@@ -22,7 +22,7 @@ function App() {
       
       {isReady && (
         <main className="container">
-          <h1>Arceussss</h1>
+          <h1>Arceus</h1>
         </main>
       )}
     </>
