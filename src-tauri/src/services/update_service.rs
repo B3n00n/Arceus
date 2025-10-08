@@ -90,15 +90,12 @@ impl UpdateService {
                     });
                 },
                 || {
-                    // Headers callback
                     Default::default()
                 },
             )
             .await {
                 Ok(_) => {
                     self.emit_status(UpdateStatus::Complete);
-                    // Note: restart() will terminate the process, but we still need to return Ok
-                    // for type safety even though this code won't be reached
                     let _ = self.app_handle.restart();
                     Ok(())
                 },
