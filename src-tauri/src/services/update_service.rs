@@ -90,18 +90,26 @@ impl UpdateService {
     }
 
     pub async fn download_and_install(&self) -> Result<(), String> {
+        eprintln!("DEBUG: Entering download_and_install function");
         let update = self.current_update.lock().await.take()
-            .ok_or_else(|| "No update available to download".to_string())?;
+            .ok_or_else(|| {
+                eprintln!("DEBUG: Error - No update available to download");
+                "No update available to download".to_string()
+            })?;
 
+        eprintln!("DEBUG: Update retrieved, setting up download...");
         let app_handle = self.app_handle.clone();
         let progress_handle = Arc::new(Mutex::new(0u64));
         let progress_handle_clone = progress_handle.clone();
 
+        eprintln!("DEBUG: Emitting Installing status");
         self.emit_status(UpdateStatus::Installing);
 
+        eprintln!("DEBUG: Calling download_and_install...");
         match update
             .download_and_install(
                 move |chunk_len, content_len| {
+                    eprintln!("DEBUG: Download progress - chunk: {}, total: {:?}", chunk_len, content_len);
                     let handle = progress_handle_clone.clone();
                     let app = app_handle.clone();
 
@@ -121,14 +129,20 @@ impl UpdateService {
                     });
                 },
                 || {
+                    eprintln!("DEBUG: Download preparation callback called");
                     Default::default()
                 },
             )
             .await {
                 Ok(_) => {
-                    eprintln!("DEBUG: Update installed successfully, restarting app...");
+                    eprintln!("DEBUG: Update installed successfully, about to restart app...");
                     self.emit_status(UpdateStatus::Complete);
-                    let _ = self.app_handle.restart();
+                    eprintln!("DEBUG: Calling app restart...");
+                    match self.app_handle.restart() {
+                        Ok(_) => eprintln!("DEBUG: Restart called successfully"),
+                        Err(e) => eprintln!("DEBUG: Restart failed: {:?}", e),
+                    }
+                    eprintln!("DEBUG: After restart call");
                     Ok(())
                 },
                 Err(e) => {
