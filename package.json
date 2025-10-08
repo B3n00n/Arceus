@@ -1,13 +1,14 @@
 {
   "name": "arceus",
   "private": true,
-  "version": "0.1.1",
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "tauri:publish": "node publish.cjs"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",

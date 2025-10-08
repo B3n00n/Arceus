@@ -1,11 +1,11 @@
 {
-  "version": "0.1.1",
-  "notes": "Arceus v0.1.1 - Fixed auto-updater with silent installation and proper error handling",
-  "pub_date": "2025-10-08T10:00:00Z",
+  "version": "0.1.0",
+  "notes": "Release 0.1.0",
+  "pub_date": "2025-10-08T11:35:24.851Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUWGdUUkZTSHU1TVd1VlJsdnc1SWJtUThwUExUTHFDTStoenJ0NXR1UDdyL3RXYUhRQVRwMWN5SWJ2MzNNZTBDYm4wWDk3NENxNTlKSnVycGx4N2xtdDFQZ2xuSHRVTVE4PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzU5OTE5NDgzCWZpbGU6YXJjZXVzXzAuMS4xX3g2NC1zZXR1cC5leGUKM0NMQXRGRGo1ZkVQUi9LeUJpSGlwelZhTHFFUUJVSWN0T3owcDBKcmwwRHMrVTd0clJZalMvYTg2TzllT1RKakdJSGVLN0FKSEpSSE5zek1xQUtzQkE9PQo=",
-      "url": "https://github.com/B3n00n/Arceus/releases/download/v0.1.1/arceus_0.1.1_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUWGdUUkZTSHU1TVN6Ym1vcjZ2UXJ0eFlhL055dmpzWEVDaWM3elptWXBWWTlnakFOM2ZlTU1LN3huYmI3VkhtQnFxazRQQkU0ZHhYVHhkcUQ1WVdDS3VQQVEzS3RyUGdnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzU5OTIzMzI0CWZpbGU6YXJjZXVzXzAuMS4wX3g2NC1zZXR1cC5leGUKMDc0R1JhWEt0YTdKWHJTbGRrVVV3bjBrM0hFZXNVMy9MOGRzZ24xVVVMZEIvKyszckdmWGN1NHJYN2lrRUsreVk4TS80NnFPb3g2dUZOOE4rU1BsQXc9PQo=",
+      "url": "https://github.com/B3n00n/Arceus/releases/download/v0.1.0/arceus_0.1.0_x64-setup.exe"
     }
   }
 }

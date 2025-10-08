@@ -138,8 +138,6 @@ impl UpdateService {
                     self.emit_status(UpdateStatus::Complete);
                     eprintln!("DEBUG: Calling app restart...");
                     let _ = self.app_handle.restart();
-                    eprintln!("DEBUG: After restart call");
-                    Ok(())
                 },
                 Err(e) => {
                     eprintln!("DEBUG: Failed to download and install update: {:?}", e);
