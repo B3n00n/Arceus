@@ -104,11 +104,11 @@ html,
 
 @media (prefers-color-scheme: dark) {
   .update-window {
-    background: #1a202c;
+    background: #282b30;
   }
 
   .update-container {
-    background: #1a202c;
+    background: #282b30;
   }
 
   .update-checking p,
