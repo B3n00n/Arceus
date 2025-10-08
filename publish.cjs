@@ -61,8 +61,8 @@ console.log('✅ Generated update-manifest.json');
 console.log('🚀 Creating GitHub release...');
 
 try {
-    // Create release
-    execSync(`gh release create v${version} --title "Release ${version}" --notes "Release ${version}"`, { stdio: 'inherit' });
+    // Create release (this will create the tag automatically)
+    execSync(`gh release create v${version} --title "Release ${version}" --notes "Release ${version}" --target main`, { stdio: 'inherit' });
 
     // Upload files
     console.log('📤 Uploading files...');
