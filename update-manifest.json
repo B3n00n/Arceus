@@ -1,0 +1,11 @@
+{
+  "version": "0.1.0",
+  "notes": "Arceus v0.1.0 - Auto-updater functionality and Windows installers",
+  "pub_date": "2025-10-08T00:00:00Z",
+  "platforms": {
+    "windows-x86_64": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUWGdUUkZTSHU1TVNtMGFUdkdPWU1IWnZhaTh6b2tHd3V2N2htRVhtVmVDNjQ0cExxMDZzcW5KZVoyTWN2KzE2dEliVFRTalcvSjRkLzBZNWNrUFN6NEpHMTR3K1NQaUFvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzU5OTEyNjA4CWZpbGU6YXJjZXVzXzAuMS4wX3g2NC1zZXR1cC5leGUKd1E4dUNIb0xjdlRvM2IzOGlDZlhHcWdKdUY3SCs0SFZKMTlKRnBtMktTUFVycm5vdGhRMk9tcE9sMHJvemZLR3hJKzBQUmRPdjNyWmk4NnV0VXBiQ1E9PQo=",
+      "url": "https://github.com/B3n00n/Arceus/releases/download/v0.1.0/arceus_0.1.0_x64-setup.exe"
+    }
+  }
+}
