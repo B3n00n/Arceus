@@ -11,15 +11,15 @@ pub struct UpdateInfo {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(tag = "type", content = "data")]
 pub enum UpdateStatus {
     Checking,
     NoUpdate,
     UpdateAvailable(UpdateInfo),
-    Downloading { progress: f64, bytes_downloaded: u64, total_bytes: u64 },
+    Downloading { progress: f64, #[serde(rename = "bytesDownloaded")] bytes_downloaded: u64, #[serde(rename = "totalBytes")] total_bytes: u64 },
     Installing,
     Complete,
-    Error(String),
+    Error { message: String },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

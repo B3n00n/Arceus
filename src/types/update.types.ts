@@ -10,10 +10,10 @@ export type UpdateStatus =
   | { type: 'Checking' }
   | { type: 'NoUpdate' }
   | { type: 'UpdateAvailable'; data: UpdateInfo }
-  | { type: 'Downloading'; progress: number; bytesDownloaded: number; totalBytes: number }
+  | { type: 'Downloading'; data: { progress: number; bytesDownloaded: number; totalBytes: number } }
   | { type: 'Installing' }
   | { type: 'Complete' }
-  | { type: 'Error'; message: string };
+  | { type: 'Error'; data: { message: string } };
 
 export interface UpdateProgress {
   chunkLen: number;

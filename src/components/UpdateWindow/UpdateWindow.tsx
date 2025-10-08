@@ -48,9 +48,9 @@ export const UpdateWindow: React.FC<UpdateWindowProps> = ({ onComplete }) => {
     try {
       await updateService.downloadAndInstall();
     } catch (error) {
-      setStatus({ 
-        type: 'Error', 
-        message: error instanceof Error ? error.message : 'Failed to install update' 
+      setStatus({
+        type: 'Error',
+        data: { message: error instanceof Error ? error.message : 'Failed to install update' }
       } as UpdateStatus);
       setIsUpdating(false);
     }
@@ -116,14 +116,14 @@ export const UpdateWindow: React.FC<UpdateWindowProps> = ({ onComplete }) => {
           <div className="update-downloading">
             <p>Downloading update...</p>
             <div className="progress-bar">
-              <div 
-                className="progress-fill" 
-                style={{ width: `${status.progress}%` }}
+              <div
+                className="progress-fill"
+                style={{ width: `${status.data.progress}%` }}
               />
             </div>
             <p className="progress-text">
-              {Math.round(status.progress)}% 
-              ({formatBytes(status.bytesDownloaded)} / {formatBytes(status.totalBytes)})
+              {Math.round(status.data.progress)}%
+              ({formatBytes(status.data.bytesDownloaded)} / {formatBytes(status.data.totalBytes)})
             </p>
           </div>
         );
@@ -151,7 +151,7 @@ export const UpdateWindow: React.FC<UpdateWindowProps> = ({ onComplete }) => {
           <div className="update-error">
             <div className="error-icon">⚠</div>
             <p>Update failed</p>
-            <small>{status.message}</small>
+            <small>{status.data.message}</small>
             <button className="btn-secondary" onClick={handleSkip}>
               Continue Anyway
             </button>

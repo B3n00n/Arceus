@@ -9,9 +9,9 @@ export class UpdateService {
     try {
       return await invoke<UpdateStatus>('check_for_updates');
     } catch (error) {
-      return { 
-        type: 'Error', 
-        message: error instanceof Error ? error.message : 'Unknown error occurred' 
+      return {
+        type: 'Error',
+        data: { message: error instanceof Error ? error.message : 'Unknown error occurred' }
       } as UpdateStatus;
     }
   }

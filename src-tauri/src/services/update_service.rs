@@ -21,8 +21,10 @@ impl UpdateService {
         self.emit_status(UpdateStatus::Checking);
 
         let updater = self.app_handle.updater_builder()
-            .header("User-Agent", "arceus-updater")
-            .map_err(|e| format!("Failed to build updater: {}", e))?
+            .header("User-Agent", "arceus-updater/1.0")
+            .map_err(|e| format!("Failed to set User-Agent header: {}", e))?
+            .header("Accept", "application/vnd.github.v3+json")
+            .map_err(|e| format!("Failed to set Accept header: {}", e))?
             .build()
             .map_err(|e| format!("Failed to initialize updater: {}", e))?;
 
@@ -49,7 +51,7 @@ impl UpdateService {
             }
             Err(e) => {
                 let error_msg = format!("Failed to check for updates: {}", e);
-                let status = UpdateStatus::Error(error_msg.clone());
+                let status = UpdateStatus::Error { message: error_msg.clone() };
                 self.emit_status(status.clone());
                 Err(error_msg)
             }
@@ -66,24 +68,24 @@ impl UpdateService {
 
         self.emit_status(UpdateStatus::Installing);
 
-        update
+        match update
             .download_and_install(
                 move |chunk_len, content_len| {
                     let handle = progress_handle_clone.clone();
                     let app = app_handle.clone();
-                    
+
                     tauri::async_runtime::spawn(async move {
                         let mut downloaded = handle.lock().await;
                         *downloaded += chunk_len as u64;
-                        
+
                         let progress = UpdateProgress::new(chunk_len as u64, content_len, *downloaded);
-                        
+
                         let status = UpdateStatus::Downloading {
                             progress: progress.percentage.unwrap_or(0.0),
                             bytes_downloaded: *downloaded,
                             total_bytes: content_len.unwrap_or(0),
                         };
-                        
+
                         let _ = app.emit("update-status", &status);
                     });
                 },
@@ -92,12 +94,20 @@ impl UpdateService {
                     Default::default()
                 },
             )
-            .await
-            .map_err(|e| format!("Failed to download and install update: {}", e))?;
-
-        self.emit_status(UpdateStatus::Complete);
-
-        self.app_handle.restart();
+            .await {
+                Ok(_) => {
+                    self.emit_status(UpdateStatus::Complete);
+                    // Note: restart() will terminate the process, but we still need to return Ok
+                    // for type safety even though this code won't be reached
+                    let _ = self.app_handle.restart();
+                    Ok(())
+                },
+                Err(e) => {
+                    let error_msg = format!("Failed to download and install update: {}", e);
+                    self.emit_status(UpdateStatus::Error { message: error_msg.clone() });
+                    Err(error_msg)
+                }
+            }
     }
 
     fn emit_status(&self, status: UpdateStatus) {
