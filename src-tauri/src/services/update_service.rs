@@ -18,18 +18,31 @@ impl UpdateService {
     }
 
     pub async fn check_for_updates(&self) -> Result<UpdateStatus, String> {
+        eprintln!("DEBUG: Starting update check...");
         self.emit_status(UpdateStatus::Checking);
 
         let updater = self.app_handle.updater_builder()
             .header("User-Agent", "arceus-updater/1.0")
-            .map_err(|e| format!("Failed to set User-Agent header: {}", e))?
+            .map_err(|e| {
+                eprintln!("DEBUG: Failed to set User-Agent header: {}", e);
+                format!("Failed to set User-Agent header: {}", e)
+            })?
             .header("Accept", "application/vnd.github.v3+json")
-            .map_err(|e| format!("Failed to set Accept header: {}", e))?
+            .map_err(|e| {
+                eprintln!("DEBUG: Failed to set Accept header: {}", e);
+                format!("Failed to set Accept header: {}", e)
+            })?
             .build()
-            .map_err(|e| format!("Failed to initialize updater: {}", e))?;
+            .map_err(|e| {
+                eprintln!("DEBUG: Failed to initialize updater: {}", e);
+                format!("Failed to initialize updater: {}", e)
+            })?;
+
+        eprintln!("DEBUG: Updater built successfully");
 
         match updater.check().await {
             Ok(Some(update)) => {
+                eprintln!("DEBUG: Update found! Version: {} -> {}", update.current_version, update.version);
                 let update_info = UpdateInfo {
                     version: update.version.to_string(),
                     current_version: update.current_version.to_string(),
@@ -38,18 +51,36 @@ impl UpdateService {
                     is_available: true,
                 };
 
+                // Store the update and automatically start downloading
                 *self.current_update.lock().await = Some(update);
 
                 let status = UpdateStatus::UpdateAvailable(update_info);
                 self.emit_status(status.clone());
-                Ok(status)
+
+                // Automatically start download and install
+                eprintln!("DEBUG: Starting automatic download and install...");
+                match self.download_and_install().await {
+                    Ok(_) => {
+                        eprintln!("DEBUG: Automatic update completed successfully");
+                        Ok(UpdateStatus::Complete)
+                    }
+                    Err(e) => {
+                        eprintln!("DEBUG: Automatic update failed: {}", e);
+                        let error_msg = format!("Automatic update failed: {}", e);
+                        let status = UpdateStatus::Error { message: error_msg.clone() };
+                        self.emit_status(status.clone());
+                        Err(error_msg)
+                    }
+                }
             }
             Ok(None) => {
+                eprintln!("DEBUG: No update available - current version is up to date");
                 let status = UpdateStatus::NoUpdate;
                 self.emit_status(status.clone());
                 Ok(status)
             }
             Err(e) => {
+                eprintln!("DEBUG: Update check failed with error: {:?}", e);
                 let error_msg = format!("Failed to check for updates: {}", e);
                 let status = UpdateStatus::Error { message: error_msg.clone() };
                 self.emit_status(status.clone());
@@ -95,11 +126,13 @@ impl UpdateService {
             )
             .await {
                 Ok(_) => {
+                    eprintln!("DEBUG: Update installed successfully, restarting app...");
                     self.emit_status(UpdateStatus::Complete);
                     let _ = self.app_handle.restart();
                     Ok(())
                 },
                 Err(e) => {
+                    eprintln!("DEBUG: Failed to download and install update: {:?}", e);
                     let error_msg = format!("Failed to download and install update: {}", e);
                     self.emit_status(UpdateStatus::Error { message: error_msg.clone() });
                     Err(error_msg)
