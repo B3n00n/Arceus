@@ -75,9 +75,8 @@ impl UpdateService {
             }
             Ok(None) => {
                 eprintln!("DEBUG: No update available - current version is up to date");
-                let status = UpdateStatus::NoUpdate;
-                self.emit_status(status.clone());
-                Ok(status)
+                // Don't emit status to UI when no update is available
+                Ok(UpdateStatus::NoUpdate)
             }
             Err(e) => {
                 eprintln!("DEBUG: Update check failed with error: {:?}", e);
