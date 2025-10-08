@@ -138,10 +138,7 @@ impl UpdateService {
                     eprintln!("DEBUG: Update installed successfully, about to restart app...");
                     self.emit_status(UpdateStatus::Complete);
                     eprintln!("DEBUG: Calling app restart...");
-                    match self.app_handle.restart() {
-                        Ok(_) => eprintln!("DEBUG: Restart called successfully"),
-                        Err(e) => eprintln!("DEBUG: Restart failed: {:?}", e),
-                    }
+                    let _ = self.app_handle.restart();
                     eprintln!("DEBUG: After restart call");
                     Ok(())
                 },
