@@ -39,5 +39,4 @@ export class UpdateService {
   }
 }
 
-// Singleton instance
 export const updateService = new UpdateService();
