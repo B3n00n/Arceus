@@ -21,6 +21,11 @@ dist-ssr
 *.sln
 *.sw?
 
+/ElectronServer/
+/ElectronClient/
+/SnorlaxServer/
+/SnorlaxClient/
+
 src-tauri/target/
 src-tauri/WixTools/
 src-tauri/Cargo.lock
