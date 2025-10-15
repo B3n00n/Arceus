@@ -38,6 +38,8 @@ impl UpdateService {
                 let update_info = UpdateInfo {
                     version: update.version.to_string(),
                     current_version: update.current_version.to_string(),
+                    notes: update.body.clone(),
+                    pub_date: update.date.map(|d| d.to_string()),
                     body: update.body.clone(),
                     date: update.date.map(|d| d.to_string()),
                     is_available: true,
@@ -89,7 +91,7 @@ impl UpdateService {
                             UpdateProgress::new(chunk_len as u64, content_len, *downloaded);
 
                         let status = UpdateStatus::Downloading {
-                            progress: progress.percentage.unwrap_or(0.0),
+                            progress: progress.percentage().unwrap_or(0.0),
                             bytes_downloaded: *downloaded,
                             total_bytes: content_len.unwrap_or(0),
                         };

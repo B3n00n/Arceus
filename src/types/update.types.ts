@@ -10,8 +10,10 @@ export type UpdateStatus =
   | { type: 'Checking' }
   | { type: 'NoUpdate' }
   | { type: 'UpdateAvailable'; data: UpdateInfo }
-  | { type: 'Downloading'; data: { progress: number; bytesDownloaded: number; totalBytes: number } }
+  | { type: 'Downloading'; data: { progress: number; bytes_downloaded: number; total_bytes: number } }
+  | { type: 'Downloaded' }
   | { type: 'Installing' }
+  | { type: 'Installed' }
   | { type: 'Complete' }
   | { type: 'Error'; data: { message: string } };
 

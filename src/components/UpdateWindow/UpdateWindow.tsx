@@ -115,11 +115,28 @@ export const UpdateWindow = () => {
           </div>
         );
 
+      case 'Downloaded':
+        return (
+          <div className="update-installing">
+            <p>Download complete</p>
+            <small>Preparing installation...</small>
+          </div>
+        );
+
       case 'Installing':
         return (
           <div className="update-installing">
             <p>Installing...</p>
             <small>App will restart automatically</small>
+          </div>
+        );
+
+      case 'Installed':
+        return (
+          <div className="update-complete">
+            <div className="checkmark">✓</div>
+            <p>Installation complete!</p>
+            <small>Restarting...</small>
           </div>
         );
 
