@@ -29,6 +29,19 @@ impl DeviceInfo {
         }
     }
 
+    pub fn with_id(id: Uuid, model: String, serial: String, ip: String) -> Self {
+        let now = Utc::now();
+        Self {
+            id,
+            model,
+            serial,
+            ip,
+            connected_at: now,
+            last_seen: now,
+            custom_name: None,
+        }
+    }
+
     pub fn display_name(&self) -> &str {
         self.custom_name.as_deref().unwrap_or(&self.model)
     }

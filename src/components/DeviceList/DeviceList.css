@@ -1,0 +1,231 @@
+.device-list-container {
+  padding: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.header h2 {
+  margin: 0;
+  color: #333;
+}
+
+.header button {
+  padding: 8px 16px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.header button:hover:not(:disabled) {
+  background: #0056b3;
+}
+
+.header button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.message {
+  padding: 12px;
+  margin-bottom: 16px;
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.device-controls {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.device-controls button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.device-controls button:not(.danger) {
+  background: #28a745;
+  color: white;
+}
+
+.device-controls button.danger {
+  background: #dc3545;
+  color: white;
+}
+
+.device-controls button:hover:not(:disabled) {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.device-controls button:disabled {
+  background: #ccc;
+  color: #666;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.device-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 16px;
+}
+
+.no-devices {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 60px 20px;
+  color: #666;
+}
+
+.no-devices p {
+  margin: 8px 0;
+  font-size: 16px;
+}
+
+.no-devices .hint {
+  font-size: 14px;
+  color: #999;
+  max-width: 500px;
+  margin: 16px auto 0;
+}
+
+.device-card {
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 16px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.device-card:hover {
+  border-color: #007bff;
+  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.1);
+}
+
+.device-card.selected {
+  border-color: #007bff;
+  background: #f0f8ff;
+}
+
+.device-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.device-header input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.device-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.status-dot.connected {
+  background: #28a745;
+  box-shadow: 0 0 4px #28a745;
+}
+
+.status-dot.disconnected {
+  background: #dc3545;
+}
+
+.device-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+}
+
+.info-row .label {
+  color: #666;
+  font-weight: 500;
+}
+
+.info-row .value {
+  color: #333;
+  font-family: monospace;
+}
+
+.command-history {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e0e0e0;
+  font-size: 13px;
+}
+
+.history-header {
+  color: #666;
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+
+.history-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  border-radius: 4px;
+}
+
+.history-item.success {
+  background: #d4edda;
+  color: #155724;
+}
+
+.history-item.error {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.command-type {
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.command-message {
+  font-size: 12px;
+  opacity: 0.9;
+}

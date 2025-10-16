@@ -83,13 +83,23 @@ pub async fn ping_devices(
     device_ids: Vec<String>,
     device_service: State<'_, Arc<DeviceService>>,
 )->std::result::Result<(), String> {
+    tracing::info!("ping_devices command called with {} device(s)", device_ids.len());
+
     let ids: std::result::Result<Vec<Uuid>, _> = device_ids.iter().map(|s| Uuid::parse_str(s)).collect();
-    let ids = ids.map_err(|e| e.to_string())?;
+    let ids = ids.map_err(|e| {
+        tracing::error!("Failed to parse device IDs: {}", e);
+        e.to_string()
+    })?;
+
+    tracing::info!("Parsed device IDs: {:?}", ids);
 
     device_service
         .ping_devices(ids)
         .await
-        .map_err(|e| e.to_string())
+        .map_err(|e| {
+            tracing::error!("ping_devices failed: {}", e);
+            e.to_string()
+        })
 }
 
 #[tauri::command]

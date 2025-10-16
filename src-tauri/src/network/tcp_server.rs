@@ -90,7 +90,10 @@ impl TcpServer {
         stream: tokio::net::TcpStream,
         addr: SocketAddr,
     ) -> Result<()> {
-        tracing::info!("New connection from {}", addr);
+        let span = tracing::info_span!("connection", %addr);
+        let _enter = span.enter();
+
+        tracing::info!("New connection established");
 
         let device = Arc::new(DeviceConnection::new(
             stream,
@@ -100,8 +103,24 @@ impl TcpServer {
 
         let device_id = device.id();
         self.connection_manager.register(Arc::clone(&device))?;
+
+        tracing::debug!(
+            device_id = %device_id,
+            total_connections = self.connection_manager.connection_count(),
+            "Device registered"
+        );
+
+        drop(_enter);
         let result = self.message_loop(Arc::clone(&device)).await;
+
+        let _enter = span.enter();
         self.connection_manager.unregister(device_id);
+
+        tracing::debug!(
+            device_id = %device_id,
+            remaining_connections = self.connection_manager.connection_count(),
+            "Device unregistered"
+        );
 
         result
     }
@@ -109,6 +128,12 @@ impl TcpServer {
     async fn message_loop(&self, device: Arc<DeviceConnection>) -> Result<()> {
         let heartbeat_timeout = Duration::from_secs(self.config.heartbeat_timeout);
         let mut device_connected = false;
+        let device_id = device.id();
+
+        let span = tracing::debug_span!("message_loop", device_id = %device_id);
+        let _enter = span.enter();
+
+        tracing::debug!(timeout_secs = self.config.heartbeat_timeout, "Starting message loop");
 
         loop {
             let message_result = timeout(heartbeat_timeout, device.receive_message()).await;
@@ -118,24 +143,25 @@ impl TcpServer {
                     device.update_last_seen();
 
                     if let Err(e) = self.handle_message(&device, message, &mut device_connected).await {
-                        tracing::error!("Error handling message from device {}: {}", device.id(), e);
+                        tracing::error!(error = %e, "Error handling message");
                     }
                 }
                 Ok(Ok(None)) => {
-                    tracing::info!("Device {} closed connection", device.id());
+                    tracing::info!("Connection closed gracefully");
                     break;
                 }
                 Ok(Err(e)) => {
-                    tracing::error!("Error receiving message from device {}: {}", device.id(), e);
+                    tracing::error!(error = %e, "Error receiving message");
                     break;
                 }
                 Err(_) => {
-                    tracing::warn!("Heartbeat timeout for device {}", device.id());
+                    tracing::warn!(timeout_secs = self.config.heartbeat_timeout, "Heartbeat timeout");
                     break;
                 }
             }
         }
 
+        tracing::debug!("Message loop ended");
         Ok(())
     }
 
@@ -146,15 +172,17 @@ impl TcpServer {
         device_connected: &mut bool,
     ) -> Result<()> {
         tracing::debug!(
-            "Received {} message from device {}",
-            message.msg_type,
-            device.id()
+            msg_type = %message.msg_type,
+            payload_size = message.payload.len(),
+            "Received message"
         );
 
         if message.msg_type == MessageType::DeviceConnected && !*device_connected {
             let mut reader = PacketReader::new(message.payload);
             let model = reader.read_string()?;
             let serial = reader.read_string()?;
+
+            tracing::info!(model = %model, serial = %serial, "Device connected");
 
             device.update_device_info(model, serial);
             *device_connected = true;
@@ -170,10 +198,9 @@ impl TcpServer {
             .await
         {
             tracing::error!(
-                "Handler error for {} from device {}: {}",
-                message.msg_type,
-                device.id(),
-                e
+                msg_type = %message.msg_type,
+                error = %e,
+                "Handler error"
             );
             return Err(e);
         }

@@ -12,11 +12,10 @@ use tokio::sync::Mutex;
 use tokio_util::codec::Framed;
 use uuid::Uuid;
 
-const MAX_COMMAND_HISTORY: usize = 50;
-
 pub struct DeviceConnection {
     id: Uuid,
-    stream: Arc<Mutex<Framed<TcpStream, MessageCodec>>>,
+    read_stream: Arc<Mutex<futures::stream::SplitStream<Framed<TcpStream, MessageCodec>>>>,
+    write_stream: Arc<Mutex<futures::stream::SplitSink<Framed<TcpStream, MessageCodec>, Message>>>,
     state: Arc<RwLock<DeviceState>>,
     event_bus: Arc<EventBus>,
     addr: SocketAddr,
@@ -31,7 +30,10 @@ impl DeviceConnection {
         let id = Uuid::new_v4();
         let framed = Framed::new(stream, MessageCodec::new());
 
-        let device_info = DeviceInfo::new(
+        let (write, read) = framed.split();
+
+        let device_info = DeviceInfo::with_id(
+            id,
             "Unknown".to_string(),
             id.to_string(),
             addr.ip().to_string(),
@@ -41,7 +43,8 @@ impl DeviceConnection {
 
         Self {
             id,
-            stream: Arc::new(Mutex::new(framed)),
+            read_stream: Arc::new(Mutex::new(read)),
+            write_stream: Arc::new(Mutex::new(write)),
             state: Arc::new(RwLock::new(state)),
             event_bus,
             addr,
@@ -144,15 +147,42 @@ impl DeviceConnection {
     }
 
     pub async fn send_message(&self, msg_type: MessageType, payload: Bytes) -> Result<()> {
-        let message = Message::new(msg_type, payload);
-        let mut stream = self.stream.lock().await;
+        let message = Message::new(msg_type, payload.clone());
+        let mut write_stream = self.write_stream.lock().await;
 
-        stream.send(message).await.map_err(|e| {
-            tracing::error!("Failed to send message to device {}: {}", self.id, e);
+        tracing::debug!(
+            msg_type = %msg_type,
+            device_id = %self.id,
+            serial = %self.serial(),
+            payload_size = payload.len(),
+            "Sending message"
+        );
+
+        write_stream.send(message).await.map_err(|e| {
+            tracing::error!(
+                msg_type = %msg_type,
+                device_id = %self.id,
+                error = %e,
+                "Failed to send message"
+            );
             e
         })?;
 
-        tracing::debug!("Sent {} message to device {}", msg_type, self.id);
+        write_stream.flush().await.map_err(|e| {
+            tracing::error!(
+                msg_type = %msg_type,
+                device_id = %self.id,
+                error = %e,
+                "Failed to flush"
+            );
+            e
+        })?;
+
+        tracing::debug!(
+            msg_type = %msg_type,
+            device_id = %self.id,
+            "Message sent"
+        );
         Ok(())
     }
 
@@ -173,11 +203,20 @@ impl DeviceConnection {
     }
 
     pub async fn receive_message(&self) -> Result<Option<Message>> {
-        let mut stream = self.stream.lock().await;
-        stream.next().await.transpose().map_err(|e| {
-            tracing::error!("Failed to receive message from device {}: {}", self.id, e);
+        tracing::trace!(device_id = %self.id, "Waiting for message");
+        let mut read_stream = self.read_stream.lock().await;
+        let result = read_stream.next().await.transpose().map_err(|e| {
+            tracing::error!(
+                device_id = %self.id,
+                error = %e,
+                "Failed to receive message"
+            );
             e
-        })
+        });
+        if result.is_ok() {
+            tracing::trace!(device_id = %self.id, "Message received");
+        }
+        result
     }
 
     pub fn mark_disconnected(&self) {

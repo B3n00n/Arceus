@@ -1,5 +1,5 @@
 use super::message_type::MessageType;
-use crate::core::error::{Result};
+use crate::core::error::Result;
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use tokio_util::codec::{Decoder, Encoder};
 
@@ -56,7 +56,7 @@ impl Decoder for MessageCodec {
     type Error = crate::core::error::ArceusError;
 
     fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>> {
-        if src.len() < 1 {
+        if src.is_empty() {
             return Ok(None);
         }
 
@@ -75,13 +75,23 @@ impl Decoder for MessageCodec {
                 Ok(Some(Message::empty(msg_type)))
             }
 
-            MessageType::BatteryStatus | MessageType::SetVolume => {
+            MessageType::SetVolume => {
                 if src.len() < 2 {
                     return Ok(None);
                 }
                 src.advance(1);
                 let payload_byte = src.get_u8();
                 Ok(Some(Message::from_vec(msg_type, vec![payload_byte])))
+            }
+
+            MessageType::BatteryStatus => {
+                if src.len() < 3 {
+                    return Ok(None);
+                }
+                src.advance(1);
+                let headset_level = src.get_u8();
+                let is_charging = src.get_u8();
+                Ok(Some(Message::from_vec(msg_type, vec![headset_level, is_charging])))
             }
 
             MessageType::VolumeStatus => {
@@ -98,31 +108,26 @@ impl Decoder for MessageCodec {
                 )))
             }
 
-            MessageType::DeviceConnected
-            | MessageType::LaunchApp
-            | MessageType::ExecuteShell
-            | MessageType::DownloadAndInstallApk
-            | MessageType::UninstallApp
-            | MessageType::InstallLocalApk
-            | MessageType::CommandResponse
-            | MessageType::Error => {
+            MessageType::DeviceConnected => {
                 if src.len() < 5 {
                     return Ok(None);
                 }
 
-                let length = u32::from_be_bytes([src[1], src[2], src[3], src[4]]) as usize;
+                let len1 = u32::from_be_bytes([src[1], src[2], src[3], src[4]]) as usize;
 
-                let total_needed = 1 + 4 + length;
-
-                if matches!(
-                    msg_type,
-                    MessageType::DeviceConnected | MessageType::CommandResponse
-                ) {
-                    if src.len() < total_needed {
-                        src.reserve(total_needed - src.len());
-                        return Ok(None);
-                    }
+                if src.len() < 1 + 4 + len1 + 4 {
+                    return Ok(None);
                 }
+
+                let len2_offset = 1 + 4 + len1;
+                let len2 = u32::from_be_bytes([
+                    src[len2_offset],
+                    src[len2_offset + 1],
+                    src[len2_offset + 2],
+                    src[len2_offset + 3],
+                ]) as usize;
+
+                let total_needed = 1 + 4 + len1 + 4 + len2;
 
                 if src.len() < total_needed {
                     src.reserve(total_needed - src.len());
@@ -131,10 +136,73 @@ impl Decoder for MessageCodec {
 
                 src.advance(1);
 
-                let mut payload_bytes = vec![0u8; src.len()];
-                src.copy_to_slice(&mut payload_bytes);
+                let payload = src.split_to(4 + len1 + 4 + len2).freeze();
 
-                Ok(Some(Message::from_vec(msg_type, payload_bytes)))
+                Ok(Some(Message::new(msg_type, payload)))
+            }
+
+            MessageType::CommandResponse => {
+                if src.len() < 6 {
+                    return Ok(None);
+                }
+
+                let str_len = u32::from_be_bytes([src[2], src[3], src[4], src[5]]) as usize;
+                let total_needed = 1 + 1 + 4 + str_len;
+
+                if src.len() < total_needed {
+                    src.reserve(total_needed - src.len());
+                    return Ok(None);
+                }
+
+                src.advance(1);
+
+                let payload = src.split_to(1 + 4 + str_len).freeze();
+
+                Ok(Some(Message::new(msg_type, payload)))
+            }
+
+            MessageType::Error => {
+                if src.len() < 5 {
+                    return Ok(None);
+                }
+
+                let str_len = u32::from_be_bytes([src[1], src[2], src[3], src[4]]) as usize;
+                let total_needed = 1 + 4 + str_len;
+
+                if src.len() < total_needed {
+                    src.reserve(total_needed - src.len());
+                    return Ok(None);
+                }
+
+                src.advance(1);
+
+                let payload = src.split_to(4 + str_len).freeze();
+
+                Ok(Some(Message::new(msg_type, payload)))
+            }
+
+            MessageType::LaunchApp
+            | MessageType::ExecuteShell
+            | MessageType::DownloadAndInstallApk
+            | MessageType::UninstallApp
+            | MessageType::InstallLocalApk => {
+                if src.len() < 5 {
+                    return Ok(None);
+                }
+
+                let length = u32::from_be_bytes([src[1], src[2], src[3], src[4]]) as usize;
+                let total_needed = 1 + 4 + length;
+
+                if src.len() < total_needed {
+                    src.reserve(total_needed - src.len());
+                    return Ok(None);
+                }
+
+                src.advance(5);
+
+                let payload = src.split_to(length).freeze();
+
+                Ok(Some(Message::new(msg_type, payload)))
             }
         }
     }
