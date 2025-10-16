@@ -101,7 +101,13 @@ impl DeviceConnection {
         let mut state = self.state.write();
         state.update_volume(volume.clone());
 
-        tracing::debug!("Device {} volume updated: {}%", state.info.serial, volume.level);
+        tracing::debug!(
+            "Device {} volume updated: {}% (current: {}, max: {})",
+            state.info.serial,
+            volume.volume_percentage,
+            volume.current_volume,
+            volume.max_volume
+        );
         self.event_bus.volume_updated(self.id, volume);
     }
 

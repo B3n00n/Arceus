@@ -24,11 +24,20 @@ impl MessageHandler for VolumeHandler {
     async fn handle(&self, device: &Arc<DeviceConnection>, payload: Bytes) -> Result<()> {
         let mut reader = PacketReader::new(payload);
 
-        let level = reader.read_u8()?;
-        let volume_info = VolumeInfo::new(level);
+        let volume_percentage = reader.read_u8()?;
+        let current_volume = reader.read_u8()?;
+        let max_volume = reader.read_u8()?;
+
+        let volume_info = VolumeInfo::new(volume_percentage, current_volume, max_volume);
         device.update_volume(volume_info);
 
-        tracing::trace!("Device {} volume: {}%", device.serial(), level);
+        tracing::trace!(
+            "Device {} volume: {}% (current: {}, max: {})",
+            device.serial(),
+            volume_percentage,
+            current_volume,
+            max_volume
+        );
 
         Ok(())
     }

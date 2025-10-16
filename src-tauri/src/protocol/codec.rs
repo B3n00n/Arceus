@@ -75,13 +75,27 @@ impl Decoder for MessageCodec {
                 Ok(Some(Message::empty(msg_type)))
             }
 
-            MessageType::BatteryStatus | MessageType::VolumeStatus | MessageType::SetVolume => {
+            MessageType::BatteryStatus | MessageType::SetVolume => {
                 if src.len() < 2 {
                     return Ok(None);
                 }
                 src.advance(1);
                 let payload_byte = src.get_u8();
                 Ok(Some(Message::from_vec(msg_type, vec![payload_byte])))
+            }
+
+            MessageType::VolumeStatus => {
+                if src.len() < 4 {
+                    return Ok(None);
+                }
+                src.advance(1);
+                let volume_percentage = src.get_u8();
+                let current_volume = src.get_u8();
+                let max_volume = src.get_u8();
+                Ok(Some(Message::from_vec(
+                    msg_type,
+                    vec![volume_percentage, current_volume, max_volume],
+                )))
             }
 
             MessageType::DeviceConnected

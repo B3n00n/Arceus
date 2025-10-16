@@ -21,7 +21,7 @@ pub enum MessageType {
     /// Payload: [message: String]
     Error = 0x05,
 
-    /// Payload: [volume_level: u8]
+    /// Payload: [volume_percentage: u8, current_volume: u8, max_volume: u8]
     VolumeStatus = 0x06,
 
     // ===== Server → Client Commands (0x10-0x1F) =====
