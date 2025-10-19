@@ -66,7 +66,7 @@ export function DeviceList() {
 
   const getSelectedIds = (): string[] => Array.from(selectedDevices);
 
-  const handleShutdown = async () => {
+  const handleRestart = async () => {
     if (selectedDevices.size === 0) {
       showMessage("Please select at least one device");
       return;
@@ -74,7 +74,7 @@ export function DeviceList() {
 
     if (
       !confirm(
-        `Are you sure you want to shutdown ${selectedDevices.size} device(s)?`
+        `Are you sure you want to restart ${selectedDevices.size} device(s)?`
       )
     ) {
       return;
@@ -82,11 +82,11 @@ export function DeviceList() {
 
     setLoading(true);
     try {
-      await DeviceService.shutdownDevices(getSelectedIds());
-      showMessage(`Shutdown command sent to ${selectedDevices.size} device(s)`);
+      await DeviceService.restartDevices(getSelectedIds());
+      showMessage(`Restart command sent to ${selectedDevices.size} device(s)`);
     } catch (error) {
-      console.error("Shutdown failed:", error);
-      showMessage("Shutdown failed: " + error);
+      console.error("Restart failed:", error);
+      showMessage("Restart failed: " + error);
     } finally {
       setLoading(false);
     }
@@ -192,11 +192,11 @@ export function DeviceList() {
           {selectedDevices.size === devices.length ? "Deselect All" : "Select All"}
         </button>
         <button
-          onClick={handleShutdown}
+          onClick={handleRestart}
           disabled={loading || selectedDevices.size === 0}
           className="danger"
         >
-          ⚡ Shutdown ({selectedDevices.size})
+          ⚡ Restart ({selectedDevices.size})
         </button>
         <button
           onClick={handleRequestBattery}

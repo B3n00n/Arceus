@@ -147,10 +147,10 @@ impl DeviceService {
         Ok(())
     }
 
-    pub async fn shutdown_devices(&self, device_ids: Vec<Uuid>) -> Result<()> {
+    pub async fn restart_devices(&self, device_ids: Vec<Uuid>) -> Result<()> {
         for id in device_ids {
             if let Some(device) = self.connection_manager.get(id) {
-                device.shutdown().await?;
+                device.restart().await?;
             }
         }
         Ok(())

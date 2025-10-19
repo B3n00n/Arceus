@@ -12,8 +12,8 @@ export class DeviceService {
     });
   }
 
-  static async shutdownDevices(deviceIds: string[]): Promise<void> {
-    await invoke("shutdown_devices", {
+  static async restartDevices(deviceIds: string[]): Promise<void> {
+    await invoke("restart_devices", {
       deviceIds
     });
   }

@@ -194,7 +194,7 @@ pub async fn install_local_apk(
 }
 
 #[tauri::command]
-pub async fn shutdown_devices(
+pub async fn restart_devices(
     device_ids: Vec<String>,
     device_service: State<'_, Arc<DeviceService>>,
 )->std::result::Result<(), String> {
@@ -202,7 +202,7 @@ pub async fn shutdown_devices(
     let ids = ids.map_err(|e| e.to_string())?;
 
     device_service
-        .shutdown_devices(ids)
+        .restart_devices(ids)
         .await
         .map_err(|e| e.to_string())
 }

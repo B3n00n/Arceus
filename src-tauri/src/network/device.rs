@@ -264,8 +264,9 @@ impl DeviceConnection {
             .await
     }
 
-    pub async fn shutdown(&self) -> Result<()> {
-        self.send_empty_message(MessageType::ShutdownDevice).await
+    pub async fn restart(&self) -> Result<()> {
+        self.send_string_command(MessageType::ShutdownDevice, "restart")
+            .await
     }
 
     pub async fn install_remote_apk(&self, url: &str) -> Result<()> {
