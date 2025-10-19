@@ -1,7 +1,9 @@
 use crate::core::{error::NetworkError, EventBus, Result};
 use axum::{
     Router,
-    routing::get_service,
+    routing::{get, get_service},
+    response::{Html, IntoResponse},
+    extract::State as AxumState,
 };
 use std::net::SocketAddr;
 use std::path::PathBuf;
@@ -42,9 +44,12 @@ impl HttpServer {
         }
 
         let serve_dir = ServeDir::new(&self.apk_directory);
+
         let app = Router::new()
-            .nest_service("/apks", get_service(serve_dir))
-            .layer(TraceLayer::new_for_http());
+            .route("/", get(directory_listing))
+            .fallback_service(get_service(serve_dir))
+            .layer(TraceLayer::new_for_http())
+            .with_state(Arc::clone(&self));
 
         let addr = SocketAddr::from(([0, 0, 0, 0], self.port));
         let listener = TcpListener::bind(addr).await.map_err(|e| {
@@ -56,8 +61,9 @@ impl HttpServer {
 
         let url = self.get_base_url();
         tracing::info!("HTTP server listening on {}", url);
+        tracing::info!("APK directory: {:?}", self.apk_directory);
 
-        self.event_bus.http_server_started(self.port, url);
+        self.event_bus.http_server_started(self.port, url.clone());
 
         axum::serve(listener, app).await.map_err(|e| {
             NetworkError::ConnectionFailed(format!("HTTP server error: {}", e)).into()
@@ -65,11 +71,15 @@ impl HttpServer {
     }
 
     pub fn get_base_url(&self) -> String {
-        format!("http://{}:{}/apks", self.local_ip, self.port)
+        format!("http://{}:{}", self.local_ip, self.port)
     }
 
     pub fn get_apk_url(&self, filename: &str) -> String {
         format!("{}/{}", self.get_base_url(), filename)
+    }
+
+    pub fn get_apk_directory(&self) -> &PathBuf {
+        &self.apk_directory
     }
 
     pub fn get_local_ip(&self) -> &str {
@@ -84,6 +94,62 @@ impl HttpServer {
                 "127.0.0.1".to_string()
             }
         }
+    }
+}
+
+async fn directory_listing(AxumState(server): AxumState<Arc<HttpServer>>) -> impl IntoResponse {
+    let mut files = Vec::new();
+
+    match tokio::fs::read_dir(&server.apk_directory).await {
+        Ok(mut entries) => {
+            while let Ok(Some(entry)) = entries.next_entry().await {
+                if let Ok(metadata) = entry.metadata().await {
+                    if metadata.is_file() {
+                        if let Some(filename) = entry.file_name().to_str() {
+                            if filename.ends_with(".apk") {
+                                let size = format_size(metadata.len());
+                                files.push((filename.to_string(), size));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Err(e) => {
+            tracing::error!("Failed to read APK directory: {}", e);
+        }
+    }
+
+    files.sort_by(|a, b| a.0.cmp(&b.0));
+
+    let mut html = String::from("<html><head><title>Index of /</title></head><body><h1>Index of /</h1><hr><pre>\n");
+
+    if files.is_empty() {
+        html.push_str("No APK files found\n");
+    } else {
+        for (filename, size) in files {
+            html.push_str(&format!("<a href=\"/{}\">{}</a>  {}\n", filename, filename, size));
+        }
+    }
+
+    html.push_str("</pre><hr></body></html>");
+
+    Html(html)
+}
+
+fn format_size(bytes: u64) -> String {
+    const KB: u64 = 1024;
+    const MB: u64 = KB * 1024;
+    const GB: u64 = MB * 1024;
+
+    if bytes >= GB {
+        format!("{:.2} GB", bytes as f64 / GB as f64)
+    } else if bytes >= MB {
+        format!("{:.2} MB", bytes as f64 / MB as f64)
+    } else if bytes >= KB {
+        format!("{:.2} KB", bytes as f64 / KB as f64)
+    } else {
+        format!("{} bytes", bytes)
     }
 }
 

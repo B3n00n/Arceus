@@ -24,6 +24,24 @@ impl MessageHandler for CommandResponseHandler {
         let mut reader = PacketReader::new(payload);
         let success = reader.read_bool()?;
         let message = reader.read_string()?;
+
+        // Check if this is an installed apps response (contains newline-separated package names)
+        if success && message.contains('\n') && message.lines().all(|line| line.contains('.')) {
+            // This looks like an installed apps list
+            let apps: Vec<String> = message
+                .lines()
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .collect();
+
+            if !apps.is_empty() {
+                let app_count = apps.len();
+                device.event_bus().installed_apps_received(device.id(), apps);
+                tracing::debug!("Device {} returned {} installed apps", device.serial(), app_count);
+                return Ok(());
+            }
+        }
+
         let result = if success {
             CommandResult::success("Command", message.clone())
         } else {

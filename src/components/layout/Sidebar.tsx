@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
-  Smartphone,
+  Glasses,
   Package,
   Settings,
   ChevronLeft,
@@ -12,7 +12,7 @@ import { useUIStore } from '@/stores/uiStore';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { name: 'Devices', href: '/devices', icon: Smartphone },
+  { name: 'Devices', href: '/devices', icon: Glasses },
   { name: 'APK Manager', href: '/apk-manager', icon: Package },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
@@ -74,10 +74,10 @@ export function Sidebar() {
             sidebarCollapsed && 'flex-col gap-1'
           )}>
             {!sidebarCollapsed ? (
-              <p className="text-sm font-medium text-white">Arceus</p>
+              <p className="text-sm font-medium text-white">Arceus v0.1.2</p>
             ) : (
-              <div className="h-8 w-8 rounded-full bg-discord-dark flex items-center justify-center">
-                <span className="text-xs text-gray-400">v0.1</span>
+              <div className="h-10 w-10 rounded-full bg-discord-dark flex items-center justify-center">
+                <span className="text-[10px] text-gray-400">v0.1.2</span>
               </div>
             )}
           </div>

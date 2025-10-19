@@ -41,6 +41,12 @@ pub enum ArceusEvent {
     },
 
     #[serde(rename_all = "camelCase")]
+    InstalledAppsReceived {
+        device_id: Uuid,
+        apps: Vec<String>,
+    },
+
+    #[serde(rename_all = "camelCase")]
     DeviceNameChanged {
         device_id: Uuid,
         serial: String,
@@ -121,6 +127,10 @@ impl EventBus {
 
     pub fn command_executed(&self, device_id: Uuid, result: CommandResult) {
         self.emit(ArceusEvent::CommandExecuted { device_id, result });
+    }
+
+    pub fn installed_apps_received(&self, device_id: Uuid, apps: Vec<String>) {
+        self.emit(ArceusEvent::InstalledAppsReceived { device_id, apps });
     }
 
     pub fn device_name_changed(&self, device_id: Uuid, serial: String, new_name: Option<String>) {

@@ -54,34 +54,24 @@ export function UpdateWindow() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-discord-dark-4">
-      <div className="bg-discord-dark-2 rounded-lg p-8 w-80 border border-discord-dark">
-        <div className="text-center">
-          <div className="mb-4">
-            <div className="h-16 w-16 mx-auto rounded-full bg-discord-blurple flex items-center justify-center">
-              <span className="text-white font-bold text-2xl">A</span>
-            </div>
-          </div>
+    <div className="flex flex-col items-center justify-center min-h-screen w-full bg-discord-dark-4 p-8">
+      <div className="text-center max-w-md w-full">
+        {error ? (
+          <div className="text-red-400 text-base mb-4">{error}</div>
+        ) : (
+          <>
+            <p className="text-white text-base mb-6">{status}</p>
 
-          <h2 className="text-xl font-semibold text-white mb-2">Arceus Updater</h2>
-
-          {error ? (
-            <div className="text-red-400 text-sm mb-4">{error}</div>
-          ) : (
-            <>
-              <p className="text-gray-400 text-sm mb-4">{status}</p>
-
-              {progress > 0 && (
-                <div className="w-full bg-discord-dark-3 rounded-full h-2 mb-4">
-                  <div
-                    className="bg-discord-blurple h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${progress}%` }}
-                  />
-                </div>
-              )}
-            </>
-          )}
-        </div>
+            {progress > 0 && (
+              <div className="w-full bg-discord-dark-3 rounded-full h-3 mb-4">
+                <div
+                  className="bg-discord-blurple h-3 rounded-full transition-all duration-300"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );
