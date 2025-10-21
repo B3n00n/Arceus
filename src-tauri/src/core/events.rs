@@ -94,8 +94,6 @@ impl EventBus {
 
         if let Err(e) = self.app_handle.emit(event_name, &event) {
             tracing::error!("Failed to emit event {:?}: {}", event, e);
-        } else {
-            tracing::debug!("Emitted event: {:?}", event);
         }
     }
 

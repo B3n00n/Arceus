@@ -32,6 +32,7 @@ import { cn } from '@/lib/cn';
 import { toast } from 'sonner';
 import type { DeviceState } from '@/types/device.types';
 import type { ApkInfo } from '@/types/apk.types';
+import type { ArceusEvent } from '@/types/events.types';
 
 type CommandTab = 'standard' | 'dev';
 
@@ -117,7 +118,11 @@ export function DevicesPage() {
   const hasSelection = selectedDeviceIds.size > 0;
   const selectedIds = Array.from(selectedDeviceIds);
 
-  const handleCommand = async (action: () => Promise<void>, actionName: string) => {
+  const handleCommand = async (
+    action: () => Promise<void>,
+    actionName: string,
+    showSuccessNotification: boolean = true
+  ) => {
     if (selectedDeviceIds.size === 0) {
       toast.error('Please select at least one device');
       return;
@@ -126,7 +131,9 @@ export function DevicesPage() {
     setLoading(true);
     try {
       await action();
-      toast.success(`${actionName} sent to ${selectedDeviceIds.size} device(s)`);
+      if (showSuccessNotification) {
+        toast.success(`${actionName} sent to ${selectedDeviceIds.size} device(s)`);
+      }
     } catch (error) {
       toast.error(`${actionName} failed: ${error}`);
     } finally {
@@ -134,13 +141,21 @@ export function DevicesPage() {
     }
   };
 
-  // Listen for installed apps event
-  useTauriEvent<any>('arceus://event', (event) => {
-    const payload = event.payload;
-    if (payload.type === 'installedAppsReceived') {
-      setInstalledApps(payload.apps);
-      setLoading(false);
-      toast.success(`Found ${payload.apps.length} apps`);
+  // Listen for installed apps event and command results
+  useTauriEvent<ArceusEvent>('arceus://event', (payload) => {
+    switch (payload.type) {
+      case 'installedAppsReceived':
+        setInstalledApps(payload.apps);
+        setLoading(false);
+        break;
+
+      case 'commandExecuted':
+        if (payload.result.success) {
+          toast.success(`${payload.result.commandType}: ${payload.result.message}`);
+        } else {
+          toast.error(`${payload.result.commandType} failed: ${payload.result.message}`);
+        }
+        break;
     }
   });
 
@@ -198,15 +213,13 @@ export function DevicesPage() {
       switch (dialogType) {
         case 'launch-manual':
           await DeviceService.launchApp(selectedIds, dialogInput);
-          toast.success(`Launching ${dialogInput}`);
           break;
         case 'uninstall-manual':
           await DeviceService.uninstallApp(selectedIds, dialogInput);
-          toast.success(`Uninstalling ${dialogInput}`);
           break;
         case 'shell':
           await DeviceService.executeShell(selectedIds, dialogInput);
-          toast.success('Shell command executed');
+          toast.success('Shell command sent');
           break;
         case 'volume':
           const vol = parseInt(dialogInput);
@@ -215,11 +228,9 @@ export function DevicesPage() {
             return;
           }
           await DeviceService.setVolume(selectedIds, vol);
-          toast.success(`Volume set to ${vol}%`);
           break;
         case 'remote-apk':
           await DeviceService.installRemoteApk(selectedIds, dialogInput);
-          toast.success('Installing APK from URL');
           break;
       }
       setShowSimpleInputDialog(false);
@@ -236,10 +247,8 @@ export function DevicesPage() {
     try {
       if (dialogType === 'launch') {
         await DeviceService.launchApp(selectedIds, packageName);
-        toast.success(`Launching ${extractAppName(packageName)}`);
       } else if (dialogType === 'uninstall') {
         await DeviceService.uninstallApp(selectedIds, packageName);
-        toast.success(`Uninstalling ${extractAppName(packageName)}`);
       }
       setShowAppListDialog(false);
       setSelectedApp(null);
@@ -254,7 +263,6 @@ export function DevicesPage() {
     setLoading(true);
     try {
       await DeviceService.installLocalApk(selectedIds, apk.filename);
-      toast.success(`Installing ${apk.filename}`);
       setShowApkListDialog(false);
       setSelectedApk(null);
     } catch (error) {
@@ -477,7 +485,7 @@ export function DevicesPage() {
                       variant="outline"
                       size="sm"
                       className="w-full justify-start"
-                      onClick={() => handleCommand(() => DeviceService.pingDevices(selectedIds), 'Ping')}
+                      onClick={() => handleCommand(() => DeviceService.pingDevices(selectedIds), 'Ping', false)}
                       disabled={loading}
                     >
                       <Wifi className="h-4 w-4 mr-2" />

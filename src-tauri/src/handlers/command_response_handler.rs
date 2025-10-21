@@ -12,6 +12,38 @@ impl CommandResponseHandler {
     pub fn new() -> Self {
         Self
     }
+
+    /// Infer command type from response message content
+    fn infer_command_type(message: &str) -> &'static str {
+        let message_lower = message.to_lowercase();
+
+        if message_lower.contains("launched") {
+            "Launch App"
+        } else if message_lower.contains("uninstalled") {
+            "Uninstall App"
+        } else if message_lower.contains("installed") {
+            "Install App"
+        } else if message.contains("Volume") {
+            "Volume"
+        } else if message_lower.contains("shutdown") {
+            "Shutdown"
+        } else if message_lower.contains("beep") || message_lower.contains("ping") {
+            "Ping"
+        } else {
+            "Command"
+        }
+    }
+
+    /// Check if a message looks like a package name list
+    fn looks_like_package_list(message: &str) -> bool {
+        if message.contains(',') {
+            // Multiple packages: check all contain dots
+            message.split(',').all(|pkg| pkg.trim().contains('.'))
+        } else {
+            // Single package: check it contains a dot and looks like a package name
+            message.contains('.') && !message.contains(' ') && message.len() > 3
+        }
+    }
 }
 
 #[async_trait]
@@ -25,11 +57,11 @@ impl MessageHandler for CommandResponseHandler {
         let success = reader.read_bool()?;
         let message = reader.read_string()?;
 
-        // Check if this is an installed apps response (contains newline-separated package names)
-        if success && message.contains('\n') && message.lines().all(|line| line.contains('.')) {
+        // Check if this is an installed apps response
+        if success && Self::looks_like_package_list(&message) {
             // This looks like an installed apps list
             let apps: Vec<String> = message
-                .lines()
+                .split(',')
                 .map(|s| s.trim().to_string())
                 .filter(|s| !s.is_empty())
                 .collect();
@@ -42,10 +74,13 @@ impl MessageHandler for CommandResponseHandler {
             }
         }
 
+        // Determine command type from message content
+        let command_type = Self::infer_command_type(&message);
+
         let result = if success {
-            CommandResult::success("Command", message.clone())
+            CommandResult::success(command_type, message.clone())
         } else {
-            CommandResult::failure("Command", message.clone())
+            CommandResult::failure(command_type, message.clone())
         };
 
         device.add_command_result(result);
