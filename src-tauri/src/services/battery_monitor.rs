@@ -47,7 +47,7 @@ impl BatteryMonitor {
         tracing::info!("Battery monitor stopped");
     }
 
-    pub async fn stop(&self) {
+    pub async fn _stop(&self) {
         *self.running.write().await = false;
     }
 }

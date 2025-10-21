@@ -1,6 +1,5 @@
 use crate::core::{error::StorageError, Result};
 use sled::Db;
-use std::collections::HashMap;
 use std::path::Path;
 
 pub struct DeviceNamesStore {
@@ -49,17 +48,5 @@ impl DeviceNamesStore {
         tracing::debug!("Removed custom name for device {}", serial);
 
         Ok(())
-    }
-
-    pub fn get_all_names(&self) -> HashMap<String, String> {
-        self.db
-            .iter()
-            .filter_map(|result| result.ok())
-            .map(|(key, value)| {
-                let serial = String::from_utf8_lossy(&key).to_string();
-                let name = String::from_utf8_lossy(&value).to_string();
-                (serial, name)
-            })
-            .collect()
     }
 }

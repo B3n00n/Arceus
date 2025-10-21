@@ -59,10 +59,6 @@ impl DeviceConnection {
         &self.event_bus
     }
 
-    pub fn addr(&self) -> SocketAddr {
-        self.addr
-    }
-
     pub fn serial(&self) -> String {
         self.state.read().info.serial.clone()
     }

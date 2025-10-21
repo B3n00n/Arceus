@@ -31,10 +31,6 @@ impl HandlerRegistry {
         self.handlers.get(&msg_type).map(Arc::clone)
     }
 
-    pub fn has_handler(&self, msg_type: MessageType) -> bool {
-        self.handlers.contains_key(&msg_type)
-    }
-
     pub async fn handle(
         &self,
         msg_type: MessageType,
@@ -60,14 +56,6 @@ impl HandlerRegistry {
             );
             e
         })
-    }
-
-    pub fn len(&self) -> usize {
-        self.handlers.len()
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.handlers.is_empty()
     }
 }
 

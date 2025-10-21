@@ -10,10 +10,6 @@ pub struct AppConfig {
 }
 
 impl AppConfig {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
     pub fn with_paths(apk_directory: PathBuf, database_path: PathBuf) -> Self {
         Self {
             server: ServerConfig::default(),

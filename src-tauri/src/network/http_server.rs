@@ -78,14 +78,6 @@ impl HttpServer {
         format!("{}/{}", self.get_base_url(), filename)
     }
 
-    pub fn get_apk_directory(&self) -> &PathBuf {
-        &self.apk_directory
-    }
-
-    pub fn get_local_ip(&self) -> &str {
-        &self.local_ip
-    }
-
     fn discover_local_ip() -> String {
         match local_ip_address::local_ip() {
             Ok(ip) => ip.to_string(),

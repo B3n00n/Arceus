@@ -76,15 +76,6 @@ impl TcpServer {
         Ok(())
     }
 
-    pub async fn stop(&self) {
-        *self.running.write().await = false;
-        tracing::info!("Stopping TCP server...");
-    }
-
-    pub async fn is_running(&self) -> bool {
-        *self.running.read().await
-    }
-
     async fn handle_connection(
         &self,
         stream: tokio::net::TcpStream,

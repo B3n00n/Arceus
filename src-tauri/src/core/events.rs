@@ -105,10 +105,6 @@ impl EventBus {
         self.emit(ArceusEvent::DeviceDisconnected { device_id, serial });
     }
 
-    pub fn device_updated(&self, device_id: Uuid) {
-        self.emit(ArceusEvent::DeviceUpdated { device_id });
-    }
-
     pub fn battery_updated(&self, device_id: Uuid, battery_info: BatteryInfo) {
         self.emit(ArceusEvent::BatteryUpdated {
             device_id,
@@ -152,19 +148,6 @@ impl EventBus {
 
     pub fn http_server_started(&self, port: u16, url: String) {
         self.emit(ArceusEvent::HttpServerStarted { port, url });
-    }
-
-    pub fn error(&self, message: impl Into<String>, context: Option<String>) {
-        self.emit(ArceusEvent::Error {
-            message: message.into(),
-            context,
-        });
-    }
-
-    pub fn info(&self, message: impl Into<String>) {
-        self.emit(ArceusEvent::Info {
-            message: message.into(),
-        });
     }
 }
 

@@ -42,10 +42,6 @@ impl DeviceInfo {
         }
     }
 
-    pub fn display_name(&self) -> &str {
-        self.custom_name.as_deref().unwrap_or(&self.model)
-    }
-
     pub fn update_last_seen(&mut self) {
         self.last_seen = Utc::now();
     }
@@ -82,11 +78,6 @@ impl DeviceState {
         if self.command_history.len() > MAX_HISTORY_SIZE {
             self.command_history.truncate(MAX_HISTORY_SIZE);
         }
-    }
-
-    pub fn recent_commands(&self, count: usize) -> &[CommandResult] {
-        let end = self.command_history.len().min(count);
-        &self.command_history[..end]
     }
 
     pub fn update_battery(&mut self, battery: BatteryInfo) {

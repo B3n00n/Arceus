@@ -16,16 +16,4 @@ impl BatteryInfo {
             last_updated: Utc::now(),
         }
     }
-
-    pub fn level_normalized(&self) -> f32 {
-        self.headset_level as f32 / 100.0
-    }
-
-    pub fn is_low(&self) -> bool {
-        self.headset_level < 20
-    }
-
-    pub fn is_critical(&self) -> bool {
-        self.headset_level < 10
-    }
 }
