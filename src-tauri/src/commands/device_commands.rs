@@ -1,17 +1,9 @@
-use crate::core::DeviceState;
+use super::helpers::{parse_device_ids, CommandResultExt};
+use crate::core::{CommandValidator, DeviceState};
 use crate::services::{ApkService, DeviceService};
 use std::sync::Arc;
 use tauri::State;
 use uuid::Uuid;
-
-/// Helper to parse device ID strings into UUIDs
-fn parse_device_ids(device_ids: Vec<String>) -> Result<Vec<Uuid>, String> {
-    device_ids
-        .iter()
-        .map(|s| Uuid::parse_str(s))
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|e| e.to_string())
-}
 
 #[tauri::command]
 pub async fn get_devices(
@@ -24,8 +16,8 @@ pub async fn get_devices(
 pub async fn get_device(
     device_id: String,
     device_service: State<'_, Arc<DeviceService>>,
-)->std::result::Result<Option<DeviceState>, String> {
-    let id = Uuid::parse_str(&device_id).map_err(|e| e.to_string())?;
+) -> std::result::Result<Option<DeviceState>, String> {
+    let id = Uuid::parse_str(&device_id).to_command_result()?;
     Ok(device_service.get_device(id))
 }
 
@@ -34,10 +26,10 @@ pub async fn set_device_name(
     serial: String,
     name: Option<String>,
     device_service: State<'_, Arc<DeviceService>>,
-)->std::result::Result<(), String> {
+) -> std::result::Result<(), String> {
     device_service
         .set_device_name(serial, name)
-        .map_err(|e| e.to_string())
+        .to_command_result()
 }
 
 #[tauri::command]
@@ -46,11 +38,12 @@ pub async fn launch_app(
     package_name: String,
     device_service: State<'_, Arc<DeviceService>>,
 ) -> std::result::Result<(), String> {
+    CommandValidator::validate_package_name(&package_name)?;
     let ids = parse_device_ids(device_ids)?;
     device_service
         .launch_app(ids, package_name)
         .await
-        .map_err(|e| e.to_string())
+        .to_command_result()
 }
 
 #[tauri::command]
@@ -59,11 +52,12 @@ pub async fn uninstall_app(
     package_name: String,
     device_service: State<'_, Arc<DeviceService>>,
 ) -> std::result::Result<(), String> {
+    CommandValidator::validate_package_name(&package_name)?;
     let ids = parse_device_ids(device_ids)?;
     device_service
         .uninstall_app(ids, package_name)
         .await
-        .map_err(|e| e.to_string())
+        .to_command_result()
 }
 
 #[tauri::command]
@@ -75,7 +69,7 @@ pub async fn request_battery(
     device_service
         .request_battery(ids)
         .await
-        .map_err(|e| e.to_string())
+        .to_command_result()
 }
 
 #[tauri::command]
@@ -87,7 +81,7 @@ pub async fn ping_devices(
     device_service
         .ping_devices(ids)
         .await
-        .map_err(|e| e.to_string())
+        .to_command_result()
 }
 
 #[tauri::command]
@@ -96,11 +90,12 @@ pub async fn set_volume(
     level: u8,
     device_service: State<'_, Arc<DeviceService>>,
 ) -> std::result::Result<(), String> {
+    CommandValidator::validate_volume_level(level)?;
     let ids = parse_device_ids(device_ids)?;
     device_service
         .set_volume(ids, level)
         .await
-        .map_err(|e| e.to_string())
+        .to_command_result()
 }
 
 #[tauri::command]
@@ -112,7 +107,7 @@ pub async fn get_volume(
     device_service
         .get_volume(ids)
         .await
-        .map_err(|e| e.to_string())
+        .to_command_result()
 }
 
 #[tauri::command]
@@ -121,11 +116,12 @@ pub async fn execute_shell(
     command: String,
     device_service: State<'_, Arc<DeviceService>>,
 ) -> std::result::Result<(), String> {
+    CommandValidator::validate_shell_command(&command)?;
     let ids = parse_device_ids(device_ids)?;
     device_service
         .execute_shell(ids, command)
         .await
-        .map_err(|e| e.to_string())
+        .to_command_result()
 }
 
 #[tauri::command]
@@ -137,7 +133,7 @@ pub async fn get_installed_apps(
     device_service
         .get_installed_apps(ids)
         .await
-        .map_err(|e| e.to_string())
+        .to_command_result()
 }
 
 #[tauri::command]
@@ -146,11 +142,12 @@ pub async fn install_remote_apk(
     url: String,
     device_service: State<'_, Arc<DeviceService>>,
 ) -> std::result::Result<(), String> {
+    CommandValidator::validate_apk_url(&url)?;
     let ids = parse_device_ids(device_ids)?;
     device_service
         .install_remote_apk(ids, url)
         .await
-        .map_err(|e| e.to_string())
+        .to_command_result()
 }
 
 #[tauri::command]
@@ -160,12 +157,13 @@ pub async fn install_local_apk(
     device_service: State<'_, Arc<DeviceService>>,
     apk_service: State<'_, Arc<ApkService>>,
 ) -> std::result::Result<(), String> {
+    CommandValidator::validate_apk_filename(&filename)?;
     let ids = parse_device_ids(device_ids)?;
     let url = apk_service.get_http_server().get_apk_url(&filename);
     device_service
         .install_local_apk(ids, url)
         .await
-        .map_err(|e| e.to_string())
+        .to_command_result()
 }
 
 #[tauri::command]
@@ -177,5 +175,5 @@ pub async fn restart_devices(
     device_service
         .restart_devices(ids)
         .await
-        .map_err(|e| e.to_string())
+        .to_command_result()
 }
