@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { DeviceState } from '@/types/device.types';
+import { eventService } from '@/services/eventService';
 
 interface DeviceStoreState {
   devices: DeviceState[];
@@ -10,6 +11,7 @@ interface DeviceStoreState {
 
   setDevices: (devices: DeviceState[]) => void;
   updateDevice: (device: DeviceState) => void;
+  addOrUpdateDevice: (device: DeviceState) => void;
   removeDevice: (deviceId: string) => void;
 
   setSelectedDeviceIds: (ids: Set<string>) => void;
@@ -39,6 +41,17 @@ export const useDeviceStore = create<DeviceStoreState>((set, get) => ({
       d.info.id === device.info.id ? device : d
     ),
   })),
+
+  addOrUpdateDevice: (device) => set((state) => {
+    const existingIndex = state.devices.findIndex((d) => d.info.id === device.info.id);
+    if (existingIndex >= 0) {
+      const newDevices = [...state.devices];
+      newDevices[existingIndex] = device;
+      return { devices: newDevices };
+    } else {
+      return { devices: [...state.devices, device] };
+    }
+  }),
 
   removeDevice: (deviceId) => set((state) => ({
     devices: state.devices.filter((d) => d.info.id !== deviceId),
@@ -94,3 +107,17 @@ export const useDeviceStore = create<DeviceStoreState>((set, get) => ({
     return devices.filter((d) => selectedDeviceIds.has(d.info.id));
   },
 }));
+
+eventService.subscribe((event) => {
+  const store = useDeviceStore.getState();
+
+  switch (event.type) {
+    case 'deviceConnected':
+      store.addOrUpdateDevice(event.device);
+      break;
+
+    case 'deviceDisconnected':
+      store.removeDevice(event.deviceId);
+      break;
+  }
+});

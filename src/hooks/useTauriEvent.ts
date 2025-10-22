@@ -6,7 +6,7 @@ export function useTauriEvent<T>(
   handler: (payload: T) => void
 ) {
   const handlerRef = useRef(handler);
-  const unlistenRef = useRef<UnlistenFn | undefined>();
+  const unlistenRef = useRef<UnlistenFn | undefined>(undefined);
 
   // Update ref when handler changes
   useEffect(() => {

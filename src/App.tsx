@@ -6,6 +6,7 @@ import { DevicesPage } from './pages/DevicesPage';
 import { ApkManagerPage } from './pages/ApkManagerPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { useUIStore } from './stores/uiStore';
+import { eventService } from './services/eventService';
 import './styles/globals.css';
 
 function App() {
@@ -15,6 +16,12 @@ function App() {
   useEffect(() => {
     // Initialize theme
     setTheme(theme);
+
+    eventService.initialize();
+
+    return () => {
+      eventService.destroy();
+    };
   }, []);
 
   return (

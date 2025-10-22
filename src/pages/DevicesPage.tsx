@@ -50,7 +50,6 @@ export function DevicesPage() {
   } = useDeviceStore();
 
   const setDevices = useDeviceStore((state) => state.setDevices);
-  const updateDevice = useDeviceStore((state) => state.updateDevice);
 
   const [loading, setLoading] = useState(false);
   const [commandTab, setCommandTab] = useState<CommandTab>('standard');
@@ -96,22 +95,12 @@ export function DevicesPage() {
     }
   };
 
-  useTauriEvent<DeviceState>('device-connected', (device) => {
-    updateDevice(device);
-    loadDevices();
-    toast.success(`${device.info.model} connected`);
-  });
-
-  useTauriEvent('device-disconnected', () => {
-    loadDevices();
-  });
-
-  useTauriEvent('battery-updated', () => {
-    loadDevices();
-  });
-
-  useTauriEvent('volume-updated', () => {
-    loadDevices();
+  // Listen for installedAppsReceived event (page-specific state)
+  useTauriEvent<ArceusEvent>('arceus://event', (event) => {
+    if (event.type === 'installedAppsReceived') {
+      setInstalledApps(event.apps);
+      setLoading(false);
+    }
   });
 
   const filteredDevices = getFilteredDevices();
@@ -141,23 +130,6 @@ export function DevicesPage() {
     }
   };
 
-  // Listen for installed apps event and command results
-  useTauriEvent<ArceusEvent>('arceus://event', (payload) => {
-    switch (payload.type) {
-      case 'installedAppsReceived':
-        setInstalledApps(payload.apps);
-        setLoading(false);
-        break;
-
-      case 'commandExecuted':
-        if (payload.result.success) {
-          toast.success(`${payload.result.commandType}: ${payload.result.message}`);
-        } else {
-          toast.error(`${payload.result.commandType} failed: ${payload.result.message}`);
-        }
-        break;
-    }
-  });
 
   const openAppListDialog = async (type: 'launch' | 'uninstall') => {
     if (selectedDeviceIds.size === 0) {

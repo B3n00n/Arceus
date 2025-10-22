@@ -1,3 +1,5 @@
+import type { DeviceState } from './device.types';
+
 export interface CommandResult {
   timestamp: string;
   commandType: string;
@@ -7,20 +9,23 @@ export interface CommandResult {
 
 export type ArceusEvent =
   | {
-      type: 'installedAppsReceived';
-      deviceId: string;
-      apps: string[];
+      type: 'deviceConnected';
+      device: DeviceState;
     }
   | {
-      type: 'commandExecuted';
+      type: 'deviceDisconnected';
       deviceId: string;
-      result: CommandResult;
+      serial: string;
+    }
+  | {
+      type: 'deviceUpdated';
+      deviceId: string;
     }
   | {
       type: 'batteryUpdated';
       deviceId: string;
       batteryInfo: {
-        level: number;
+        headsetLevel: number;
         isCharging: boolean;
       };
     }
@@ -28,7 +33,46 @@ export type ArceusEvent =
       type: 'volumeUpdated';
       deviceId: string;
       volumeInfo: {
+        volumePercentage: number;
         currentVolume: number;
         maxVolume: number;
       };
+    }
+  | {
+      type: 'commandExecuted';
+      deviceId: string;
+      result: CommandResult;
+    }
+  | {
+      type: 'installedAppsReceived';
+      deviceId: string;
+      apps: string[];
+    }
+  | {
+      type: 'deviceNameChanged';
+      deviceId: string;
+      serial: string;
+      newName: string | null;
+    }
+  | {
+      type: 'serverStarted';
+      tcpPort: number;
+      httpPort: number;
+    }
+  | {
+      type: 'serverStopped';
+    }
+  | {
+      type: 'httpServerStarted';
+      port: number;
+      url: string;
+    }
+  | {
+      type: 'error';
+      message: string;
+      context: string | null;
+    }
+  | {
+      type: 'info';
+      message: string;
     };
