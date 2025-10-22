@@ -44,6 +44,11 @@ class EventService {
         toast.info(`Device disconnected`);
         break;
 
+      case 'deviceNameChanged':
+        const displayName = event.newName || event.serial;
+        toast.success(`Renamed to "${displayName}"`);
+        break;
+
       case 'commandExecuted':
         if (event.result.success) {
           toast.success(`${event.result.commandType}: ${event.result.message}`);

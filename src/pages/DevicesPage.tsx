@@ -22,6 +22,8 @@ import {
   X,
   FileText,
   FolderOpen,
+  Pencil,
+  Check,
 } from 'lucide-react';
 import { useDeviceStore } from '@/stores/deviceStore';
 import { DeviceService } from '@/services/deviceService';
@@ -830,10 +832,42 @@ interface DeviceCardProps {
 }
 
 function DeviceCard({ device, isSelected, onToggle }: DeviceCardProps) {
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editedName, setEditedName] = useState(device.info.custom_name || '');
+  const [isSavingName, setIsSavingName] = useState(false);
+  const setDevices = useDeviceStore((state) => state.setDevices);
+
+  useEffect(() => {
+    setEditedName(device.info.custom_name || '');
+  }, [device.info.custom_name]);
+
+  const handleSaveName = async () => {
+    if (isSavingName) return;
+
+    setIsSavingName(true);
+    try {
+      const nameToSave = editedName.trim() || null;
+      await DeviceService.setDeviceName(device.info.serial, nameToSave);
+      setIsEditingName(false);
+
+      const devices = await DeviceService.getDevices();
+      setDevices(devices);
+    } catch (error) {
+      toast.error(`Failed to rename device: ${error}`);
+    } finally {
+      setIsSavingName(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditedName(device.info.custom_name || '');
+    setIsEditingName(false);
+  };
+
   return (
     <Card
       className={cn(
-        'bg-discord-dark-2 border-discord-dark cursor-pointer transition-all hover:border-discord-blurple',
+        'group bg-discord-dark-2 border-discord-dark cursor-pointer transition-all hover:border-discord-blurple',
         isSelected && 'border-discord-blurple ring-1 ring-discord-blurple'
       )}
       onClick={onToggle}
@@ -850,14 +884,60 @@ function DeviceCard({ device, isSelected, onToggle }: DeviceCardProps) {
             />
             <div className="flex-1">
               <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-white">
-                  {device.info.custom_name || device.info.model}
-                </h3>
-                <Badge variant={device.is_connected ? 'success' : 'secondary'} className="text-xs">
-                  {device.is_connected ? 'Online' : 'Offline'}
-                </Badge>
+                {isEditingName ? (
+                  <div className="flex items-center gap-2 flex-1" onClick={(e) => e.stopPropagation()}>
+                    <Input
+                      value={editedName}
+                      onChange={(e) => setEditedName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleSaveName();
+                        if (e.key === 'Escape') handleCancelEdit();
+                      }}
+                      placeholder={device.info.model}
+                      className="h-7 text-sm"
+                      autoFocus
+                      disabled={isSavingName}
+                    />
+                    <button
+                      onClick={handleSaveName}
+                      disabled={isSavingName}
+                      className="text-green-400 hover:text-green-300 transition-colors"
+                    >
+                      <Check className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={handleCancelEdit}
+                      disabled={isSavingName}
+                      className="text-gray-400 hover:text-gray-300 transition-colors"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold text-white">
+                        {device.info.custom_name || device.info.model}
+                      </h3>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsEditingName(true);
+                        }}
+                        className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-white transition-all"
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </button>
+                    </div>
+                    <Badge variant={device.is_connected ? 'success' : 'secondary'} className="text-xs">
+                      {device.is_connected ? 'Online' : 'Offline'}
+                    </Badge>
+                  </>
+                )}
               </div>
-              <p className="text-xs text-gray-400 mt-1">{device.info.serial}</p>
+              {!isEditingName && (
+                <p className="text-xs text-gray-400 mt-1">{device.info.serial}</p>
+              )}
             </div>
           </div>
           <div className={`h-2 w-2 rounded-full ${getStatusColor(device.is_connected)} ${device.is_connected ? 'pulse-dot' : ''}`} />

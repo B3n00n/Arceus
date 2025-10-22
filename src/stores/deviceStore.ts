@@ -119,5 +119,18 @@ eventService.subscribe((event) => {
     case 'deviceDisconnected':
       store.removeDevice(event.deviceId);
       break;
+
+    case 'deviceNameChanged':
+      const device = store.devices.find(d => d.info.id === event.deviceId);
+      if (device) {
+        store.updateDevice({
+          ...device,
+          info: {
+            ...device.info,
+            custom_name: event.newName,
+          }
+        });
+      }
+      break;
   }
 });
