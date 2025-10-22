@@ -21,10 +21,7 @@ dist-ssr
 *.sln
 *.sw?
 
-/ElectronServer/
-/ElectronClient/
-/SnorlaxServer/
-/SnorlaxClient/
+/snorlax/
 
 src-tauri/target/
 src-tauri/WixTools/
