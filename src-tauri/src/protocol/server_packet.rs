@@ -332,15 +332,15 @@ packets! {
     ServerPacket {
         LaunchApp => (opcode: 0x40, PacketLength::VariableShort),
         ExecuteShell => (opcode: 0x41, PacketLength::VariableShort),
-        RequestBattery => (opcode: 0x42, PacketLength::Fixed(0)),
-        RequestInstalledApps => (opcode: 0x43, PacketLength::Fixed(0)),
-        RequestDeviceInfo => (opcode: 0x44, PacketLength::Fixed(0)),
-        Ping => (opcode: 0x45, PacketLength::Fixed(8)),
+        RequestBattery => (opcode: 0x42, PacketLength::VariableShort),
+        RequestInstalledApps => (opcode: 0x43, PacketLength::VariableShort),
+        RequestDeviceInfo => (opcode: 0x44, PacketLength::VariableShort),
+        Ping => (opcode: 0x45, PacketLength::VariableShort),
         InstallApk => (opcode: 0x46, PacketLength::VariableShort),
         InstallLocalApk => (opcode: 0x47, PacketLength::VariableShort),
-        Shutdown => (opcode: 0x48, PacketLength::Fixed(0)),
+        Shutdown => (opcode: 0x48, PacketLength::VariableShort),
         UninstallApp => (opcode: 0x49, PacketLength::VariableShort),
-        SetVolume => (opcode: 0x4A, PacketLength::Fixed(1)),
-        GetVolume => (opcode: 0x4B, PacketLength::Fixed(0)),
+        SetVolume => (opcode: 0x4A, PacketLength::VariableShort),
+        GetVolume => (opcode: 0x4B, PacketLength::VariableShort),
     }
 }

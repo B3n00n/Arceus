@@ -424,19 +424,19 @@ packets! {
     ClientPacket {
         // Client-initiated (0x01-0x05)
         DeviceConnected => (opcode: 0x01, PacketLength::VariableShort),
-        Heartbeat => (opcode: 0x02, PacketLength::Fixed(0)),
-        BatteryStatus => (opcode: 0x03, PacketLength::Fixed(2)),
-        VolumeStatus => (opcode: 0x04, PacketLength::Fixed(3)),
+        Heartbeat => (opcode: 0x02, PacketLength::VariableShort),
+        BatteryStatus => (opcode: 0x03, PacketLength::VariableShort),
+        VolumeStatus => (opcode: 0x04, PacketLength::VariableShort),
         Error => (opcode: 0x05, PacketLength::VariableShort),
 
         // Response packets (0x10-0x17)
         LaunchAppResponse => (opcode: 0x10, PacketLength::VariableShort),
         ShellExecutionResponse => (opcode: 0x11, PacketLength::VariableShort),
         InstalledAppsResponse => (opcode: 0x12, PacketLength::VariableShort),
-        PingResponse => (opcode: 0x13, PacketLength::Fixed(8)),
+        PingResponse => (opcode: 0x13, PacketLength::VariableShort),
         ApkInstallResponse => (opcode: 0x14, PacketLength::VariableShort),
         UninstallAppResponse => (opcode: 0x15, PacketLength::VariableShort),
-        ShutdownResponse => (opcode: 0x16, PacketLength::Fixed(0)),
-        VolumeSetResponse => (opcode: 0x17, PacketLength::Fixed(2)),
+        ShutdownResponse => (opcode: 0x16, PacketLength::VariableShort),
+        VolumeSetResponse => (opcode: 0x17, PacketLength::VariableShort),
     }
 }
