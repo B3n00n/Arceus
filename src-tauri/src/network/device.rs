@@ -1,8 +1,7 @@
 use crate::core::{
     BatteryInfo, CommandResult, DeviceInfo, DeviceState, EventBus, Result, VolumeInfo,
 };
-use crate::protocol::{Message, MessageCodec, MessageType, PacketWriter};
-use bytes::Bytes;
+use crate::protocol::{ClientPacket, ClientPacketCodec, ServerPacket};
 use futures::{SinkExt, StreamExt};
 use parking_lot::RwLock;
 use std::net::SocketAddr;
@@ -12,23 +11,21 @@ use tokio::sync::Mutex;
 use tokio_util::codec::Framed;
 use uuid::Uuid;
 
+/// Represents a connected Quest device
 pub struct DeviceConnection {
     id: Uuid,
-    read_stream: Arc<Mutex<futures::stream::SplitStream<Framed<TcpStream, MessageCodec>>>>,
-    write_stream: Arc<Mutex<futures::stream::SplitSink<Framed<TcpStream, MessageCodec>, Message>>>,
+    read_stream: Arc<Mutex<futures::stream::SplitStream<Framed<TcpStream, ClientPacketCodec>>>>,
+    write_stream:
+        Arc<Mutex<futures::stream::SplitSink<Framed<TcpStream, ClientPacketCodec>, ServerPacket>>>,
     state: Arc<RwLock<DeviceState>>,
     event_bus: Arc<EventBus>,
     addr: SocketAddr,
 }
 
 impl DeviceConnection {
-    pub fn new(
-        stream: TcpStream,
-        addr: SocketAddr,
-        event_bus: Arc<EventBus>,
-    ) -> Self {
+    pub fn new(stream: TcpStream, addr: SocketAddr, event_bus: Arc<EventBus>) -> Self {
         let id = Uuid::new_v4();
-        let framed = Framed::new(stream, MessageCodec::new());
+        let framed = Framed::new(stream, ClientPacketCodec);
 
         let (write, read) = framed.split();
 
@@ -51,6 +48,10 @@ impl DeviceConnection {
         }
     }
 
+    // =============================================================================
+    // Public getters
+    // =============================================================================
+
     pub fn id(&self) -> Uuid {
         self.id
     }
@@ -66,6 +67,10 @@ impl DeviceConnection {
     pub fn get_state(&self) -> DeviceState {
         self.state.read().clone()
     }
+
+    // =============================================================================
+    // State update methods
+    // =============================================================================
 
     pub fn update_device_info(&self, model: String, serial: String) {
         let mut state = self.state.write();
@@ -139,84 +144,8 @@ impl DeviceConnection {
             name
         );
 
-        self.event_bus.device_name_changed(
-            self.id,
-            state.info.serial.clone(),
-            name,
-        );
-    }
-
-    pub async fn send_message(&self, msg_type: MessageType, payload: Bytes) -> Result<()> {
-        let message = Message::new(msg_type, payload.clone());
-        let mut write_stream = self.write_stream.lock().await;
-
-        tracing::debug!(
-            msg_type = %msg_type,
-            device_id = %self.id,
-            serial = %self.serial(),
-            payload_size = payload.len(),
-            "Sending message"
-        );
-
-        write_stream.send(message).await.map_err(|e| {
-            tracing::error!(
-                msg_type = %msg_type,
-                device_id = %self.id,
-                error = %e,
-                "Failed to send message"
-            );
-            e
-        })?;
-
-        write_stream.flush().await.map_err(|e| {
-            tracing::error!(
-                msg_type = %msg_type,
-                device_id = %self.id,
-                error = %e,
-                "Failed to flush"
-            );
-            e
-        })?;
-
-        tracing::debug!(
-            msg_type = %msg_type,
-            device_id = %self.id,
-            "Message sent"
-        );
-        Ok(())
-    }
-
-    pub async fn send_empty_message(&self, msg_type: MessageType) -> Result<()> {
-        self.send_message(msg_type, Bytes::new()).await
-    }
-
-    pub async fn send_string_command(&self, msg_type: MessageType, payload: &str) -> Result<()> {
-        let mut writer = PacketWriter::new();
-        writer.write_string(payload);
-        self.send_message(msg_type, writer.freeze()).await
-    }
-
-    pub async fn send_u8_command(&self, msg_type: MessageType, value: u8) -> Result<()> {
-        let mut writer = PacketWriter::new();
-        writer.write_u8(value);
-        self.send_message(msg_type, writer.freeze()).await
-    }
-
-    pub async fn receive_message(&self) -> Result<Option<Message>> {
-        tracing::trace!(device_id = %self.id, "Waiting for message");
-        let mut read_stream = self.read_stream.lock().await;
-        let result = read_stream.next().await.transpose().map_err(|e| {
-            tracing::error!(
-                device_id = %self.id,
-                error = %e,
-                "Failed to receive message"
-            );
-            e
-        });
-        if result.is_ok() {
-            tracing::trace!(device_id = %self.id, "Message received");
-        }
-        result
+        self.event_bus
+            .device_name_changed(self.id, state.info.serial.clone(), name);
     }
 
     pub fn mark_disconnected(&self) {
@@ -225,58 +154,172 @@ impl DeviceConnection {
 
         tracing::info!("Device {} disconnected", state.info.serial);
 
-        self.event_bus.device_disconnected(self.id, state.info.serial.clone());
+        self.event_bus
+            .device_disconnected(self.id, state.info.serial.clone());
     }
 
-    pub async fn request_battery(&self) -> Result<()> {
-        self.send_empty_message(MessageType::RequestBattery).await
+    // =============================================================================
+    // Low-level send/receive methods
+    // =============================================================================
+
+    /// Send a server packet to the device
+    pub async fn send_packet(&self, packet: ServerPacket) -> Result<()> {
+        let mut write_stream = self.write_stream.lock().await;
+
+        tracing::debug!(
+            opcode = packet.opcode(),
+            device_id = %self.id,
+            serial = %self.serial(),
+            "Sending packet"
+        );
+
+        write_stream.send(packet).await.map_err(|e| {
+            tracing::error!(
+                device_id = %self.id,
+                error = %e,
+                "Failed to send packet"
+            );
+            e
+        })?;
+
+        write_stream.flush().await.map_err(|e| {
+            tracing::error!(
+                device_id = %self.id,
+                error = %e,
+                "Failed to flush"
+            );
+            e
+        })?;
+
+        tracing::debug!(device_id = %self.id, "Packet sent successfully");
+        Ok(())
     }
 
-    pub async fn request_volume(&self) -> Result<()> {
-        self.send_empty_message(MessageType::GetVolume).await
+    /// Receive a client packet from the device
+    pub async fn receive_packet(&self) -> Result<Option<ClientPacket>> {
+        tracing::trace!(device_id = %self.id, "Waiting for packet");
+        let mut read_stream = self.read_stream.lock().await;
+        let result = read_stream.next().await.transpose().map_err(|e| {
+            tracing::error!(
+                device_id = %self.id,
+                error = %e,
+                "Failed to receive packet"
+            );
+            e
+        });
+        if result.is_ok() {
+            tracing::trace!(device_id = %self.id, "Packet received");
+        }
+        result
     }
+
+    // =============================================================================
+    // High-level command methods (type-safe!)
+    // =============================================================================
 
     pub async fn launch_app(&self, package_name: &str) -> Result<()> {
-        self.send_string_command(MessageType::LaunchApp, package_name)
-            .await
-    }
-
-    pub async fn uninstall_app(&self, package_name: &str) -> Result<()> {
-        self.send_string_command(MessageType::UninstallApp, package_name)
-            .await
+        use crate::protocol::server_packet::LaunchApp;
+        self.send_packet(ServerPacket::LaunchApp(LaunchApp {
+            package_name: package_name.to_string(),
+        }))
+        .await
     }
 
     pub async fn execute_shell(&self, command: &str) -> Result<()> {
-        self.send_string_command(MessageType::ExecuteShell, command)
+        use crate::protocol::server_packet::ExecuteShell;
+        self.send_packet(ServerPacket::ExecuteShell(ExecuteShell {
+            command: command.to_string(),
+        }))
+        .await
+    }
+
+    pub async fn request_battery(&self) -> Result<()> {
+        use crate::protocol::server_packet::RequestBattery;
+        self.send_packet(ServerPacket::RequestBattery(RequestBattery))
             .await
     }
 
-    pub async fn get_installed_apps(&self) -> Result<()> {
-        self.send_empty_message(MessageType::GetInstalledApps).await
+    pub async fn request_installed_apps(&self) -> Result<()> {
+        use crate::protocol::server_packet::RequestInstalledApps;
+        self.send_packet(ServerPacket::RequestInstalledApps(
+            RequestInstalledApps,
+        ))
+        .await
+    }
+
+    pub async fn request_device_info(&self) -> Result<()> {
+        use crate::protocol::server_packet::RequestDeviceInfo;
+        self.send_packet(ServerPacket::RequestDeviceInfo(RequestDeviceInfo))
+            .await
     }
 
     pub async fn ping(&self) -> Result<()> {
-        self.send_empty_message(MessageType::Ping).await
+        use crate::protocol::server_packet::Ping;
+        let timestamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_millis() as u64;
+
+        self.send_packet(ServerPacket::Ping(Ping { timestamp }))
+            .await
+    }
+
+    pub async fn install_apk(&self, url: &str) -> Result<()> {
+        use crate::protocol::server_packet::InstallApk;
+        self.send_packet(ServerPacket::InstallApk(InstallApk {
+            url: url.to_string(),
+        }))
+        .await
+    }
+
+    pub async fn install_local_apk(&self, filename: &str) -> Result<()> {
+        use crate::protocol::server_packet::InstallLocalApk;
+        self.send_packet(ServerPacket::InstallLocalApk(InstallLocalApk {
+            filename: filename.to_string(),
+        }))
+        .await
+    }
+
+    pub async fn shutdown(&self) -> Result<()> {
+        use crate::protocol::server_packet::Shutdown;
+        self.send_packet(ServerPacket::Shutdown(Shutdown)).await
+    }
+
+    pub async fn uninstall_app(&self, package_name: &str) -> Result<()> {
+        use crate::protocol::server_packet::UninstallApp;
+        self.send_packet(ServerPacket::UninstallApp(UninstallApp {
+            package_name: package_name.to_string(),
+        }))
+        .await
     }
 
     pub async fn set_volume(&self, level: u8) -> Result<()> {
-        self.send_u8_command(MessageType::SetVolume, level.min(100))
-            .await
+        use crate::protocol::server_packet::SetVolume;
+        self.send_packet(ServerPacket::SetVolume(SetVolume {
+            level: level.min(100),
+        }))
+        .await
+    }
+
+    pub async fn get_volume(&self) -> Result<()> {
+        use crate::protocol::server_packet::GetVolume;
+        self.send_packet(ServerPacket::GetVolume(GetVolume)).await
+    }
+
+    // Legacy alias methods for compatibility with service layer
+    pub async fn get_installed_apps(&self) -> Result<()> {
+        self.request_installed_apps().await
     }
 
     pub async fn restart(&self) -> Result<()> {
-        self.send_string_command(MessageType::ShutdownDevice, "restart")
-            .await
+        self.shutdown().await
     }
 
     pub async fn install_remote_apk(&self, url: &str) -> Result<()> {
-        self.send_string_command(MessageType::DownloadAndInstallApk, url)
-            .await
+        self.install_apk(url).await
     }
 
-    pub async fn install_local_apk(&self, url: &str) -> Result<()> {
-        self.send_string_command(MessageType::InstallLocalApk, url)
-            .await
+    pub async fn request_volume(&self) -> Result<()> {
+        self.get_volume().await
     }
 }
-

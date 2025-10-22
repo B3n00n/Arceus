@@ -1,13 +1,13 @@
 use super::{ConnectionManager, DeviceConnection};
-use crate::core::{error::NetworkError, EventBus, Result, ServerConfig};
+use crate::core::{error::NetworkError, BatteryInfo, EventBus, Result, ServerConfig, VolumeInfo};
 use crate::handlers::HandlerRegistry;
-use crate::protocol::{Message, MessageType, PacketReader};
+use crate::protocol::ClientPacket;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::net::TcpListener;
 use tokio::sync::RwLock;
-use tokio::time::{timeout};
+use tokio::time::timeout;
 
 pub struct TcpServer {
     config: ServerConfig,
@@ -124,17 +124,23 @@ impl TcpServer {
         let span = tracing::debug_span!("message_loop", device_id = %device_id);
         let _enter = span.enter();
 
-        tracing::debug!(timeout_secs = self.config.heartbeat_timeout, "Starting message loop");
+        tracing::debug!(
+            timeout_secs = self.config.heartbeat_timeout,
+            "Starting message loop"
+        );
 
         loop {
-            let message_result = timeout(heartbeat_timeout, device.receive_message()).await;
+            let packet_result = timeout(heartbeat_timeout, device.receive_packet()).await;
 
-            match message_result {
-                Ok(Ok(Some(message))) => {
+            match packet_result {
+                Ok(Ok(Some(packet))) => {
                     device.update_last_seen();
 
-                    if let Err(e) = self.handle_message(&device, message, &mut device_connected).await {
-                        tracing::error!(error = %e, "Error handling message");
+                    if let Err(e) = self
+                        .handle_packet(&device, packet, &mut device_connected)
+                        .await
+                    {
+                        tracing::error!(error = %e, "Error handling packet");
                     }
                 }
                 Ok(Ok(None)) => {
@@ -142,11 +148,14 @@ impl TcpServer {
                     break;
                 }
                 Ok(Err(e)) => {
-                    tracing::error!(error = %e, "Error receiving message");
+                    tracing::error!(error = %e, "Error receiving packet");
                     break;
                 }
                 Err(_) => {
-                    tracing::warn!(timeout_secs = self.config.heartbeat_timeout, "Heartbeat timeout");
+                    tracing::warn!(
+                        timeout_secs = self.config.heartbeat_timeout,
+                        "Heartbeat timeout"
+                    );
                     break;
                 }
             }
@@ -156,47 +165,66 @@ impl TcpServer {
         Ok(())
     }
 
-    async fn handle_message(
+    async fn handle_packet(
         &self,
         device: &Arc<DeviceConnection>,
-        message: Message,
+        packet: ClientPacket,
         device_connected: &mut bool,
     ) -> Result<()> {
-        tracing::debug!(
-            msg_type = %message.msg_type,
-            payload_size = message.payload.len(),
-            "Received message"
-        );
+        use crate::protocol::client_packet as cp;
 
-        if message.msg_type == MessageType::DeviceConnected && !*device_connected {
-            let mut reader = PacketReader::new(message.payload);
-            let model = reader.read_string()?;
-            let serial = reader.read_string()?;
+        tracing::debug!(opcode = packet.opcode(), "Received packet");
 
-            tracing::info!(model = %model, serial = %serial, "Device connected");
+        match packet {
+            // Handle DeviceConnected first
+            ClientPacket::DeviceConnected(cp::DeviceConnected { model, serial }) => {
+                if !*device_connected {
+                    tracing::info!(model = %model, serial = %serial, "Device connected");
 
-            device.update_device_info(model, serial);
-            *device_connected = true;
+                    device.update_device_info(model, serial);
+                    *device_connected = true;
 
-            self.event_bus.device_connected(device.get_state());
+                    self.event_bus.device_connected(device.get_state());
+                }
+                Ok(())
+            }
 
-            return Ok(());
+            // Heartbeat - just update last seen (already done above)
+            ClientPacket::Heartbeat(_) => {
+                tracing::trace!("Heartbeat received");
+                Ok(())
+            }
+
+            // Battery status update
+            ClientPacket::BatteryStatus(cp::BatteryStatus { level, is_charging }) => {
+                let battery = BatteryInfo::new(level, is_charging);
+                device.update_battery(battery);
+                Ok(())
+            }
+
+            // Volume status update
+            ClientPacket::VolumeStatus(cp::VolumeStatus {
+                percentage,
+                current,
+                max,
+            }) => {
+                let volume = VolumeInfo::new(percentage, current, max);
+                device.update_volume(volume);
+                Ok(())
+            }
+
+            // Error from client
+            ClientPacket::Error(cp::Error { message }) => {
+                tracing::warn!(device = %device.serial(), error = %message, "Client error");
+                Ok(())
+            }
+
+            // All other packets are handled by the handler registry
+            _ => {
+                self.handler_registry
+                    .handle_packet(device, packet)
+                    .await
+            }
         }
-
-        if let Err(e) = self
-            .handler_registry
-            .handle(message.msg_type, device, message.payload)
-            .await
-        {
-            tracing::error!(
-                msg_type = %message.msg_type,
-                error = %e,
-                "Handler error"
-            );
-            return Err(e);
-        }
-
-        Ok(())
     }
 }
-

@@ -1,6 +1,7 @@
 mod commands;
 mod core;
 mod handlers;
+mod net;
 mod network;
 mod protocol;
 mod services;
@@ -16,8 +17,8 @@ use commands::{
 
 use core::{AppConfig, EventBus};
 use handlers::{
-    BatteryHandler, CommandResponseHandler, DeviceConnectedHandler, ErrorHandler,
-    HandlerRegistry, HeartbeatHandler, VolumeHandler,
+    ApkInstallHandler, HandlerRegistry, InstalledAppsHandler, LaunchAppHandler, PingHandler,
+    ShellExecutionHandler, ShutdownHandler, UninstallAppHandler, VolumeSetHandler,
 };
 use network::{ConnectionManager, HttpServer, TcpServer};
 use services::{update_service::create_update_service, ApkService, BatteryMonitor, DeviceService};
@@ -76,12 +77,14 @@ pub fn run() {
 
             let mut handler_registry = HandlerRegistry::new();
             handler_registry
-                .register(BatteryHandler::new())
-                .register(VolumeHandler::new())
-                .register(CommandResponseHandler::new())
-                .register(HeartbeatHandler::new())
-                .register(ErrorHandler::new())
-                .register(DeviceConnectedHandler::new());
+                .register(LaunchAppHandler::new())
+                .register(ShellExecutionHandler::new())
+                .register(InstalledAppsHandler::new())
+                .register(PingHandler::new())
+                .register(ApkInstallHandler::new())
+                .register(UninstallAppHandler::new())
+                .register(ShutdownHandler::new())
+                .register(VolumeSetHandler::new());
 
             let handler_registry = Arc::new(handler_registry);
 

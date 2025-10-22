@@ -1,17 +1,25 @@
+// Core handler infrastructure
+pub mod registry;
 pub mod traits;
 
-pub mod battery_handler;
-pub mod command_response_handler;
-pub mod device_connected_handler;
-pub mod error_handler;
-pub mod heartbeat_handler;
-pub mod registry;
-pub mod volume_handler;
+// Response packet handlers
+pub mod apk_install_handler;
+pub mod installed_apps_handler;
+pub mod launch_app_handler;
+pub mod ping_handler;
+pub mod shell_execution_handler;
+pub mod shutdown_handler;
+pub mod uninstall_app_handler;
+pub mod volume_set_handler;
 
-pub use battery_handler::BatteryHandler;
-pub use command_response_handler::CommandResponseHandler;
-pub use device_connected_handler::DeviceConnectedHandler;
-pub use error_handler::ErrorHandler;
-pub use heartbeat_handler::HeartbeatHandler;
+// Re-exports
+pub use apk_install_handler::ApkInstallHandler;
+pub use installed_apps_handler::InstalledAppsHandler;
+pub use launch_app_handler::LaunchAppHandler;
+pub use ping_handler::PingHandler;
 pub use registry::HandlerRegistry;
-pub use volume_handler::VolumeHandler;
+pub use shell_execution_handler::ShellExecutionHandler;
+pub use shutdown_handler::ShutdownHandler;
+pub use traits::PacketHandler;
+pub use uninstall_app_handler::UninstallAppHandler;
+pub use volume_set_handler::VolumeSetHandler;

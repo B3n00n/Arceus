@@ -1,61 +1,80 @@
-use super::traits::MessageHandler;
-use crate::core::{error::HandlerError, Result};
+use super::traits::PacketHandler;
+use crate::core::Result;
 use crate::network::DeviceConnection;
-use crate::protocol::MessageType;
-use bytes::Bytes;
-use std::collections::HashMap;
+use crate::protocol::ClientPacket;
 use std::sync::Arc;
 
+/// Registry for client packet handlers
+///
+/// This registry routes incoming ClientPackets to their appropriate handlers
+/// based on the packet type (discriminant of the enum).
 pub struct HandlerRegistry {
-    handlers: HashMap<MessageType, Arc<dyn MessageHandler>>,
+    handlers: Vec<Arc<dyn PacketHandler>>,
 }
 
 impl HandlerRegistry {
     pub fn new() -> Self {
         Self {
-            handlers: HashMap::new(),
+            handlers: Vec::new(),
         }
     }
 
+    /// Register a handler for client packets
     pub fn register<H>(&mut self, handler: H) -> &mut Self
     where
-        H: MessageHandler + 'static,
+        H: PacketHandler + 'static,
     {
-        let msg_type = handler.message_type();
-        self.handlers.insert(msg_type, Arc::new(handler));
-        tracing::debug!("Registered handler for {}", msg_type);
+        tracing::debug!("Registering handler: {}", handler.name());
+        self.handlers.push(Arc::new(handler));
         self
     }
 
-    pub fn get(&self, msg_type: MessageType) -> Option<Arc<dyn MessageHandler>> {
-        self.handlers.get(&msg_type).map(Arc::clone)
+    /// Find a handler that can handle the given packet
+    fn find_handler(&self, packet: &ClientPacket) -> Option<Arc<dyn PacketHandler>> {
+        self.handlers
+            .iter()
+            .find(|h| h.handles_packet(packet))
+            .map(Arc::clone)
     }
 
-    pub async fn handle(
+    /// Handle a client packet by routing it to the appropriate handler
+    pub async fn handle_packet(
         &self,
-        msg_type: MessageType,
         device: &Arc<DeviceConnection>,
-        payload: Bytes,
+        packet: ClientPacket,
     ) -> Result<()> {
-        let handler = self
-            .get(msg_type)
-            .ok_or_else(|| HandlerError::HandlerNotRegistered(msg_type.to_u8()))?;
+        let handler = self.find_handler(&packet);
 
-        tracing::trace!(
-            "Routing {} message from device {} to handler",
-            msg_type,
-            device.id()
-        );
+        match handler {
+            Some(h) => {
+                tracing::trace!(
+                    opcode = packet.opcode(),
+                    handler = %h.name(),
+                    device_id = %device.id(),
+                    "Routing packet to handler"
+                );
 
-        handler.handle(device, payload).await.map_err(|e| {
-            tracing::error!(
-                "Handler {} failed for device {}: {}",
-                handler.name(),
-                device.id(),
-                e
-            );
-            e
-        })
+                h.handle(device, packet).await.map_err(|e| {
+                    tracing::error!(
+                        handler = %h.name(),
+                        device_id = %device.id(),
+                        error = %e,
+                        "Handler failed"
+                    );
+                    e
+                })?;
+
+                Ok(())
+            }
+            None => {
+                tracing::warn!(
+                    opcode = packet.opcode(),
+                    device_id = %device.id(),
+                    "No handler registered for packet type"
+                );
+                Ok(()) // Not an error, just no handler registered
+            }
+        }
     }
 }
 
@@ -64,4 +83,3 @@ impl Default for HandlerRegistry {
         Self::new()
     }
 }
-
