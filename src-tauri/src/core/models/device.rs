@@ -16,19 +16,6 @@ pub struct DeviceInfo {
 }
 
 impl DeviceInfo {
-    pub fn new(model: String, serial: String, ip: String) -> Self {
-        let now = Utc::now();
-        Self {
-            id: Uuid::new_v4(),
-            model,
-            serial,
-            ip,
-            connected_at: now,
-            last_seen: now,
-            custom_name: None,
-        }
-    }
-
     pub fn with_id(id: Uuid, model: String, serial: String, ip: String) -> Self {
         let now = Utc::now();
         Self {

@@ -27,8 +27,8 @@ impl PacketHandler for PingResponseHandler {
     async fn handle(
         &self,
         device: &Arc<DeviceConnection>,
-        mut src: &mut (dyn Read + Send),
-        mut _dst: &mut (dyn Write + Send),
+        src: &mut (dyn Read + Send),
+        _dst: &mut (dyn Write + Send),
     ) -> Result<()> {
         let timestamp = src.read_u64::<byteorder::BigEndian>()?;
 

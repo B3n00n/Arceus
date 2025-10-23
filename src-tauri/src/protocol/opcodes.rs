@@ -21,8 +21,7 @@ pub const INSTALLED_APPS_RESPONSE: u8 = 0x12;
 pub const PING_RESPONSE: u8 = 0x13;
 pub const APK_INSTALL_RESPONSE: u8 = 0x14;
 pub const UNINSTALL_APP_RESPONSE: u8 = 0x15;
-pub const SHUTDOWN_RESPONSE: u8 = 0x16;
-pub const VOLUME_SET_RESPONSE: u8 = 0x17;
+pub const VOLUME_SET_RESPONSE: u8 = 0x16;
 
 // =============================================================================
 // SERVER → CLIENT (Commands from server) - 0x40-0x4B

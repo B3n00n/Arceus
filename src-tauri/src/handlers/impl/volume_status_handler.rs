@@ -27,8 +27,8 @@ impl PacketHandler for VolumeStatusHandler {
     async fn handle(
         &self,
         device: &Arc<DeviceConnection>,
-        mut src: &mut (dyn Read + Send),
-        mut _dst: &mut (dyn Write + Send),
+        src: &mut (dyn Read + Send),
+        _dst: &mut (dyn Write + Send),
     ) -> Result<()> {
         let percentage = src.read_u8()?;
         let current = src.read_u8()?;

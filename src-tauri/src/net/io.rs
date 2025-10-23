@@ -1,29 +1,5 @@
 use byteorder::{ReadBytesExt, WriteBytesExt};
 use std::io::{ErrorKind, Read, Write};
-use thiserror::Error;
-
-#[derive(Debug, Error)]
-pub enum PacketReadError {
-    #[error("invalid opcode `{0}`")]
-    InvalidOpcode(u8),
-    #[error("read error")]
-    ReadError(#[from] std::io::Error),
-    #[error("connection closed")]
-    StreamClosed,
-}
-
-pub trait ProtocolReadable {
-    fn read<T>(src: &mut T) -> Result<Self, PacketReadError>
-    where
-        T: std::io::Read + byteorder::ReadBytesExt,
-        Self: Sized;
-}
-
-pub trait ProtocolWritable {
-    fn write<T>(&self, dst: &mut T) -> anyhow::Result<()>
-    where
-        T: Write + WriteBytesExt;
-}
 
 pub trait ProtocolWriteExt {
     fn write_string<T: AsRef<str>>(&mut self, text: T) -> Result<(), std::io::Error>;

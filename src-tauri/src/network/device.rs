@@ -64,10 +64,6 @@ impl DeviceConnection {
         self.id
     }
 
-    pub fn event_bus(&self) -> &Arc<EventBus> {
-        &self.event_bus
-    }
-
     pub fn serial(&self) -> String {
         self.state.read().info.serial.clone()
     }

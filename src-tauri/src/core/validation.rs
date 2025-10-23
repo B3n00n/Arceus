@@ -1,15 +1,7 @@
-use super::error::{ArceusError, HandlerError};
-
-/// Trait for types that can validate themselves
-pub trait Validatable {
-    fn validate(&self) -> Result<(), ArceusError>;
-}
-
-/// Command parameter validation utilities
+/// Command validation utilities for user input
 pub struct CommandValidator;
 
 impl CommandValidator {
-    /// Validate volume level (Meta Quest supports 0-100)
     pub fn validate_volume_level(level: u8) -> Result<(), String> {
         const MAX_VOLUME: u8 = 100;
         if level > MAX_VOLUME {
@@ -21,7 +13,6 @@ impl CommandValidator {
         Ok(())
     }
 
-    /// Validate shell command (basic safety checks)
     pub fn validate_shell_command(cmd: &str) -> Result<(), String> {
         if cmd.trim().is_empty() {
             return Err("Shell command cannot be empty".to_string());
@@ -68,40 +59,6 @@ impl CommandValidator {
                 "Invalid filename: '{}'. Cannot contain path separators or '..'",
                 filename
             ));
-        }
-        Ok(())
-    }
-}
-
-// Implement Validatable for domain models
-impl Validatable for crate::core::VolumeInfo {
-    fn validate(&self) -> Result<(), ArceusError> {
-        if self.volume_percentage > 100 {
-            return Err(HandlerError::InvalidPayload(format!(
-                "Volume percentage {} > 100",
-                self.volume_percentage
-            ))
-            .into());
-        }
-        if self.max_volume > 0 && self.current_volume > self.max_volume {
-            return Err(HandlerError::InvalidPayload(format!(
-                "Current volume {} > max volume {}",
-                self.current_volume, self.max_volume
-            ))
-            .into());
-        }
-        Ok(())
-    }
-}
-
-impl Validatable for crate::core::BatteryInfo {
-    fn validate(&self) -> Result<(), ArceusError> {
-        if self.headset_level > 100 {
-            return Err(HandlerError::InvalidPayload(format!(
-                "Battery level {} > 100",
-                self.headset_level
-            ))
-            .into());
         }
         Ok(())
     }
