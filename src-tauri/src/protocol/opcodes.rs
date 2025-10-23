@@ -10,7 +10,6 @@ pub const DEVICE_CONNECTED: u8 = 0x01;
 pub const HEARTBEAT: u8 = 0x02;
 pub const BATTERY_STATUS: u8 = 0x03;
 pub const VOLUME_STATUS: u8 = 0x04;
-pub const ERROR: u8 = 0x05;
 
 // =============================================================================
 // CLIENT → SERVER (Responses to server commands) - 0x10-0x17
@@ -33,7 +32,6 @@ pub const LAUNCH_APP: u8 = 0x40;
 pub const EXECUTE_SHELL: u8 = 0x41;
 pub const REQUEST_BATTERY: u8 = 0x42;
 pub const REQUEST_INSTALLED_APPS: u8 = 0x43;
-pub const REQUEST_DEVICE_INFO: u8 = 0x44;
 pub const PING: u8 = 0x45;
 pub const INSTALL_APK: u8 = 0x46;
 pub const INSTALL_LOCAL_APK: u8 = 0x47;

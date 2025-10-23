@@ -9,9 +9,9 @@ pub trait Validatable {
 pub struct CommandValidator;
 
 impl CommandValidator {
-    /// Validate volume level (Meta Quest supports 0-15)
+    /// Validate volume level (Meta Quest supports 0-100)
     pub fn validate_volume_level(level: u8) -> Result<(), String> {
-        const MAX_VOLUME: u8 = 15;
+        const MAX_VOLUME: u8 = 100;
         if level > MAX_VOLUME {
             return Err(format!(
                 "Volume level {} out of range (0-{})",

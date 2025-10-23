@@ -1,4 +1,5 @@
 use crate::core::error::Result;
+use crate::core::CommandResult;
 use crate::handlers::PacketHandler;
 use crate::net::ProtocolReadExt;
 use crate::network::DeviceConnection;
@@ -26,7 +27,7 @@ impl PacketHandler for UninstallAppResponseHandler {
 
     async fn handle(
         &self,
-        _device: &Arc<DeviceConnection>,
+        device: &Arc<DeviceConnection>,
         mut src: &mut (dyn Read + Send),
         mut _dst: &mut (dyn Write + Send),
     ) -> Result<()> {
@@ -35,8 +36,10 @@ impl PacketHandler for UninstallAppResponseHandler {
 
         if success {
             tracing::info!("Uninstall succeeded: {}", message);
+            device.add_command_result(CommandResult::success("uninstall_app", message));
         } else {
             tracing::warn!("Uninstall failed: {}", message);
+            device.add_command_result(CommandResult::failure("uninstall_app", message));
         }
 
         Ok(())

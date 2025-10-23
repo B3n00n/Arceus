@@ -1,4 +1,5 @@
 use crate::core::error::Result;
+use crate::core::CommandResult;
 use crate::handlers::PacketHandler;
 use crate::net::ProtocolReadExt;
 use crate::network::DeviceConnection;
@@ -26,7 +27,7 @@ impl PacketHandler for ShutdownResponseHandler {
 
     async fn handle(
         &self,
-        _device: &Arc<DeviceConnection>,
+        device: &Arc<DeviceConnection>,
         mut src: &mut (dyn Read + Send),
         mut _dst: &mut (dyn Write + Send),
     ) -> Result<()> {
@@ -35,8 +36,10 @@ impl PacketHandler for ShutdownResponseHandler {
 
         if success {
             tracing::info!("Shutdown initiated: {}", message);
+            device.add_command_result(CommandResult::success("shutdown", message));
         } else {
             tracing::warn!("Shutdown failed: {}", message);
+            device.add_command_result(CommandResult::failure("shutdown", message));
         }
 
         Ok(())

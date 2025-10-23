@@ -1,7 +1,7 @@
 use crate::core::{
     BatteryInfo, CommandResult, DeviceInfo, DeviceState, EventBus, Result, VolumeInfo,
 };
-use crate::protocol::{ClientPacket, ClientPacketCodec, RawPacket, RawPacketCodec, ServerPacket};
+use crate::protocol::{RawPacket, RawPacketCodec};
 use futures::{SinkExt, StreamExt};
 use parking_lot::RwLock;
 use std::net::SocketAddr;
@@ -224,36 +224,6 @@ impl DeviceConnection {
         result
     }
 
-    /// Legacy method - kept for compatibility
-    #[deprecated(note = "Use send_raw_packet instead")]
-    pub async fn send_packet(&self, packet: ServerPacket) -> Result<()> {
-        // Convert ServerPacket to RawPacket
-        let mut buffer = Vec::new();
-        use crate::net::io::ProtocolWritable;
-        packet.write(&mut buffer).map_err(|e| {
-            crate::core::error::ArceusError::Protocol(
-                crate::core::error::ProtocolError::MalformedPacket(format!("{}", e))
-            )
-        })?;
-
-        // Extract opcode and payload
-        let opcode = packet.opcode();
-        let payload = buffer[3..].to_vec(); // Skip opcode + length
-
-        self.send_raw_packet(RawPacket::new(opcode, payload)).await
-    }
-
-    /// Legacy method - kept for compatibility
-    #[deprecated(note = "Use receive_raw_packet instead")]
-    pub async fn receive_packet(&self) -> Result<Option<ClientPacket>> {
-        // This should not be used anymore
-        Err(crate::core::error::ArceusError::Protocol(
-            crate::core::error::ProtocolError::MalformedPacket(
-                "receive_packet is deprecated, use receive_raw_packet".to_string()
-            )
-        ))
-    }
-
     // =============================================================================
     // High-level command methods (using raw packets!)
     // =============================================================================
@@ -289,12 +259,6 @@ impl DeviceConnection {
     pub async fn request_installed_apps(&self) -> Result<()> {
         use crate::protocol::opcodes;
         self.send_raw_packet(RawPacket::empty(opcodes::REQUEST_INSTALLED_APPS))
-            .await
-    }
-
-    pub async fn request_device_info(&self) -> Result<()> {
-        use crate::protocol::opcodes;
-        self.send_raw_packet(RawPacket::empty(opcodes::REQUEST_DEVICE_INFO))
             .await
     }
 

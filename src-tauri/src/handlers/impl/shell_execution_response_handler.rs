@@ -1,4 +1,5 @@
 use crate::core::error::Result;
+use crate::core::CommandResult;
 use crate::handlers::PacketHandler;
 use crate::net::ProtocolReadExt;
 use crate::network::DeviceConnection;
@@ -26,7 +27,7 @@ impl PacketHandler for ShellExecutionResponseHandler {
 
     async fn handle(
         &self,
-        _device: &Arc<DeviceConnection>,
+        device: &Arc<DeviceConnection>,
         mut src: &mut (dyn Read + Send),
         mut _dst: &mut (dyn Write + Send),
     ) -> Result<()> {
@@ -36,6 +37,18 @@ impl PacketHandler for ShellExecutionResponseHandler {
 
         tracing::info!("Shell execution (exit {}): {}", exit_code, if success { "success" } else { "failed" });
         tracing::debug!("Output: {}", output);
+
+        let message = if output.len() > 100 {
+            format!("{}... (exit code: {})", &output[..100], exit_code)
+        } else {
+            format!("{} (exit code: {})", output, exit_code)
+        };
+
+        if success {
+            device.add_command_result(CommandResult::success("shell_execution", message));
+        } else {
+            device.add_command_result(CommandResult::failure("shell_execution", message));
+        }
 
         Ok(())
     }

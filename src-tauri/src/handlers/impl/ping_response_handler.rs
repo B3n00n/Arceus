@@ -1,4 +1,5 @@
 use crate::core::error::Result;
+use crate::core::CommandResult;
 use crate::handlers::PacketHandler;
 use crate::network::DeviceConnection;
 use crate::protocol::opcodes;
@@ -25,7 +26,7 @@ impl PacketHandler for PingResponseHandler {
 
     async fn handle(
         &self,
-        _device: &Arc<DeviceConnection>,
+        device: &Arc<DeviceConnection>,
         mut src: &mut (dyn Read + Send),
         mut _dst: &mut (dyn Write + Send),
     ) -> Result<()> {
@@ -39,6 +40,7 @@ impl PacketHandler for PingResponseHandler {
         let latency = now.saturating_sub(timestamp);
 
         tracing::info!("Ping response: {}ms latency", latency);
+        device.add_command_result(CommandResult::success("ping", format!("Latency: {}ms", latency)));
 
         Ok(())
     }
