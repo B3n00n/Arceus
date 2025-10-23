@@ -1,8 +1,8 @@
-use crate::core::models::device;
 use crate::core::{
     BatteryInfo, CommandResult, DeviceInfo, DeviceState, EventBus, Result, VolumeInfo,
 };
 use crate::protocol::{RawPacket, RawPacketCodec};
+use crate::storage::DeviceNamesStore;
 use futures::{SinkExt, StreamExt};
 use parking_lot::RwLock;
 use std::net::SocketAddr;
@@ -20,11 +20,17 @@ pub struct DeviceConnection {
         Arc<Mutex<futures::stream::SplitSink<Framed<TcpStream, RawPacketCodec>, RawPacket>>>,
     state: Arc<RwLock<DeviceState>>,
     event_bus: Arc<EventBus>,
+    device_names_store: Arc<DeviceNamesStore>,
     addr: SocketAddr,
 }
 
 impl DeviceConnection {
-    pub fn new(stream: TcpStream, addr: SocketAddr, event_bus: Arc<EventBus>) -> Self {
+    pub fn new(
+        stream: TcpStream,
+        addr: SocketAddr,
+        event_bus: Arc<EventBus>,
+        device_names_store: Arc<DeviceNamesStore>,
+    ) -> Self {
         let id = Uuid::new_v4();
         let framed = Framed::new(stream, RawPacketCodec);
 
@@ -45,6 +51,7 @@ impl DeviceConnection {
             write_stream: Arc::new(Mutex::new(write)),
             state: Arc::new(RwLock::new(state)),
             event_bus,
+            device_names_store,
             addr,
         }
     }
@@ -76,8 +83,13 @@ impl DeviceConnection {
     pub fn update_device_info(&self, model: String, serial: String) {
         let mut state = self.state.write();
         state.info.model = model;
-        state.info.serial = serial;
+        state.info.serial = serial.clone();
         state.info.update_last_seen();
+
+        // Load custom name from database if it exists
+        if let Some(custom_name) = self.device_names_store.get_name(&serial) {
+            state.info.custom_name = Some(custom_name);
+        }
 
         tracing::info!(
             "Device {} ({}) connected from {}",
@@ -86,7 +98,7 @@ impl DeviceConnection {
             self.addr
         );
 
-        // Emit device connected event
+        // Emit device connected event with custom name included
         let device_state = state.clone();
         drop(state); // Release the write lock before emitting
         self.event_bus.device_connected(device_state);

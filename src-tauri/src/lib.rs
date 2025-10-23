@@ -86,7 +86,6 @@ pub fn run() {
             handler_registry.register(Arc::new(PingResponseHandler::new()));
             handler_registry.register(Arc::new(ApkInstallResponseHandler::new()));
             handler_registry.register(Arc::new(UninstallAppResponseHandler::new()));
-            handler_registry.register(Arc::new(ShutdownResponseHandler::new()));
             handler_registry.register(Arc::new(VolumeSetResponseHandler::new()));
 
             let handler_registry = Arc::new(handler_registry);
@@ -96,6 +95,7 @@ pub fn run() {
                 Arc::clone(&connection_manager),
                 Arc::clone(&handler_registry),
                 Arc::clone(&event_bus),
+                Arc::clone(&device_names_store),
             ));
 
             let http_server = Arc::new(HttpServer::new(
