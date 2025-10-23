@@ -1,3 +1,4 @@
+use crate::core::models::device;
 use crate::core::{
     BatteryInfo, CommandResult, DeviceInfo, DeviceState, EventBus, Result, VolumeInfo,
 };
@@ -84,6 +85,11 @@ impl DeviceConnection {
             state.info.serial,
             self.addr
         );
+
+        // Emit device connected event
+        let device_state = state.clone();
+        drop(state); // Release the write lock before emitting
+        self.event_bus.device_connected(device_state);
     }
 
     pub fn update_last_seen(&self) {

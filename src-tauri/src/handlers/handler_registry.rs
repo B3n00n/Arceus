@@ -24,16 +24,6 @@ impl HandlerRegistry {
         self.handlers.insert(opcode, handler);
     }
 
-    /// Handle an incoming packet by dispatching to the appropriate handler
-    ///
-    /// # Arguments
-    /// * `device` - The device connection this packet came from
-    /// * `opcode` - The packet opcode
-    /// * `src` - Reader positioned at the start of the payload
-    /// * `dst` - Writer for the response packet
-    ///
-    /// # Returns
-    /// Ok(()) if handled successfully, Err if no handler found or handler failed
     pub async fn handle(
         &self,
         device: &Arc<crate::network::DeviceConnection>,

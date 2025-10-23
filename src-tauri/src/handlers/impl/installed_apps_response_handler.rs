@@ -38,6 +38,7 @@ impl PacketHandler for InstalledAppsResponseHandler {
         }
 
         tracing::info!("Received {} installed apps", count);
+        tracing::info!("Installed apps: {}", apps.join(", "));
         device.update_installed_apps(apps);
 
         Ok(())
