@@ -1,7 +1,6 @@
 use super::{ConnectionManager, DeviceConnection};
-use crate::core::{error::NetworkError, BatteryInfo, EventBus, Result, ServerConfig, VolumeInfo};
+use crate::core::{error::NetworkError, EventBus, Result, ServerConfig};
 use crate::handlers::HandlerRegistry;
-use crate::protocol::ClientPacket;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
@@ -118,7 +117,6 @@ impl TcpServer {
 
     async fn message_loop(&self, device: Arc<DeviceConnection>) -> Result<()> {
         let heartbeat_timeout = Duration::from_secs(self.config.heartbeat_timeout);
-        let mut device_connected = false;
         let device_id = device.id();
 
         let span = tracing::debug_span!("message_loop", device_id = %device_id);
@@ -130,16 +128,13 @@ impl TcpServer {
         );
 
         loop {
-            let packet_result = timeout(heartbeat_timeout, device.receive_packet()).await;
+            let packet_result = timeout(heartbeat_timeout, device.receive_raw_packet()).await;
 
             match packet_result {
                 Ok(Ok(Some(packet))) => {
                     device.update_last_seen();
 
-                    if let Err(e) = self
-                        .handle_packet(&device, packet, &mut device_connected)
-                        .await
-                    {
+                    if let Err(e) = self.handle_packet(&device, packet).await {
                         tracing::error!(error = %e, "Error handling packet");
                     }
                 }
@@ -168,63 +163,18 @@ impl TcpServer {
     async fn handle_packet(
         &self,
         device: &Arc<DeviceConnection>,
-        packet: ClientPacket,
-        device_connected: &mut bool,
+        packet: crate::protocol::RawPacket,
     ) -> Result<()> {
-        use crate::protocol::client_packet as cp;
+        tracing::debug!(opcode = packet.opcode, "Received packet");
 
-        tracing::debug!(opcode = packet.opcode(), "Received packet");
+        // Create a cursor from payload for reading
+        let mut src = std::io::Cursor::new(packet.payload);
+        // Dummy dst for handlers that might write responses (currently unused)
+        let mut dst = Vec::new();
 
-        match packet {
-            // Handle DeviceConnected first
-            ClientPacket::DeviceConnected(cp::DeviceConnected { model, serial }) => {
-                if !*device_connected {
-                    tracing::info!(model = %model, serial = %serial, "Device connected");
-
-                    device.update_device_info(model, serial);
-                    *device_connected = true;
-
-                    self.event_bus.device_connected(device.get_state());
-                }
-                Ok(())
-            }
-
-            // Heartbeat - just update last seen (already done above)
-            ClientPacket::Heartbeat(_) => {
-                tracing::trace!("Heartbeat received");
-                Ok(())
-            }
-
-            // Battery status update
-            ClientPacket::BatteryStatus(cp::BatteryStatus { level, is_charging }) => {
-                let battery = BatteryInfo::new(level, is_charging);
-                device.update_battery(battery);
-                Ok(())
-            }
-
-            // Volume status update
-            ClientPacket::VolumeStatus(cp::VolumeStatus {
-                percentage,
-                current,
-                max,
-            }) => {
-                let volume = VolumeInfo::new(percentage, current, max);
-                device.update_volume(volume);
-                Ok(())
-            }
-
-            // Error from client
-            ClientPacket::Error(cp::Error { message }) => {
-                tracing::warn!(device = %device.serial(), error = %message, "Client error");
-                Ok(())
-            }
-
-            // All other packets are handled by the handler registry
-            _ => {
-                self.handler_registry
-                    .handle_packet(device, packet)
-                    .await
-            }
-        }
+        // Dispatch to handler registry
+        self.handler_registry
+            .handle(device, packet.opcode, &mut src, &mut dst)
+            .await
     }
 }

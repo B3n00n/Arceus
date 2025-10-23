@@ -1,7 +1,7 @@
 use crate::core::{
     BatteryInfo, CommandResult, DeviceInfo, DeviceState, EventBus, Result, VolumeInfo,
 };
-use crate::protocol::{ClientPacket, ClientPacketCodec, ServerPacket};
+use crate::protocol::{ClientPacket, ClientPacketCodec, RawPacket, RawPacketCodec, ServerPacket};
 use futures::{SinkExt, StreamExt};
 use parking_lot::RwLock;
 use std::net::SocketAddr;
@@ -14,9 +14,9 @@ use uuid::Uuid;
 /// Represents a connected Quest device
 pub struct DeviceConnection {
     id: Uuid,
-    read_stream: Arc<Mutex<futures::stream::SplitStream<Framed<TcpStream, ClientPacketCodec>>>>,
+    read_stream: Arc<Mutex<futures::stream::SplitStream<Framed<TcpStream, RawPacketCodec>>>>,
     write_stream:
-        Arc<Mutex<futures::stream::SplitSink<Framed<TcpStream, ClientPacketCodec>, ServerPacket>>>,
+        Arc<Mutex<futures::stream::SplitSink<Framed<TcpStream, RawPacketCodec>, RawPacket>>>,
     state: Arc<RwLock<DeviceState>>,
     event_bus: Arc<EventBus>,
     addr: SocketAddr,
@@ -25,7 +25,7 @@ pub struct DeviceConnection {
 impl DeviceConnection {
     pub fn new(stream: TcpStream, addr: SocketAddr, event_bus: Arc<EventBus>) -> Self {
         let id = Uuid::new_v4();
-        let framed = Framed::new(stream, ClientPacketCodec);
+        let framed = Framed::new(stream, RawPacketCodec);
 
         let (write, read) = framed.split();
 
@@ -119,6 +119,17 @@ impl DeviceConnection {
         self.event_bus.volume_updated(self.id, volume);
     }
 
+    pub fn update_installed_apps(&self, apps: Vec<String>) {
+        tracing::debug!(
+            "Device {} updated installed apps: {} apps",
+            self.serial(),
+            apps.len()
+        );
+
+        // Emit event to frontend
+        self.event_bus.installed_apps_received(self.id, apps);
+    }
+
     pub fn add_command_result(&self, result: CommandResult) {
         let mut state = self.state.write();
         state.add_command_result(result.clone());
@@ -162,12 +173,12 @@ impl DeviceConnection {
     // Low-level send/receive methods
     // =============================================================================
 
-    /// Send a server packet to the device
-    pub async fn send_packet(&self, packet: ServerPacket) -> Result<()> {
+    /// Send a raw packet to the device
+    pub async fn send_raw_packet(&self, packet: RawPacket) -> Result<()> {
         let mut write_stream = self.write_stream.lock().await;
 
         tracing::debug!(
-            opcode = packet.opcode(),
+            opcode = packet.opcode,
             device_id = %self.id,
             serial = %self.serial(),
             "Sending packet"
@@ -195,8 +206,8 @@ impl DeviceConnection {
         Ok(())
     }
 
-    /// Receive a client packet from the device
-    pub async fn receive_packet(&self) -> Result<Option<ClientPacket>> {
+    /// Receive a raw packet from the device
+    pub async fn receive_raw_packet(&self) -> Result<Option<RawPacket>> {
         tracing::trace!(device_id = %self.id, "Waiting for packet");
         let mut read_stream = self.read_stream.lock().await;
         let result = read_stream.next().await.transpose().map_err(|e| {
@@ -213,97 +224,150 @@ impl DeviceConnection {
         result
     }
 
+    /// Legacy method - kept for compatibility
+    #[deprecated(note = "Use send_raw_packet instead")]
+    pub async fn send_packet(&self, packet: ServerPacket) -> Result<()> {
+        // Convert ServerPacket to RawPacket
+        let mut buffer = Vec::new();
+        use crate::net::io::ProtocolWritable;
+        packet.write(&mut buffer).map_err(|e| {
+            crate::core::error::ArceusError::Protocol(
+                crate::core::error::ProtocolError::MalformedPacket(format!("{}", e))
+            )
+        })?;
+
+        // Extract opcode and payload
+        let opcode = packet.opcode();
+        let payload = buffer[3..].to_vec(); // Skip opcode + length
+
+        self.send_raw_packet(RawPacket::new(opcode, payload)).await
+    }
+
+    /// Legacy method - kept for compatibility
+    #[deprecated(note = "Use receive_raw_packet instead")]
+    pub async fn receive_packet(&self) -> Result<Option<ClientPacket>> {
+        // This should not be used anymore
+        Err(crate::core::error::ArceusError::Protocol(
+            crate::core::error::ProtocolError::MalformedPacket(
+                "receive_packet is deprecated, use receive_raw_packet".to_string()
+            )
+        ))
+    }
+
     // =============================================================================
-    // High-level command methods (type-safe!)
+    // High-level command methods (using raw packets!)
     // =============================================================================
 
     pub async fn launch_app(&self, package_name: &str) -> Result<()> {
-        use crate::protocol::server_packet::LaunchApp;
-        self.send_packet(ServerPacket::LaunchApp(LaunchApp {
-            package_name: package_name.to_string(),
-        }))
-        .await
+        use crate::net::ProtocolWriteExt;
+        use crate::protocol::opcodes;
+
+        let mut payload = Vec::new();
+        payload.write_string(package_name)?;
+
+        self.send_raw_packet(RawPacket::new(opcodes::LAUNCH_APP, payload))
+            .await
     }
 
     pub async fn execute_shell(&self, command: &str) -> Result<()> {
-        use crate::protocol::server_packet::ExecuteShell;
-        self.send_packet(ServerPacket::ExecuteShell(ExecuteShell {
-            command: command.to_string(),
-        }))
-        .await
+        use crate::net::ProtocolWriteExt;
+        use crate::protocol::opcodes;
+
+        let mut payload = Vec::new();
+        payload.write_string(command)?;
+
+        self.send_raw_packet(RawPacket::new(opcodes::EXECUTE_SHELL, payload))
+            .await
     }
 
     pub async fn request_battery(&self) -> Result<()> {
-        use crate::protocol::server_packet::RequestBattery;
-        self.send_packet(ServerPacket::RequestBattery(RequestBattery))
+        use crate::protocol::opcodes;
+        self.send_raw_packet(RawPacket::empty(opcodes::REQUEST_BATTERY))
             .await
     }
 
     pub async fn request_installed_apps(&self) -> Result<()> {
-        use crate::protocol::server_packet::RequestInstalledApps;
-        self.send_packet(ServerPacket::RequestInstalledApps(
-            RequestInstalledApps,
-        ))
-        .await
+        use crate::protocol::opcodes;
+        self.send_raw_packet(RawPacket::empty(opcodes::REQUEST_INSTALLED_APPS))
+            .await
     }
 
     pub async fn request_device_info(&self) -> Result<()> {
-        use crate::protocol::server_packet::RequestDeviceInfo;
-        self.send_packet(ServerPacket::RequestDeviceInfo(RequestDeviceInfo))
+        use crate::protocol::opcodes;
+        self.send_raw_packet(RawPacket::empty(opcodes::REQUEST_DEVICE_INFO))
             .await
     }
 
     pub async fn ping(&self) -> Result<()> {
-        use crate::protocol::server_packet::Ping;
+        use crate::protocol::opcodes;
+        use byteorder::WriteBytesExt;
+
         let timestamp = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
             .as_millis() as u64;
 
-        self.send_packet(ServerPacket::Ping(Ping { timestamp }))
+        let mut payload = Vec::new();
+        payload.write_u64::<byteorder::BigEndian>(timestamp)?;
+
+        self.send_raw_packet(RawPacket::new(opcodes::PING, payload))
             .await
     }
 
     pub async fn install_apk(&self, url: &str) -> Result<()> {
-        use crate::protocol::server_packet::InstallApk;
-        self.send_packet(ServerPacket::InstallApk(InstallApk {
-            url: url.to_string(),
-        }))
-        .await
+        use crate::net::ProtocolWriteExt;
+        use crate::protocol::opcodes;
+
+        let mut payload = Vec::new();
+        payload.write_string(url)?;
+
+        self.send_raw_packet(RawPacket::new(opcodes::INSTALL_APK, payload))
+            .await
     }
 
     pub async fn install_local_apk(&self, filename: &str) -> Result<()> {
-        use crate::protocol::server_packet::InstallLocalApk;
-        self.send_packet(ServerPacket::InstallLocalApk(InstallLocalApk {
-            filename: filename.to_string(),
-        }))
-        .await
+        use crate::net::ProtocolWriteExt;
+        use crate::protocol::opcodes;
+
+        let mut payload = Vec::new();
+        payload.write_string(filename)?;
+
+        self.send_raw_packet(RawPacket::new(opcodes::INSTALL_LOCAL_APK, payload))
+            .await
     }
 
     pub async fn shutdown(&self) -> Result<()> {
-        use crate::protocol::server_packet::Shutdown;
-        self.send_packet(ServerPacket::Shutdown(Shutdown)).await
+        use crate::protocol::opcodes;
+        self.send_raw_packet(RawPacket::empty(opcodes::SHUTDOWN))
+            .await
     }
 
     pub async fn uninstall_app(&self, package_name: &str) -> Result<()> {
-        use crate::protocol::server_packet::UninstallApp;
-        self.send_packet(ServerPacket::UninstallApp(UninstallApp {
-            package_name: package_name.to_string(),
-        }))
-        .await
+        use crate::net::ProtocolWriteExt;
+        use crate::protocol::opcodes;
+
+        let mut payload = Vec::new();
+        payload.write_string(package_name)?;
+
+        self.send_raw_packet(RawPacket::new(opcodes::UNINSTALL_APP, payload))
+            .await
     }
 
     pub async fn set_volume(&self, level: u8) -> Result<()> {
-        use crate::protocol::server_packet::SetVolume;
-        self.send_packet(ServerPacket::SetVolume(SetVolume {
-            level: level.min(100),
-        }))
-        .await
+        use crate::protocol::opcodes;
+        use byteorder::WriteBytesExt;
+
+        let mut payload = Vec::new();
+        payload.write_u8(level.min(100))?;
+
+        self.send_raw_packet(RawPacket::new(opcodes::SET_VOLUME, payload))
+            .await
     }
 
     pub async fn get_volume(&self) -> Result<()> {
-        use crate::protocol::server_packet::GetVolume;
-        self.send_packet(ServerPacket::GetVolume(GetVolume)).await
+        use crate::protocol::opcodes;
+        self.send_raw_packet(RawPacket::empty(opcodes::GET_VOLUME))
+            .await
     }
 
     // Legacy alias methods for compatibility with service layer

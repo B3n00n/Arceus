@@ -16,10 +16,7 @@ use commands::{
 };
 
 use core::{AppConfig, EventBus};
-use handlers::{
-    ApkInstallHandler, HandlerRegistry, InstalledAppsHandler, LaunchAppHandler, PingHandler,
-    ShellExecutionHandler, ShutdownHandler, UninstallAppHandler, VolumeSetHandler,
-};
+use handlers::HandlerRegistry;
 use network::{ConnectionManager, HttpServer, TcpServer};
 use services::{update_service::create_update_service, ApkService, BatteryMonitor, DeviceService};
 use storage::DeviceNamesStore;
@@ -76,15 +73,21 @@ pub fn run() {
                 Arc::new(ConnectionManager::new(config.server.max_connections));
 
             let mut handler_registry = HandlerRegistry::new();
-            handler_registry
-                .register(LaunchAppHandler::new())
-                .register(ShellExecutionHandler::new())
-                .register(InstalledAppsHandler::new())
-                .register(PingHandler::new())
-                .register(ApkInstallHandler::new())
-                .register(UninstallAppHandler::new())
-                .register(ShutdownHandler::new())
-                .register(VolumeSetHandler::new());
+
+            // Register all response handlers
+            use handlers::r#impl::*;
+            handler_registry.register(Arc::new(DeviceConnectedHandler::new()));
+            handler_registry.register(Arc::new(HeartbeatHandler::new()));
+            handler_registry.register(Arc::new(BatteryStatusHandler::new()));
+            handler_registry.register(Arc::new(VolumeStatusHandler::new()));
+            handler_registry.register(Arc::new(LaunchAppResponseHandler::new()));
+            handler_registry.register(Arc::new(ShellExecutionResponseHandler::new()));
+            handler_registry.register(Arc::new(InstalledAppsResponseHandler::new()));
+            handler_registry.register(Arc::new(PingResponseHandler::new()));
+            handler_registry.register(Arc::new(ApkInstallResponseHandler::new()));
+            handler_registry.register(Arc::new(UninstallAppResponseHandler::new()));
+            handler_registry.register(Arc::new(ShutdownResponseHandler::new()));
+            handler_registry.register(Arc::new(VolumeSetResponseHandler::new()));
 
             let handler_registry = Arc::new(handler_registry);
 
