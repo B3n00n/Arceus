@@ -12,7 +12,7 @@ pub const BATTERY_STATUS: u8 = 0x03;
 pub const VOLUME_STATUS: u8 = 0x04;
 
 // =============================================================================
-// CLIENT → SERVER (Responses to server commands) - 0x10-0x17
+// CLIENT → SERVER (Responses to server commands) - 0x10-0x16
 // =============================================================================
 
 pub const LAUNCH_APP_RESPONSE: u8 = 0x10;
