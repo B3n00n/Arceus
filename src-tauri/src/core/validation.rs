@@ -21,30 +21,6 @@ impl CommandValidator {
         Ok(())
     }
 
-    /// Validate Android package name format
-    pub fn validate_package_name(name: &str) -> Result<(), String> {
-        if name.is_empty() {
-            return Err("Package name cannot be empty".to_string());
-        }
-        if !name.contains('.') {
-            return Err(format!(
-                "Invalid package name format: '{}'. Expected format: com.example.app",
-                name
-            ));
-        }
-        // Android package names must be lowercase and contain only alphanumeric, dots, and underscores
-        if !name
-            .chars()
-            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '.' || c == '_')
-        {
-            return Err(format!(
-                "Invalid package name: '{}'. Must contain only lowercase letters, digits, dots, and underscores",
-                name
-            ));
-        }
-        Ok(())
-    }
-
     /// Validate shell command (basic safety checks)
     pub fn validate_shell_command(cmd: &str) -> Result<(), String> {
         if cmd.trim().is_empty() {

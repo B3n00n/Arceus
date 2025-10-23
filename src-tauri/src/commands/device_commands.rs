@@ -38,7 +38,6 @@ pub async fn launch_app(
     package_name: String,
     device_service: State<'_, Arc<DeviceService>>,
 ) -> std::result::Result<(), String> {
-    CommandValidator::validate_package_name(&package_name)?;
     let ids = parse_device_ids(device_ids)?;
     device_service
         .launch_app(ids, package_name)
@@ -52,7 +51,6 @@ pub async fn uninstall_app(
     package_name: String,
     device_service: State<'_, Arc<DeviceService>>,
 ) -> std::result::Result<(), String> {
-    CommandValidator::validate_package_name(&package_name)?;
     let ids = parse_device_ids(device_ids)?;
     device_service
         .uninstall_app(ids, package_name)
