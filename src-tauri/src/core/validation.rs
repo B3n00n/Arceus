@@ -17,7 +17,6 @@ impl CommandValidator {
         if cmd.trim().is_empty() {
             return Err("Shell command cannot be empty".to_string());
         }
-        // Warn about potentially dangerous commands (but don't block them)
         let dangerous_patterns = ["rm -rf", "dd if=", "mkfs", "format"];
         for pattern in dangerous_patterns {
             if cmd.contains(pattern) {

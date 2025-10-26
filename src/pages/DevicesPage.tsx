@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Slider } from '@/components/ui/slider';
 import {
   Grid3x3,
   List,
@@ -64,6 +65,7 @@ export function DevicesPage() {
   const [dialogType, setDialogType] = useState<string>('');
   const [dialogInput, setDialogInput] = useState('');
   const [dialogSearch, setDialogSearch] = useState('');
+  const [volumeValue, setVolumeValue] = useState(50);
 
   // Selection states for dialogs
   const [selectedApp, setSelectedApp] = useState<string | null>(null);
@@ -177,7 +179,7 @@ export function DevicesPage() {
   };
 
   const executeSimpleCommand = async () => {
-    if (!dialogInput.trim()) {
+    if (dialogType !== 'volume' && !dialogInput.trim()) {
       toast.error('Please enter a value');
       return;
     }
@@ -196,12 +198,7 @@ export function DevicesPage() {
           toast.success('Shell command sent');
           break;
         case 'volume':
-          const vol = parseInt(dialogInput);
-          if (isNaN(vol) || vol < 0 || vol > 100) {
-            toast.error('Volume must be 0-100');
-            return;
-          }
-          await DeviceService.setVolume(selectedIds, vol);
+          await DeviceService.setVolume(selectedIds, volumeValue);
           break;
         case 'remote-apk':
           await DeviceService.installRemoteApk(selectedIds, dialogInput);
@@ -393,14 +390,26 @@ export function DevicesPage() {
       </div>
 
       {/* Right: Command Panel */}
-      {hasSelection && (
-        <div className="w-80 border-l border-discord-dark-2 bg-discord-dark-3 flex flex-col">
-          <div className="p-4 border-b border-discord-dark-2">
-            <h3 className="font-semibold text-white">Commands</h3>
-            <p className="text-xs text-gray-400 mt-1">
-              {selectedDeviceIds.size} device{selectedDeviceIds.size > 1 ? 's' : ''} selected
-            </p>
+      <div className="w-80 border-l border-discord-dark-2 bg-discord-dark-3 flex flex-col">
+        <div className="p-4 border-b border-discord-dark-2">
+          <h3 className="font-semibold text-white">Commands</h3>
+          <p className="text-xs text-gray-400 mt-1">
+            {hasSelection
+              ? `${selectedDeviceIds.size} device${selectedDeviceIds.size > 1 ? 's' : ''} selected`
+              : 'No device selected'}
+          </p>
+        </div>
+
+        {!hasSelection ? (
+          <div className="flex-1 flex items-center justify-center p-6">
+            <div className="text-center">
+              <p className="text-gray-400 text-sm">
+                Select a device to execute commands
+              </p>
+            </div>
           </div>
+        ) : (
+          <>
 
           {/* Tab Switcher */}
           <div className="flex border-b border-discord-dark-2">
@@ -597,8 +606,9 @@ export function DevicesPage() {
               </>
             )}
           </div>
-        </div>
-      )}
+          </>
+        )}
+      </div>
 
       {/* Simple Input Dialog */}
       {showSimpleInputDialog && (
@@ -624,27 +634,43 @@ export function DevicesPage() {
                   {dialogType === 'volume' && 'Volume Level (0-100)'}
                   {dialogType === 'remote-apk' && 'APK URL'}
                 </label>
-                <Input
-                  value={dialogInput}
-                  onChange={(e) => setDialogInput(e.target.value)}
-                  placeholder={
-                    (dialogType === 'launch-manual' || dialogType === 'uninstall-manual') ? 'com.example.app' :
-                    dialogType === 'shell' ? 'ls -la' :
-                    dialogType === 'volume' ? '50' :
-                    'https://example.com/app.apk'
-                  }
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') executeSimpleCommand();
-                    if (e.key === 'Escape') setShowSimpleInputDialog(false);
-                  }}
-                  autoFocus
-                />
+                {dialogType === 'volume' ? (
+                  <div className="space-y-3">
+                    <Slider
+                      min={0}
+                      max={100}
+                      value={volumeValue}
+                      onValueChange={setVolumeValue}
+                      className="w-full"
+                    />
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-400">0</span>
+                      <span className="text-lg font-semibold text-white">{volumeValue}%</span>
+                      <span className="text-xs text-gray-400">100</span>
+                    </div>
+                  </div>
+                ) : (
+                  <Input
+                    value={dialogInput}
+                    onChange={(e) => setDialogInput(e.target.value)}
+                    placeholder={
+                      (dialogType === 'launch-manual' || dialogType === 'uninstall-manual') ? 'com.example.app' :
+                      dialogType === 'shell' ? 'ls -la' :
+                      'https://example.com/app.apk'
+                    }
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') executeSimpleCommand();
+                      if (e.key === 'Escape') setShowSimpleInputDialog(false);
+                    }}
+                    autoFocus
+                  />
+                )}
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 justify-between">
                 <Button
+                  variant="outline"
                   onClick={executeSimpleCommand}
-                  disabled={loading || !dialogInput.trim()}
-                  className="flex-1"
+                  disabled={loading || (dialogType !== 'volume' && !dialogInput.trim())}
                 >
                   Execute
                 </Button>
@@ -712,15 +738,15 @@ export function DevicesPage() {
                 )}
               </div>
             </CardContent>
-            <div className="p-4 border-t border-discord-dark flex gap-2">
+            <div className="p-4 border-t border-discord-dark flex gap-2 justify-between">
               <Button
+                variant="outline"
                 onClick={() => {
                   if (selectedApp) {
                     executeAppCommand(selectedApp);
                   }
                 }}
                 disabled={loading || !selectedApp}
-                className="flex-1"
               >
                 {dialogType === 'launch' ? 'Launch' : 'Uninstall'}
               </Button>
@@ -785,15 +811,15 @@ export function DevicesPage() {
                 )}
               </div>
             </CardContent>
-            <div className="p-4 border-t border-discord-dark flex gap-2">
+            <div className="p-4 border-t border-discord-dark flex gap-2 justify-between">
               <Button
+                variant="outline"
                 onClick={async () => {
                   if (selectedApk) {
                     await executeApkInstall(selectedApk);
                   }
                 }}
                 disabled={loading || !selectedApk}
-                className="flex-1"
               >
                 Install
               </Button>
@@ -915,7 +941,7 @@ function DeviceCard({ device, isSelected, onToggle }: DeviceCardProps) {
                   </div>
                 ) : (
                   <>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-1">
                       <h3 className="font-semibold text-white">
                         {device.info.custom_name || device.info.model}
                       </h3>
@@ -929,7 +955,7 @@ function DeviceCard({ device, isSelected, onToggle }: DeviceCardProps) {
                         <Pencil className="h-3 w-3" />
                       </button>
                     </div>
-                    <Badge variant={device.is_connected ? 'success' : 'secondary'} className="text-xs">
+                    <Badge variant={device.is_connected ? 'success' : 'secondary'} className="text-xs ml-auto">
                       {device.is_connected ? 'Online' : 'Offline'}
                     </Badge>
                   </>
@@ -940,7 +966,6 @@ function DeviceCard({ device, isSelected, onToggle }: DeviceCardProps) {
               )}
             </div>
           </div>
-          <div className={`h-2 w-2 rounded-full ${getStatusColor(device.is_connected)} ${device.is_connected ? 'pulse-dot' : ''}`} />
         </div>
       </CardHeader>
       <CardContent className="space-y-2">
