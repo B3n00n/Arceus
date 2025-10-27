@@ -1,26 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Slider } from '@/components/ui/slider';
 import {
   Grid3x3,
   List,
-  Battery,
-  Wifi,
-  Volume2,
   RefreshCw,
-  Power,
   CheckSquare,
   Square,
-  Trash2,
-  PlayCircle,
-  Terminal,
-  Download,
-  Upload,
-  Search,
-  FileText,
   FolderOpen,
 } from 'lucide-react';
 import { useDeviceStore } from '@/stores/deviceStore';
@@ -31,10 +16,11 @@ import { cn } from '@/lib/cn';
 import { toast } from '@/lib/toast';
 import type { ApkInfo } from '@/types/apk.types';
 import type { ArceusEvent } from '@/types/events.types';
-import { DialogOverlay } from '@/components/dialogs/DialogOverlay';
-import { DeviceCard } from '@/components/devices/DeviceCard';
-
-type CommandTab = 'standard' | 'dev';
+import { DeviceList } from '@/components/devices/DeviceList';
+import { CommandPanel } from '@/components/devices/CommandPanel';
+import { SimpleInputDialog } from '@/components/dialogs/SimpleInputDialog';
+import { AppListDialog } from '@/components/dialogs/AppListDialog';
+import { ApkListDialog } from '@/components/dialogs/ApkListDialog';
 
 export function DevicesPage() {
   const {
@@ -52,7 +38,6 @@ export function DevicesPage() {
   const setDevices = useDeviceStore((state) => state.setDevices);
 
   const [loading, setLoading] = useState(false);
-  const [commandTab, setCommandTab] = useState<CommandTab>('standard');
 
   // Dialog states
   const [showSimpleInputDialog, setShowSimpleInputDialog] = useState(false);
@@ -61,12 +46,7 @@ export function DevicesPage() {
 
   const [dialogType, setDialogType] = useState<string>('');
   const [dialogInput, setDialogInput] = useState('');
-  const [dialogSearch, setDialogSearch] = useState('');
-  const [volumeValue, setVolumeValue] = useState(50);
-
-  // Selection states for dialogs
-  const [selectedApp, setSelectedApp] = useState<string | null>(null);
-  const [selectedApk, setSelectedApk] = useState<ApkInfo | null>(null);
+  const [volumeValue] = useState(50);
 
   // Data states
   const [installedApps, setInstalledApps] = useState<string[]>([]);
@@ -141,8 +121,6 @@ export function DevicesPage() {
     setLoading(true);
     setInstalledApps([]);
     setDialogType(type);
-    setDialogSearch('');
-    setSelectedApp(null);
     setShowAppListDialog(true);
 
     try {
@@ -160,8 +138,6 @@ export function DevicesPage() {
     }
 
     await loadApks();
-    setDialogSearch('');
-    setSelectedApk(null);
     setShowApkListDialog(true);
   };
 
@@ -175,8 +151,11 @@ export function DevicesPage() {
     setShowSimpleInputDialog(true);
   };
 
-  const executeSimpleCommand = async () => {
-    if (dialogType !== 'volume' && !dialogInput.trim()) {
+  const executeSimpleCommand = async (input: string | number) => {
+    const inputString = typeof input === 'number' ? input.toString() : input;
+    const inputNumber = typeof input === 'number' ? input : 50;
+
+    if (dialogType !== 'volume' && !inputString.trim()) {
       toast.error('Please enter a value');
       return;
     }
@@ -185,20 +164,20 @@ export function DevicesPage() {
     try {
       switch (dialogType) {
         case 'launch-manual':
-          await DeviceService.launchApp(selectedIds, dialogInput);
+          await DeviceService.launchApp(selectedIds, inputString);
           break;
         case 'uninstall-manual':
-          await DeviceService.uninstallApp(selectedIds, dialogInput);
+          await DeviceService.uninstallApp(selectedIds, inputString);
           break;
         case 'shell':
-          await DeviceService.executeShell(selectedIds, dialogInput);
+          await DeviceService.executeShell(selectedIds, inputString);
           toast.success('Shell command sent');
           break;
         case 'volume':
-          await DeviceService.setVolume(selectedIds, volumeValue);
+          await DeviceService.setVolume(selectedIds, inputNumber);
           break;
         case 'remote-apk':
-          await DeviceService.installRemoteApk(selectedIds, dialogInput);
+          await DeviceService.installRemoteApk(selectedIds, inputString);
           break;
       }
       setShowSimpleInputDialog(false);
@@ -219,7 +198,6 @@ export function DevicesPage() {
         await DeviceService.uninstallApp(selectedIds, packageName);
       }
       setShowAppListDialog(false);
-      setSelectedApp(null);
     } catch (error) {
       toast.error(`Command failed: ${error}`);
     } finally {
@@ -232,44 +210,11 @@ export function DevicesPage() {
     try {
       await DeviceService.installLocalApk(selectedIds, apk.filename);
       setShowApkListDialog(false);
-      setSelectedApk(null);
     } catch (error) {
       toast.error(`Install failed: ${error}`);
     } finally {
       setLoading(false);
     }
-  };
-
-  const extractAppName = (packageName: string) => {
-    const parts = packageName.split('.');
-    return parts[parts.length - 1];
-  };
-
-  const getFilteredApps = () => {
-    return installedApps.filter(app => {
-      // Only show CombaticaLTD apps in standard mode
-      if (!app.startsWith('com.CombaticaLTD.')) return false;
-
-      if (dialogSearch) {
-        const appName = extractAppName(app);
-        return appName.toLowerCase().includes(dialogSearch.toLowerCase()) ||
-               app.toLowerCase().includes(dialogSearch.toLowerCase());
-      }
-      return true;
-    });
-  };
-
-  const getFilteredApks = () => {
-    if (!dialogSearch) return availableApks;
-    return availableApks.filter(apk =>
-      apk.filename.toLowerCase().includes(dialogSearch.toLowerCase())
-    );
-  };
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   };
 
   return (
@@ -357,483 +302,54 @@ export function DevicesPage() {
 
         {/* Device Grid/List */}
         <div className="flex-1 overflow-y-auto p-6">
-          {filteredDevices.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full">
-              <Wifi className="h-16 w-16 text-gray-600 mb-4" />
-              <h3 className="text-lg font-semibold text-white mb-2">No devices found</h3>
-              <p className="text-gray-400 text-sm text-center max-w-md">
-                Make sure your Quest devices have SnorlaxClient running
-              </p>
-            </div>
-          ) : (
-            <div
-              className={cn(
-                viewMode === 'grid'
-                  ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'
-                  : 'space-y-3'
-              )}
-            >
-              {filteredDevices.map((device) => (
-                <DeviceCard
-                  key={device.info.id}
-                  device={device}
-                  isSelected={selectedDeviceIds.has(device.info.id)}
-                  onToggle={() => toggleDevice(device.info.id)}
-                />
-              ))}
-            </div>
-          )}
+          <DeviceList
+            devices={filteredDevices}
+            selectedDeviceIds={selectedDeviceIds}
+            viewMode={viewMode}
+            onToggleDevice={toggleDevice}
+          />
         </div>
       </div>
 
       {/* Right: Command Panel */}
-      <div className="w-80 border-l border-discord-dark-2 bg-discord-dark-3 flex flex-col">
-        <div className="p-4 border-b border-discord-dark-2">
-          <h3 className="font-semibold text-white">Commands</h3>
-          <p className="text-xs text-gray-400 mt-1">
-            {hasSelection
-              ? `${selectedDeviceIds.size} device${selectedDeviceIds.size > 1 ? 's' : ''} selected`
-              : 'No device selected'}
-          </p>
-        </div>
+      <CommandPanel
+        selectedDeviceIds={selectedDeviceIds}
+        loading={loading}
+        onOpenAppListDialog={openAppListDialog}
+        onOpenApkPickerDialog={openApkPickerDialog}
+        onOpenSimpleInputDialog={openSimpleInputDialog}
+        onHandleCommand={handleCommand}
+      />
 
-        {!hasSelection ? (
-          <div className="flex-1 flex items-center justify-center p-6">
-            <div className="text-center">
-              <p className="text-gray-400 text-sm">
-                Select a device to execute commands
-              </p>
-            </div>
-          </div>
-        ) : (
-          <>
+      {/* Dialogs */}
+      <SimpleInputDialog
+        isOpen={showSimpleInputDialog}
+        onClose={() => setShowSimpleInputDialog(false)}
+        dialogType={dialogType as 'launch-manual' | 'uninstall-manual' | 'shell' | 'volume' | 'remote-apk'}
+        selectedCount={selectedDeviceIds.size}
+        onExecute={executeSimpleCommand}
+        loading={loading}
+        initialValue={dialogType === 'volume' ? volumeValue : dialogInput}
+      />
 
-          {/* Tab Switcher */}
-          <div className="flex border-b border-discord-dark-2">
-            <button
-              className={cn(
-                'flex-1 px-4 py-2 text-sm font-medium transition-colors',
-                commandTab === 'standard'
-                  ? 'text-white bg-discord-dark-2 border-b-2 border-discord-blurple'
-                  : 'text-gray-400 hover:text-white'
-              )}
-              onClick={() => setCommandTab('standard')}
-            >
-              Standard
-            </button>
-            <button
-              className={cn(
-                'flex-1 px-4 py-2 text-sm font-medium transition-colors',
-                commandTab === 'dev'
-                  ? 'text-white bg-discord-dark-2 border-b-2 border-discord-blurple'
-                  : 'text-gray-400 hover:text-white'
-              )}
-              onClick={() => setCommandTab('dev')}
-            >
-              Developer
-            </button>
-          </div>
+      <AppListDialog
+        isOpen={showAppListDialog}
+        onClose={() => setShowAppListDialog(false)}
+        dialogType={dialogType as 'launch' | 'uninstall'}
+        selectedCount={selectedDeviceIds.size}
+        installedApps={installedApps}
+        onSelectApp={executeAppCommand}
+        loading={loading}
+      />
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {commandTab === 'standard' ? (
-              <>
-                {/* Device Info */}
-                <div>
-                  <p className="text-xs text-gray-400 mb-2 uppercase font-semibold">Device Info</p>
-                  <div className="space-y-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full justify-start"
-                      onClick={() => handleCommand(() => DeviceService.requestBattery(selectedIds), 'Get Battery')}
-                      disabled={loading}
-                    >
-                      <Battery className="h-4 w-4 mr-2" />
-                      Get Battery
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full justify-start"
-                      onClick={() => handleCommand(() => DeviceService.getVolume(selectedIds), 'Get Volume')}
-                      disabled={loading}
-                    >
-                      <Volume2 className="h-4 w-4 mr-2" />
-                      Get Volume
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full justify-start"
-                      onClick={() => handleCommand(() => DeviceService.pingDevices(selectedIds), 'Ping', false)}
-                      disabled={loading}
-                    >
-                      <Wifi className="h-4 w-4 mr-2" />
-                      Ping
-                    </Button>
-                  </div>
-                </div>
-
-                {/* App Management */}
-                <div>
-                  <p className="text-xs text-gray-400 mb-2 uppercase font-semibold">App Management</p>
-                  <div className="space-y-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full justify-start"
-                      onClick={() => openAppListDialog('launch')}
-                      disabled={loading}
-                    >
-                      <PlayCircle className="h-4 w-4 mr-2" />
-                      Launch App
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full justify-start"
-                      onClick={() => openAppListDialog('uninstall')}
-                      disabled={loading}
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Uninstall App
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full justify-start"
-                      onClick={() => openSimpleInputDialog('remote-apk')}
-                      disabled={loading}
-                    >
-                      <Download className="h-4 w-4 mr-2" />
-                      Install from URL
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full justify-start"
-                      onClick={openApkPickerDialog}
-                      disabled={loading}
-                    >
-                      <Upload className="h-4 w-4 mr-2" />
-                      Install Local APK
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Device Control */}
-                <div>
-                  <p className="text-xs text-gray-400 mb-2 uppercase font-semibold">Device Control</p>
-                  <div className="space-y-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full justify-start"
-                      onClick={() => openSimpleInputDialog('volume')}
-                      disabled={loading}
-                    >
-                      <Volume2 className="h-4 w-4 mr-2" />
-                      Set Volume
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full justify-start"
-                      onClick={() => {
-                        if (confirm(`Restart ${selectedDeviceIds.size} device(s)?`)) {
-                          handleCommand(() => DeviceService.restartDevices(selectedIds), 'Restart');
-                        }
-                      }}
-                      disabled={loading}
-                    >
-                      <Power className="h-4 w-4 mr-2" />
-                      Restart Device
-                    </Button>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <>
-                {/* Developer Commands */}
-                <div>
-                  <p className="text-xs text-gray-400 mb-2 uppercase font-semibold">Developer Tools</p>
-                  <div className="space-y-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full justify-start"
-                      onClick={() => handleCommand(() => DeviceService.getInstalledApps(selectedIds), 'Get Apps')}
-                      disabled={loading}
-                    >
-                      <List className="h-4 w-4 mr-2" />
-                      Get Installed Apps
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full justify-start"
-                      onClick={() => openSimpleInputDialog('shell')}
-                      disabled={loading}
-                    >
-                      <Terminal className="h-4 w-4 mr-2" />
-                      Shell Command
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full justify-start"
-                      onClick={() => openSimpleInputDialog('launch-manual')}
-                      disabled={loading}
-                    >
-                      <FileText className="h-4 w-4 mr-2" />
-                      Launch by Package
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full justify-start"
-                      onClick={() => openSimpleInputDialog('uninstall-manual')}
-                      disabled={loading}
-                    >
-                      <FileText className="h-4 w-4 mr-2" />
-                      Uninstall by Package
-                    </Button>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-          </>
-        )}
-      </div>
-
-      {/* Simple Input Dialog */}
-      {showSimpleInputDialog && (
-        <DialogOverlay onClose={() => setShowSimpleInputDialog(false)}>
-          <Card className="bg-discord-dark-2 border-discord-dark w-96">
-            <CardHeader>
-              <h3 className="text-lg font-semibold text-white">
-                {dialogType === 'launch-manual' && 'Launch App by Package'}
-                {dialogType === 'uninstall-manual' && 'Uninstall App by Package'}
-                {dialogType === 'shell' && 'Execute Shell Command'}
-                {dialogType === 'volume' && 'Set Volume'}
-                {dialogType === 'remote-apk' && 'Install APK from URL'}
-              </h3>
-              <p className="text-sm text-gray-400">
-                For {selectedDeviceIds.size} device(s)
-              </p>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <label className="text-sm text-gray-300 mb-2 block">
-                  {(dialogType === 'launch-manual' || dialogType === 'uninstall-manual') && 'Package Name'}
-                  {dialogType === 'shell' && 'Shell Command'}
-                  {dialogType === 'volume' && 'Volume Level (0-100)'}
-                  {dialogType === 'remote-apk' && 'APK URL'}
-                </label>
-                {dialogType === 'volume' ? (
-                  <div className="space-y-3">
-                    <Slider
-                      min={0}
-                      max={100}
-                      value={volumeValue}
-                      onValueChange={setVolumeValue}
-                      className="w-full"
-                    />
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-gray-400">0</span>
-                      <span className="text-lg font-semibold text-white">{volumeValue}%</span>
-                      <span className="text-xs text-gray-400">100</span>
-                    </div>
-                  </div>
-                ) : (
-                  <Input
-                    value={dialogInput}
-                    onChange={(e) => setDialogInput(e.target.value)}
-                    placeholder={
-                      (dialogType === 'launch-manual' || dialogType === 'uninstall-manual') ? 'com.example.app' :
-                      dialogType === 'shell' ? 'ls -la' :
-                      'https://example.com/app.apk'
-                    }
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') executeSimpleCommand();
-                      if (e.key === 'Escape') setShowSimpleInputDialog(false);
-                    }}
-                    autoFocus
-                  />
-                )}
-              </div>
-              <div className="flex gap-2 justify-between">
-                <Button
-                  variant="outline"
-                  onClick={executeSimpleCommand}
-                  disabled={loading || (dialogType !== 'volume' && !dialogInput.trim())}
-                >
-                  Execute
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setShowSimpleInputDialog(false)}
-                  disabled={loading}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </DialogOverlay>
-      )}
-
-      {/* App List Dialog */}
-      {showAppListDialog && (
-        <DialogOverlay onClose={() => {
-          setShowAppListDialog(false);
-          setSelectedApp(null);
-        }}>
-          <Card className="bg-discord-dark-2 border-discord-dark w-[500px] max-h-[600px] flex flex-col">
-            <CardHeader>
-              <h3 className="text-lg font-semibold text-white">
-                {dialogType === 'launch' ? 'Select App to Launch' : 'Select App to Uninstall'}
-              </h3>
-              <p className="text-sm text-gray-400">
-                For {selectedDeviceIds.size} device(s)
-              </p>
-              <div className="relative mt-2">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  value={dialogSearch}
-                  onChange={(e) => setDialogSearch(e.target.value)}
-                  placeholder="Search apps..."
-                  className="pl-10"
-                />
-              </div>
-            </CardHeader>
-            <CardContent className="flex-1 overflow-y-auto p-0">
-              <div className="divide-y divide-discord-dark">
-                {getFilteredApps().map((app) => (
-                  <button
-                    key={app}
-                    className={cn(
-                      "w-full px-6 py-3 text-left hover:bg-discord-dark-3 transition-colors",
-                      selectedApp === app && "bg-discord-blurple/20 border-l-2 border-discord-blurple"
-                    )}
-                    onClick={() => setSelectedApp(app)}
-                    disabled={loading}
-                  >
-                    <p className="text-sm text-white font-medium">{extractAppName(app)}</p>
-                    <p className="text-xs text-gray-400 mt-0.5 font-mono">{app}</p>
-                  </button>
-                ))}
-                {getFilteredApps().length === 0 && (
-                  <div className="px-6 py-8 text-center text-gray-400">
-                    {loading
-                      ? 'Loading apps...'
-                      : installedApps.length === 0
-                      ? 'No apps found'
-                      : 'No CombaticaLTD apps found'}
-                  </div>
-                )}
-              </div>
-            </CardContent>
-            <div className="p-4 border-t border-discord-dark flex gap-2 justify-between">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  if (selectedApp) {
-                    executeAppCommand(selectedApp);
-                  }
-                }}
-                disabled={loading || !selectedApp}
-              >
-                {dialogType === 'launch' ? 'Launch' : 'Uninstall'}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowAppListDialog(false);
-                  setSelectedApp(null);
-                }}
-                disabled={loading}
-              >
-                Cancel
-              </Button>
-            </div>
-          </Card>
-        </DialogOverlay>
-      )}
-
-      {/* APK Picker Dialog */}
-      {showApkListDialog && (
-        <DialogOverlay onClose={() => setShowApkListDialog(false)}>
-          <Card className="bg-discord-dark-2 border-discord-dark w-[500px] max-h-[600px] flex flex-col">
-            <CardHeader>
-              <h3 className="text-lg font-semibold text-white">Select APK to Install</h3>
-              <p className="text-sm text-gray-400">
-                For {selectedDeviceIds.size} device(s)
-              </p>
-              <div className="relative mt-2">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  value={dialogSearch}
-                  onChange={(e) => setDialogSearch(e.target.value)}
-                  placeholder="Search APKs..."
-                  className="pl-10"
-                />
-              </div>
-            </CardHeader>
-            <CardContent className="flex-1 overflow-y-auto p-0">
-              <div className="divide-y divide-discord-dark">
-                {getFilteredApks().map((apk) => (
-                  <button
-                    key={apk.filename}
-                    className={cn(
-                      "w-full px-6 py-3 text-left hover:bg-discord-dark-3 transition-colors",
-                      selectedApk?.filename === apk.filename && "bg-discord-blurple/20 border-l-2 border-discord-blurple"
-                    )}
-                    onClick={() => setSelectedApk(apk)}
-                    disabled={loading}
-                  >
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm text-white font-medium">{apk.filename}</p>
-                      <Badge variant="secondary" className="text-xs">
-                        {formatFileSize(apk.size_bytes)}
-                      </Badge>
-                    </div>
-                  </button>
-                ))}
-                {getFilteredApks().length === 0 && (
-                  <div className="px-6 py-8 text-center text-gray-400">
-                    No APK files found
-                  </div>
-                )}
-              </div>
-            </CardContent>
-            <div className="p-4 border-t border-discord-dark flex gap-2 justify-between">
-              <Button
-                variant="outline"
-                onClick={async () => {
-                  if (selectedApk) {
-                    await executeApkInstall(selectedApk);
-                  }
-                }}
-                disabled={loading || !selectedApk}
-              >
-                Install
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowApkListDialog(false);
-                  setSelectedApk(null);
-                }}
-                disabled={loading}
-              >
-                Cancel
-              </Button>
-            </div>
-          </Card>
-        </DialogOverlay>
-      )}
+      <ApkListDialog
+        isOpen={showApkListDialog}
+        onClose={() => setShowApkListDialog(false)}
+        selectedCount={selectedDeviceIds.size}
+        availableApks={availableApks}
+        onSelectApk={executeApkInstall}
+        loading={loading}
+      />
     </div>
   );
 }
