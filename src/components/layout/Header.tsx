@@ -1,7 +1,6 @@
 import { Bell } from 'lucide-react';
 import { useToastHistoryStore } from '@/stores/toastHistoryStore';
 import { ToastHistory } from '@/components/ToastHistory';
-import { cn } from '@/lib/cn';
 
 export function Header() {
   const { togglePanel, unreadCount } = useToastHistoryStore();
