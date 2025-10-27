@@ -1,5 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use std::collections::VecDeque;
 use uuid::Uuid;
 
 use super::{BatteryInfo, CommandResult, VolumeInfo};
@@ -43,7 +44,7 @@ pub struct DeviceState {
     pub info: DeviceInfo,
     pub battery: Option<BatteryInfo>,
     pub volume: Option<VolumeInfo>,
-    pub command_history: Vec<CommandResult>,
+    pub command_history: VecDeque<CommandResult>,
     pub is_connected: bool,
 }
 
@@ -53,7 +54,7 @@ impl DeviceState {
             info,
             battery: None,
             volume: None,
-            command_history: Vec::new(),
+            command_history: VecDeque::new(),
             is_connected: true,
         }
     }
@@ -61,9 +62,9 @@ impl DeviceState {
     pub fn add_command_result(&mut self, result: CommandResult) {
         const MAX_HISTORY_SIZE: usize = 50;
 
-        self.command_history.insert(0, result);
+        self.command_history.push_front(result);
         if self.command_history.len() > MAX_HISTORY_SIZE {
-            self.command_history.truncate(MAX_HISTORY_SIZE);
+            self.command_history.pop_back();
         }
     }
 
