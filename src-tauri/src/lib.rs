@@ -85,6 +85,7 @@ pub fn run() {
             handler_registry.register(Arc::new(InstalledAppsResponseHandler::new()));
             handler_registry.register(Arc::new(PingResponseHandler::new()));
             handler_registry.register(Arc::new(ApkInstallResponseHandler::new()));
+            handler_registry.register(Arc::new(ApkDownloadStartedHandler::new()));
             handler_registry.register(Arc::new(UninstallAppResponseHandler::new()));
             handler_registry.register(Arc::new(VolumeSetResponseHandler::new()));
 

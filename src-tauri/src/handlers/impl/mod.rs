@@ -7,6 +7,7 @@ mod shell_execution_response_handler;
 mod installed_apps_response_handler;
 mod ping_response_handler;
 mod apk_install_response_handler;
+mod apk_download_started_handler;
 mod uninstall_app_response_handler;
 mod volume_set_response_handler;
 
@@ -19,5 +20,6 @@ pub use shell_execution_response_handler::ShellExecutionResponseHandler;
 pub use installed_apps_response_handler::InstalledAppsResponseHandler;
 pub use ping_response_handler::PingResponseHandler;
 pub use apk_install_response_handler::ApkInstallResponseHandler;
+pub use apk_download_started_handler::ApkDownloadStartedHandler;
 pub use uninstall_app_response_handler::UninstallAppResponseHandler;
 pub use volume_set_response_handler::VolumeSetResponseHandler;
