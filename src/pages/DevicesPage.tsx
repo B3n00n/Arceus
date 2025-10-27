@@ -32,7 +32,7 @@ import { ApkService } from '@/services/apkService';
 import { useTauriEvent } from '@/hooks/useTauriEvent';
 import { formatDate, getBatteryColor, getStatusColor } from '@/lib/formatting';
 import { cn } from '@/lib/cn';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 import type { DeviceState } from '@/types/device.types';
 import type { ApkInfo } from '@/types/apk.types';
 import type { ArceusEvent } from '@/types/events.types';

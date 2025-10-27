@@ -22,7 +22,8 @@ export function MainLayout() {
           <Outlet />
         </main>
       </div>
-      <Toaster theme="dark" position="top-right" richColors />
+      <Toaster theme="dark" position="top-right" richColors offset={{ top: '75px' }}
+ />
     </div>
   );
 }

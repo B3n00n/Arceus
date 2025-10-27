@@ -1,6 +1,6 @@
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import type { ArceusEvent } from '@/types/events.types';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 
 type EventCallback = (event: ArceusEvent) => void;
 
