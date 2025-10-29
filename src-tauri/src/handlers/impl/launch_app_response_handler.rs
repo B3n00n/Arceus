@@ -33,13 +33,20 @@ impl PacketHandler for LaunchAppResponseHandler {
     ) -> Result<()> {
         let success = src.read_u8()? != 0;
         let message = src.read_string()?;
+        let device_name = device.display_name();
 
         if success {
             tracing::info!("Launch app succeeded: {}", message);
-            device.add_command_result(CommandResult::success("launch_app", message));
+            device.add_command_result(CommandResult::success(
+                "launch_app",
+                format!("{}: {}", device_name, message),
+            ));
         } else {
             tracing::warn!("Launch app failed: {}", message);
-            device.add_command_result(CommandResult::failure("launch_app", message));
+            device.add_command_result(CommandResult::failure(
+                "launch_app",
+                format!("{}: {}", device_name, message),
+            ));
         }
 
         Ok(())

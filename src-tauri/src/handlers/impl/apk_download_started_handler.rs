@@ -32,11 +32,12 @@ impl PacketHandler for ApkDownloadStartedHandler {
         mut _dst: &mut (dyn Write + Send),
     ) -> Result<()> {
         let filename_or_url = src.read_string()?;
+        let device_name = device.display_name();
 
         tracing::info!("APK download started: {}", filename_or_url);
         device.add_command_result(CommandResult::success(
             "install_apk",
-            format!("Download started: {}", filename_or_url),
+            format!("{}: Download started", device_name),
         ));
 
         Ok(())

@@ -91,12 +91,12 @@ export const useDeviceStore = create<DeviceStoreState>((set, get) => ({
         device.info.model.toLowerCase().includes(searchQuery.toLowerCase()) ||
         device.info.serial.toLowerCase().includes(searchQuery.toLowerCase()) ||
         device.info.ip.includes(searchQuery) ||
-        (device.info.custom_name?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
+        (device.info.customName?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
 
       const matchesStatus =
         filterStatus === 'all' ||
-        (filterStatus === 'connected' && device.is_connected) ||
-        (filterStatus === 'disconnected' && !device.is_connected);
+        (filterStatus === 'connected' && device.isConnected) ||
+        (filterStatus === 'disconnected' && !device.isConnected);
 
       return matchesSearch && matchesStatus;
     });
@@ -127,7 +127,7 @@ eventService.subscribe((event) => {
           ...device,
           info: {
             ...device.info,
-            custom_name: event.newName,
+            customName: event.newName,
           }
         });
       }

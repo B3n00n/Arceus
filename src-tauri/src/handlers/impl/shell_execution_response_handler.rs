@@ -34,14 +34,15 @@ impl PacketHandler for ShellExecutionResponseHandler {
         let success = src.read_u8()? != 0;
         let output = src.read_string()?;
         let exit_code = src.read_i32::<byteorder::BigEndian>()?;
+        let device_name = device.display_name();
 
         tracing::info!("Shell execution (exit {}): {}", exit_code, if success { "success" } else { "failed" });
         tracing::debug!("Output: {}", output);
 
         let message = if output.len() > 100 {
-            format!("{}... (exit code: {})", &output[..100], exit_code)
+            format!("{}: {}... (exit code: {})", device_name, &output[..100], exit_code)
         } else {
-            format!("{} (exit code: {})", output, exit_code)
+            format!("{}: {} (exit code: {})", device_name, output, exit_code)
         };
 
         if success {

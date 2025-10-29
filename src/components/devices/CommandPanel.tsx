@@ -193,7 +193,7 @@ export function CommandPanel({
                       className="w-full justify-start"
                       onClick={() => {
                         if (confirm(`Restart ${selectedDeviceIds.size} device(s)?`)) {
-                          onHandleCommand(() => DeviceService.restartDevices(selectedIds), 'Restart');
+                          onHandleCommand(() => DeviceService.restartDevices(selectedIds), 'Restart', false);
                         }
                       }}
                       disabled={loading}

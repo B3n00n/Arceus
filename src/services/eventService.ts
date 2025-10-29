@@ -37,7 +37,8 @@ class EventService {
   private handleNotifications(event: ArceusEvent) {
     switch (event.type) {
       case 'deviceConnected':
-        toast.success(`${event.device.info.model} connected`);
+        const deviceName = event.device.info.customName || 'Quest';
+        toast.success(`${deviceName}: Connected`);
         break;
 
       case 'deviceDisconnected':
@@ -51,9 +52,9 @@ class EventService {
 
       case 'commandExecuted':
         if (event.result.success) {
-          toast.success(`${event.result.commandType}: ${event.result.message}`);
+          toast.success(event.result.message);
         } else {
-          toast.error(`${event.result.commandType} failed: ${event.result.message}`);
+          toast.error(event.result.message);
         }
         break;
 

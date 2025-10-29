@@ -33,13 +33,20 @@ impl PacketHandler for UninstallAppResponseHandler {
     ) -> Result<()> {
         let success = src.read_u8()? != 0;
         let message = src.read_string()?;
+        let device_name = device.display_name();
 
         if success {
             tracing::info!("Uninstall succeeded: {}", message);
-            device.add_command_result(CommandResult::success("uninstall_app", message));
+            device.add_command_result(CommandResult::success(
+                "uninstall_app",
+                format!("{}: {}", device_name, message),
+            ));
         } else {
             tracing::warn!("Uninstall failed: {}", message);
-            device.add_command_result(CommandResult::failure("uninstall_app", message));
+            device.add_command_result(CommandResult::failure(
+                "uninstall_app",
+                format!("{}: {}", device_name, message),
+            ));
         }
 
         Ok(())

@@ -33,13 +33,20 @@ impl PacketHandler for ApkInstallResponseHandler {
     ) -> Result<()> {
         let success = src.read_u8()? != 0;
         let message = src.read_string()?;
+        let device_name = device.display_name();
 
         if success {
             tracing::info!("APK install succeeded: {}", message);
-            device.add_command_result(CommandResult::success("install_apk", message));
+            device.add_command_result(CommandResult::success(
+                "install_apk",
+                format!("{}: {}", device_name, message),
+            ));
         } else {
             tracing::warn!("APK install failed: {}", message);
-            device.add_command_result(CommandResult::failure("install_apk", message));
+            device.add_command_result(CommandResult::failure(
+                "install_apk",
+                format!("{}: {}", device_name, message),
+            ));
         }
 
         Ok(())

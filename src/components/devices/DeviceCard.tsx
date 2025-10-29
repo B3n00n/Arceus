@@ -18,13 +18,13 @@ interface DeviceCardProps {
 
 export function DeviceCard({ device, isSelected, onToggle }: DeviceCardProps) {
   const [isEditingName, setIsEditingName] = useState(false);
-  const [editedName, setEditedName] = useState(device.info.custom_name || '');
+  const [editedName, setEditedName] = useState(device.info.customName || '');
   const [isSavingName, setIsSavingName] = useState(false);
   const setDevices = useDeviceStore((state) => state.setDevices);
 
   useEffect(() => {
-    setEditedName(device.info.custom_name || '');
-  }, [device.info.custom_name]);
+    setEditedName(device.info.customName || '');
+  }, [device.info.customName]);
 
   const handleSaveName = async () => {
     if (isSavingName) return;
@@ -45,7 +45,7 @@ export function DeviceCard({ device, isSelected, onToggle }: DeviceCardProps) {
   };
 
   const handleCancelEdit = () => {
-    setEditedName(device.info.custom_name || '');
+    setEditedName(device.info.customName || '');
     setIsEditingName(false);
   };
 
@@ -102,7 +102,7 @@ export function DeviceCard({ device, isSelected, onToggle }: DeviceCardProps) {
                   <>
                     <div className="flex items-center gap-2 flex-1">
                       <h3 className="font-semibold text-white">
-                        {device.info.custom_name || device.info.model}
+                        {device.info.customName || device.info.model}
                       </h3>
                       <button
                         onClick={(e) => {
@@ -114,8 +114,8 @@ export function DeviceCard({ device, isSelected, onToggle }: DeviceCardProps) {
                         <Pencil className="h-3 w-3" />
                       </button>
                     </div>
-                    <Badge variant={device.is_connected ? 'success' : 'secondary'} className="text-xs ml-auto">
-                      {device.is_connected ? 'Online' : 'Offline'}
+                    <Badge variant={device.isConnected ? 'success' : 'secondary'} className="text-xs ml-auto">
+                      {device.isConnected ? 'Online' : 'Offline'}
                     </Badge>
                   </>
                 )}
@@ -136,35 +136,35 @@ export function DeviceCard({ device, isSelected, onToggle }: DeviceCardProps) {
           <div className="flex items-center justify-between text-xs">
             <span className="text-gray-400">Battery</span>
             <div className="flex items-center gap-1">
-              <span className={cn('font-medium', getBatteryColor(device.battery.headset_level))}>
-                {device.battery.headset_level}%
+              <span className={cn('font-medium', getBatteryColor(device.battery.headsetLevel))}>
+                {device.battery.headsetLevel}%
               </span>
-              {device.battery.is_charging && <span className="text-yellow-500 text-sm">⚡</span>}
+              {device.battery.isCharging && <span className="text-yellow-500 text-sm">⚡</span>}
             </div>
           </div>
         )}
         {device.volume && (
           <div className="flex items-center justify-between text-xs">
             <span className="text-gray-400">Volume</span>
-            <span className="text-gray-300">{device.volume.volume_percentage}%</span>
+            <span className="text-gray-300">{device.volume.volumePercentage}%</span>
           </div>
         )}
         <div className="flex items-center justify-between text-xs">
           <span className="text-gray-400">Last Seen</span>
-          <span className="text-gray-300">{formatDate(device.info.last_seen)}</span>
+          <span className="text-gray-300">{formatDate(device.info.lastSeen)}</span>
         </div>
-        {device.command_history.length > 0 && (
+        {device.commandHistory.length > 0 && (
           <div className="pt-2 border-t border-discord-dark">
             <div className="text-xs text-gray-400 mb-1">Last Command</div>
             <div
               className={cn(
                 'text-xs p-1.5 rounded bg-discord-dark-3',
-                device.command_history[0].success ? 'text-green-400' : 'text-red-400'
+                device.commandHistory[0].success ? 'text-green-400' : 'text-red-400'
               )}
             >
-              <span className="font-medium">{device.command_history[0].command_type}</span>
+              <span className="font-medium">{device.commandHistory[0].commandType}</span>
               <br />
-              <span className="text-gray-400">{device.command_history[0].message}</span>
+              <span className="text-gray-400">{device.commandHistory[0].message}</span>
             </div>
           </div>
         )}

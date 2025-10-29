@@ -1,12 +1,12 @@
 use crate::core::{DeviceState, Result};
-use crate::network::ConnectionManager;
+use crate::network::{ConnectionManager, DeviceNameManager};
 use crate::storage::DeviceNamesStore;
 use std::sync::Arc;
 use uuid::Uuid;
 
 pub struct DeviceService {
     connection_manager: Arc<ConnectionManager>,
-    device_names_store: Arc<DeviceNamesStore>,
+    device_manager: Arc<DeviceNameManager>,
 }
 
 impl DeviceService {
@@ -14,9 +14,11 @@ impl DeviceService {
         connection_manager: Arc<ConnectionManager>,
         device_names_store: Arc<DeviceNamesStore>,
     ) -> Self {
+        let device_manager = Arc::new(DeviceNameManager::new(device_names_store));
+
         Self {
             connection_manager,
-            device_names_store,
+            device_manager,
         }
     }
 
@@ -24,9 +26,7 @@ impl DeviceService {
         let mut devices = self.connection_manager.get_all_states();
 
         for device in &mut devices {
-            if let Some(name) = self.device_names_store.get_name(&device.info.serial) {
-                device.info.custom_name = Some(name);
-            }
+            device.info.custom_name = self.device_manager.load_custom_name(&device.info.serial);
         }
 
         devices
@@ -36,22 +36,23 @@ impl DeviceService {
         let device = self.connection_manager.get(id)?;
         let mut state = device.get_state();
 
-        if let Some(name) = self.device_names_store.get_name(&state.info.serial) {
-            state.info.custom_name = Some(name);
-        }
+        state.info.custom_name = self.device_manager.load_custom_name(&state.info.serial);
 
         Some(state)
     }
 
     pub fn set_device_name(&self, serial: String, name: Option<String>) -> Result<()> {
-        if let Some(ref n) = name {
-            self.device_names_store.set_name(serial.clone(), n.clone())?;
-        } else {
-            self.device_names_store.remove_name(&serial)?;
-        }
+        tracing::info!("Setting device name for serial {}: {:?}", serial, name);
 
-        if let Some(device) = self.connection_manager.get_by_serial(&serial) {
+        // Save to database via DeviceManager
+        self.device_manager.set_custom_name(serial.clone(), name.clone())?;
+
+        // Update the live device connection if it exists
+        if let Some(device) = self.connection_manager.find_by_serial(&serial) {
+            tracing::info!("Found device with serial {}, updating custom name", serial);
             device.set_custom_name(name);
+        } else {
+            tracing::warn!("Device with serial {} not found in connection manager", serial);
         }
 
         Ok(())

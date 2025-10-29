@@ -1,4 +1,4 @@
-use super::{ConnectionManager, DeviceConnection};
+use super::{ConnectionManager, DeviceConnection, DeviceNameManager};
 use crate::core::{error::NetworkError, EventBus, Result, ServerConfig};
 use crate::handlers::HandlerRegistry;
 use crate::storage::DeviceNamesStore;
@@ -14,7 +14,7 @@ pub struct TcpServer {
     connection_manager: Arc<ConnectionManager>,
     handler_registry: Arc<HandlerRegistry>,
     event_bus: Arc<EventBus>,
-    device_names_store: Arc<DeviceNamesStore>,
+    device_manager: Arc<DeviceNameManager>,
     running: Arc<RwLock<bool>>,
 }
 
@@ -26,12 +26,14 @@ impl TcpServer {
         event_bus: Arc<EventBus>,
         device_names_store: Arc<DeviceNamesStore>,
     ) -> Self {
+        let device_manager = Arc::new(DeviceNameManager::new(device_names_store));
+
         Self {
             config,
             connection_manager,
             handler_registry,
             event_bus,
-            device_names_store,
+            device_manager,
             running: Arc::new(RwLock::new(false)),
         }
     }
@@ -93,7 +95,7 @@ impl TcpServer {
             stream,
             addr,
             Arc::clone(&self.event_bus),
-            Arc::clone(&self.device_names_store),
+            Arc::clone(&self.device_manager),
         ));
 
         let device_id = device.id();

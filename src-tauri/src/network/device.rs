@@ -2,7 +2,7 @@ use crate::core::{
     BatteryInfo, CommandResult, DeviceInfo, DeviceState, EventBus, Result, VolumeInfo,
 };
 use crate::protocol::{RawPacket, RawPacketCodec};
-use crate::storage::DeviceNamesStore;
+use super::device_name_manager::DeviceNameManager;
 use futures::{SinkExt, StreamExt};
 use parking_lot::RwLock;
 use std::net::SocketAddr;
@@ -20,7 +20,7 @@ pub struct DeviceConnection {
         Arc<Mutex<futures::stream::SplitSink<Framed<TcpStream, RawPacketCodec>, RawPacket>>>,
     state: Arc<RwLock<DeviceState>>,
     event_bus: Arc<EventBus>,
-    device_names_store: Arc<DeviceNamesStore>,
+    device_manager: Arc<DeviceNameManager>,
     addr: SocketAddr,
 }
 
@@ -29,7 +29,7 @@ impl DeviceConnection {
         stream: TcpStream,
         addr: SocketAddr,
         event_bus: Arc<EventBus>,
-        device_names_store: Arc<DeviceNamesStore>,
+        device_manager: Arc<DeviceNameManager>,
     ) -> Self {
         let id = Uuid::new_v4();
         let framed = Framed::new(stream, RawPacketCodec);
@@ -39,7 +39,7 @@ impl DeviceConnection {
         let device_info = DeviceInfo::with_id(
             id,
             "Unknown".to_string(),
-            id.to_string(),
+            "".to_string(), // Empty serial until handshake
             addr.ip().to_string(),
         );
 
@@ -51,7 +51,7 @@ impl DeviceConnection {
             write_stream: Arc::new(Mutex::new(write)),
             state: Arc::new(RwLock::new(state)),
             event_bus,
-            device_names_store,
+            device_manager,
             addr,
         }
     }
@@ -72,6 +72,17 @@ impl DeviceConnection {
         self.state.read().clone()
     }
 
+    /// Returns the display name for this device.
+    /// Returns custom name if set, otherwise "Quest"
+    pub fn display_name(&self) -> String {
+        let state = self.state.read();
+        state
+            .info
+            .custom_name
+            .clone()
+            .unwrap_or_else(|| self.device_manager.get_display_name(&state.info.serial))
+    }
+
     // =============================================================================
     // State update methods
     // =============================================================================
@@ -82,16 +93,18 @@ impl DeviceConnection {
         state.info.serial = serial.clone();
         state.info.update_last_seen();
 
-        // Load custom name from database if it exists
-        if let Some(custom_name) = self.device_names_store.get_name(&serial) {
-            state.info.custom_name = Some(custom_name);
-        }
+        // Ensure device is registered in the database
+        self.device_manager.ensure_device_registered(&serial);
+
+        // Load custom name from DeviceManager
+        state.info.custom_name = self.device_manager.load_custom_name(&serial);
 
         tracing::info!(
-            "Device {} ({}) connected from {}",
+            "Device {} ({}) connected from {} with name: {:?}",
             state.info.model,
             state.info.serial,
-            self.addr
+            self.addr,
+            state.info.custom_name
         );
 
         // Emit device connected event with custom name included
@@ -164,7 +177,7 @@ impl DeviceConnection {
         state.info.set_custom_name(name.clone());
 
         tracing::info!(
-            "Device {} custom name set to: {:?}",
+            "Device {} custom name updated to: {:?}",
             state.info.serial,
             name
         );
@@ -354,6 +367,14 @@ impl DeviceConnection {
     }
 
     pub async fn restart(&self) -> Result<()> {
+        let device_name = self.display_name();
+
+        // Add command result immediately since shutdown doesn't send a response
+        self.add_command_result(CommandResult::success(
+            "restart",
+            format!("{}: Restarting", device_name),
+        ));
+
         self.shutdown().await
     }
 

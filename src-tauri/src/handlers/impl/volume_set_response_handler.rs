@@ -33,13 +33,20 @@ impl PacketHandler for VolumeSetResponseHandler {
     ) -> Result<()> {
         let success = src.read_u8()? != 0;
         let message = src.read_string()?;
+        let device_name = device.display_name();
 
         if success {
             tracing::info!("Volume set successfully: {}", message);
-            device.add_command_result(CommandResult::success("set_volume", message));
+            device.add_command_result(CommandResult::success(
+                "set_volume",
+                format!("{}: {}", device_name, message),
+            ));
         } else {
             tracing::warn!("Volume set failed: {}", message);
-            device.add_command_result(CommandResult::failure("set_volume", message));
+            device.add_command_result(CommandResult::failure(
+                "set_volume",
+                format!("{}: {}", device_name, message),
+            ));
         }
 
         Ok(())

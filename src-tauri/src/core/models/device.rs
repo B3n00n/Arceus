@@ -6,6 +6,7 @@ use uuid::Uuid;
 use super::{BatteryInfo, CommandResult, VolumeInfo};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct DeviceInfo {
     pub id: Uuid,
     pub model: String,
@@ -40,6 +41,7 @@ impl DeviceInfo {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct DeviceState {
     pub info: DeviceInfo,
     pub battery: Option<BatteryInfo>,

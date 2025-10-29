@@ -38,9 +38,13 @@ impl PacketHandler for PingResponseHandler {
             .as_millis() as u64;
 
         let latency = now.saturating_sub(timestamp);
+        let device_name = device.display_name();
 
         tracing::info!("Ping response: {}ms latency", latency);
-        device.add_command_result(CommandResult::success("ping", format!("Latency: {}ms", latency)));
+        device.add_command_result(CommandResult::success(
+            "ping",
+            format!("{}: Pinged!", device_name),
+        ));
 
         Ok(())
     }
