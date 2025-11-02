@@ -1,5 +1,5 @@
+use crate::application::services::update_service::UpdateService;
 use crate::core::models::update::UpdateStatus;
-use crate::services::update_service::UpdateService;
 use std::sync::Arc;
 use tauri::{AppHandle, Manager, State};
 use tokio::sync::Mutex;

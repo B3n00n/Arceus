@@ -1,0 +1,658 @@
+/// Packet handler system for processing incoming device packets
+/// Handlers update the device repository based on received packets.
+
+use crate::core::{models::CommandResult, EventBus};
+use crate::domain::models::{Battery, Device, DeviceId, Serial, Volume};
+use crate::domain::repositories::{DeviceNameRepository, DeviceRepository};
+use crate::net::io::ProtocolReadExt;
+use crate::protocol::{opcodes, RawPacket};
+use async_trait::async_trait;
+use byteorder::{BigEndian, ReadBytesExt};
+use std::io::Cursor;
+use std::sync::Arc;
+
+/// Result type for packet handlers
+pub type Result<T> = std::result::Result<T, crate::core::error::ArceusError>;
+
+/// Trait for handling specific packet types
+#[async_trait]
+pub trait PacketHandler: Send + Sync {
+    /// Get the opcode this handler processes
+    fn opcode(&self) -> u8;
+
+    /// Handle a packet
+    async fn handle(&self, device_id: DeviceId, payload: Vec<u8>) -> Result<()>;
+}
+
+/// Registry for packet handlers
+pub struct PacketHandlerRegistry {
+    handlers: std::collections::HashMap<u8, Arc<dyn PacketHandler>>,
+}
+
+impl PacketHandlerRegistry {
+    pub fn new(
+        device_repo: Arc<dyn DeviceRepository>,
+        device_name_repo: Arc<dyn DeviceNameRepository>,
+        event_bus: Arc<EventBus>,
+        session_manager: Arc<crate::infrastructure::network::SessionManager>,
+    ) -> Self {
+        let mut registry = Self {
+            handlers: std::collections::HashMap::new(),
+        };
+
+        // Client initiated packets
+        registry.register(Arc::new(DeviceConnectedHandler::new(
+            device_repo.clone(),
+            device_name_repo.clone(),
+            event_bus.clone(),
+            session_manager.clone(),
+        )));
+        registry.register(Arc::new(HeartbeatHandler::new(device_repo.clone())));
+        registry.register(Arc::new(BatteryStatusHandler::new(
+            device_repo.clone(),
+            event_bus.clone(),
+        )));
+        registry.register(Arc::new(VolumeStatusHandler::new(
+            device_repo.clone(),
+            event_bus.clone(),
+        )));
+
+        // Response handlers
+        registry.register(Arc::new(LaunchAppResponseHandler::new(event_bus.clone())));
+        registry.register(Arc::new(ShellExecutionResponseHandler::new(event_bus.clone())));
+        registry.register(Arc::new(InstalledAppsResponseHandler::new(event_bus.clone())));
+        registry.register(Arc::new(PingResponseHandler::new(event_bus.clone())));
+        registry.register(Arc::new(ApkInstallResponseHandler::new(event_bus.clone())));
+        registry.register(Arc::new(UninstallAppResponseHandler::new(event_bus.clone())));
+        registry.register(Arc::new(VolumeSetResponseHandler::new(event_bus.clone())));
+        registry.register(Arc::new(ApkDownloadStartedHandler::new(event_bus.clone())));
+
+        registry
+    }
+
+    /// Register a packet handler
+    pub fn register(&mut self, handler: Arc<dyn PacketHandler>) {
+        let opcode = handler.opcode();
+        self.handlers.insert(opcode, handler);
+    }
+
+    /// Handle a received packet
+    pub async fn handle(&self, device_id: DeviceId, packet: RawPacket) -> Result<()> {
+        match self.handlers.get(&packet.opcode) {
+            Some(handler) => {
+                handler.handle(device_id, packet.payload).await?;
+                Ok(())
+            }
+            None => {
+                tracing::debug!(
+                    device_id = %device_id,
+                    opcode = packet.opcode,
+                    "No handler registered for opcode"
+                );
+                Ok(())
+            }
+        }
+    }
+}
+
+/// Handles DEVICE_CONNECTED (0x01) packets
+/// Payload: [model: String][serial: String]
+struct DeviceConnectedHandler {
+    device_repo: Arc<dyn DeviceRepository>,
+    device_name_repo: Arc<dyn DeviceNameRepository>,
+    event_bus: Arc<EventBus>,
+    session_manager: Arc<crate::infrastructure::network::SessionManager>,
+}
+
+impl DeviceConnectedHandler {
+    fn new(
+        device_repo: Arc<dyn DeviceRepository>,
+        device_name_repo: Arc<dyn DeviceNameRepository>,
+        event_bus: Arc<EventBus>,
+        session_manager: Arc<crate::infrastructure::network::SessionManager>,
+    ) -> Self {
+        Self {
+            device_repo,
+            device_name_repo,
+            event_bus,
+            session_manager,
+        }
+    }
+}
+
+#[async_trait]
+impl PacketHandler for DeviceConnectedHandler {
+    fn opcode(&self) -> u8 {
+        opcodes::DEVICE_CONNECTED
+    }
+
+    async fn handle(&self, device_id: DeviceId, payload: Vec<u8>) -> Result<()> {
+        let mut cursor = Cursor::new(payload);
+
+        let model = cursor.read_string()?;
+        let serial_str = cursor.read_string()?;
+
+        tracing::info!(
+            device_id = %device_id,
+            model = %model,
+            serial = %serial_str,
+            "Device connected packet received"
+        );
+
+        let serial = Serial::new(serial_str)
+            .map_err(|e| crate::core::error::ArceusError::Other(format!("Invalid serial: {}", e)))?;
+
+        // Check if this device (by serial) already exists in the repository
+        let existing_device = self.device_repo.find_by_serial(&serial).await.ok().flatten();
+
+        // Get the temporary device that was created on TCP connection
+        let temp_device = self.device_repo.find_by_id(device_id).await.ok().flatten();
+
+        let device_to_save = if let Some(mut existing) = existing_device {
+            // Device reconnected - update with new info and mark as connected
+            tracing::info!(
+                existing_id = %existing.id(),
+                temp_id = %device_id,
+                serial = %serial.as_str(),
+                "Device reconnected - using existing device ID"
+            );
+
+            // Move session from temp_id to existing_id
+            if existing.id() != device_id {
+                if let Some(session) = self.session_manager.get_session(&device_id) {
+                    tracing::debug!(
+                        "Moving session from temp_id {} to existing_id {}",
+                        device_id,
+                        existing.id()
+                    );
+                    self.session_manager.remove_session(&device_id);
+                    self.session_manager.add_session(existing.id(), session);
+                }
+
+                // Remove the temporary device entry
+                tracing::debug!("Removing temporary device entry {}", device_id);
+                let _ = self.device_repo.remove(device_id).await;
+            }
+
+            // Update existing device with latest info
+            let ip = temp_device.as_ref().map(|d| d.ip().clone()).unwrap_or_else(|| existing.ip().clone());
+            existing = Device::new(existing.id(), serial.clone(), model.clone(), ip);
+
+            // Restore battery and volume if they existed
+            if let Some(temp) = temp_device.as_ref() {
+                if let Some(battery) = temp.battery() {
+                    existing = existing.with_battery(battery.clone());
+                }
+                if let Some(volume) = temp.volume() {
+                    existing = existing.with_volume(volume.clone());
+                }
+            }
+
+            existing
+        } else if let Some(temp) = temp_device {
+            // New device - update the temporary entry with real info
+            tracing::info!(
+                device_id = %device_id,
+                serial = %serial.as_str(),
+                "New device registered"
+            );
+
+            Device::new(device_id, serial.clone(), model.clone(), temp.ip().clone())
+        } else {
+            // This shouldn't happen, but handle it gracefully
+            tracing::warn!("Device connected packet without prior TCP connection");
+            return Ok(());
+        };
+
+        // Load custom name if exists
+        let custom_name = self.device_name_repo.get_name(&serial).await.ok().flatten();
+        let device_to_save = device_to_save.with_custom_name(custom_name.clone());
+
+        self.device_repo.save(device_to_save.clone()).await?;
+
+        // Emit event with the CORRECT device ID (not the temporary one)
+        let device_info = crate::core::models::device::DeviceInfo {
+            id: device_to_save.id().as_uuid().clone(),
+            model: model.clone(),
+            serial: serial.as_str().to_string(),
+            ip: device_to_save.ip().as_str().to_string(),
+            connected_at: device_to_save.connected_at(),
+            last_seen: device_to_save.last_seen(),
+            custom_name: custom_name,
+        };
+        let device_state = crate::core::models::device::DeviceState {
+            info: device_info,
+            battery: device_to_save.battery().map(|b| crate::core::models::battery::BatteryInfo {
+                headset_level: b.level(),
+                is_charging: b.is_charging(),
+                last_updated: b.last_updated(),
+            }),
+            volume: device_to_save.volume().map(|v| {
+                crate::core::models::volume::VolumeInfo::new(v.percentage(), v.current(), v.max())
+            }),
+            command_history: std::collections::VecDeque::new(),
+            is_connected: true,
+        };
+        self.event_bus.device_connected(device_state);
+
+        Ok(())
+    }
+}
+
+/// Handles HEARTBEAT (0x02) packets
+/// No payload
+struct HeartbeatHandler {}
+
+impl HeartbeatHandler {
+    fn new(_device_repo: Arc<dyn DeviceRepository>) -> Self {
+        Self {}
+    }
+}
+
+#[async_trait]
+impl PacketHandler for HeartbeatHandler {
+    fn opcode(&self) -> u8 {
+        opcodes::HEARTBEAT
+    }
+
+    async fn handle(&self, device_id: DeviceId, _payload: Vec<u8>) -> Result<()> {
+        tracing::trace!(device_id = %device_id, "Heartbeat received");
+
+        // Update last_seen is already handled in the message loop
+        // This handler just acknowledges the heartbeat
+
+        Ok(())
+    }
+}
+
+/// Handles BATTERY_STATUS (0x03) packets
+/// Payload: [level: u8][is_charging: bool]
+struct BatteryStatusHandler {
+    device_repo: Arc<dyn DeviceRepository>,
+    event_bus: Arc<EventBus>,
+}
+
+impl BatteryStatusHandler {
+    fn new(device_repo: Arc<dyn DeviceRepository>, event_bus: Arc<EventBus>) -> Self {
+        Self {
+            device_repo,
+            event_bus,
+        }
+    }
+}
+
+#[async_trait]
+impl PacketHandler for BatteryStatusHandler {
+    fn opcode(&self) -> u8 {
+        opcodes::BATTERY_STATUS
+    }
+
+    async fn handle(&self, device_id: DeviceId, payload: Vec<u8>) -> Result<()> {
+        let mut cursor = Cursor::new(payload);
+
+        let level = cursor.read_u8()?;
+        let is_charging = cursor.read_u8()? != 0;
+
+        tracing::debug!(
+            device_id = %device_id,
+            level = level,
+            is_charging = is_charging,
+            "Battery status received"
+        );
+
+        // Update device with battery info
+        if let Ok(Some(device)) = self.device_repo.find_by_id(device_id).await {
+            let battery = Battery::new(level, is_charging)
+                .map_err(|e| crate::core::error::ArceusError::Other(format!("Invalid battery: {}", e)))?;
+
+            let updated_device = device.with_battery(battery);
+            self.device_repo.save(updated_device).await?;
+
+            // Emit event
+            let battery_info = crate::core::models::battery::BatteryInfo {
+                headset_level: level,
+                is_charging,
+                last_updated: chrono::Utc::now(),
+            };
+            self.event_bus.battery_updated(device_id.as_uuid().clone(), battery_info);
+        }
+
+        Ok(())
+    }
+}
+
+/// Handles VOLUME_STATUS (0x04) packets
+/// Payload: [current: u8][max: u8]
+struct VolumeStatusHandler {
+    device_repo: Arc<dyn DeviceRepository>,
+    event_bus: Arc<EventBus>,
+}
+
+impl VolumeStatusHandler {
+    fn new(device_repo: Arc<dyn DeviceRepository>, event_bus: Arc<EventBus>) -> Self {
+        Self {
+            device_repo,
+            event_bus,
+        }
+    }
+}
+
+#[async_trait]
+impl PacketHandler for VolumeStatusHandler {
+    fn opcode(&self) -> u8 {
+        opcodes::VOLUME_STATUS
+    }
+
+    async fn handle(&self, device_id: DeviceId, payload: Vec<u8>) -> Result<()> {
+        let mut cursor = Cursor::new(payload);
+
+        let first = cursor.read_u8()?;
+        let second = cursor.read_u8()?;
+
+        // Device sends [percentage(0-100)][max], but we need [current][max]
+        // If first > second, assume device sent [percentage][max] format
+        let (current, max) = if first > second && second > 0 {
+            // Percentage format: calculate current from percentage
+            let percentage = first;
+            let max = second;
+            let current = ((percentage as f32 / 100.0) * max as f32).round() as u8;
+            (current, max)
+        } else {
+            // Assume [current][max] format
+            (first, second)
+        };
+
+        tracing::debug!(
+            device_id = %device_id,
+            current = current,
+            max = max,
+            "Volume status received (parsed from first={}, second={})",
+            first,
+            second
+        );
+
+        // Update device with volume info
+        if let Ok(Some(device)) = self.device_repo.find_by_id(device_id).await {
+            let volume = Volume::new(current, max)
+                .map_err(|e| crate::core::error::ArceusError::Other(format!("Invalid volume: {}", e)))?;
+
+            let updated_device = device.with_volume(volume);
+            self.device_repo.save(updated_device).await?;
+
+            // Emit event
+            let percentage = ((current as f32 / max as f32) * 100.0) as u8;
+            let volume_info = crate::core::models::volume::VolumeInfo::new(
+                percentage,
+                current,
+                max,
+            );
+            self.event_bus.volume_updated(device_id.as_uuid().clone(), volume_info);
+        }
+
+        Ok(())
+    }
+}
+
+// =============================================================================
+// Response Handlers (0x10-0x17)
+// =============================================================================
+
+/// Handles PING_RESPONSE (0x13) packets
+struct PingResponseHandler {
+    event_bus: Arc<EventBus>,
+}
+
+impl PingResponseHandler {
+    fn new(event_bus: Arc<EventBus>) -> Self {
+        Self { event_bus }
+    }
+}
+
+#[async_trait]
+impl PacketHandler for PingResponseHandler {
+    fn opcode(&self) -> u8 {
+        crate::protocol::opcodes::PING_RESPONSE
+    }
+
+    async fn handle(&self, device_id: DeviceId, _payload: Vec<u8>) -> Result<()> {
+        tracing::debug!(device_id = %device_id, "Ping response received");
+
+        // Emit event to frontend
+        let result = CommandResult::success("ping", "Ping successful");
+        self.event_bus.command_executed(device_id.as_uuid().clone(), result);
+
+        Ok(())
+    }
+}
+
+/// Handles LAUNCH_APP_RESPONSE (0x10) packets
+struct LaunchAppResponseHandler {
+    event_bus: Arc<EventBus>,
+}
+
+impl LaunchAppResponseHandler {
+    fn new(event_bus: Arc<EventBus>) -> Self {
+        Self { event_bus }
+    }
+}
+
+#[async_trait]
+impl PacketHandler for LaunchAppResponseHandler {
+    fn opcode(&self) -> u8 {
+        crate::protocol::opcodes::LAUNCH_APP_RESPONSE
+    }
+
+    async fn handle(&self, device_id: DeviceId, payload: Vec<u8>) -> Result<()> {
+        let mut cursor = Cursor::new(payload);
+        let success = cursor.read_u8()? != 0;
+
+        tracing::debug!(device_id = %device_id, success, "Launch app response");
+
+        let result = if success {
+            CommandResult::success("launch_app", "App launched successfully")
+        } else {
+            CommandResult::failure("launch_app", "Failed to launch app")
+        };
+        self.event_bus.command_executed(device_id.as_uuid().clone(), result);
+
+        Ok(())
+    }
+}
+
+/// Handles SHELL_EXECUTION_RESPONSE (0x11) packets
+struct ShellExecutionResponseHandler {
+    event_bus: Arc<EventBus>,
+}
+
+impl ShellExecutionResponseHandler {
+    fn new(event_bus: Arc<EventBus>) -> Self {
+        Self { event_bus }
+    }
+}
+
+#[async_trait]
+impl PacketHandler for ShellExecutionResponseHandler {
+    fn opcode(&self) -> u8 {
+        crate::protocol::opcodes::SHELL_EXECUTION_RESPONSE
+    }
+
+    async fn handle(&self, device_id: DeviceId, payload: Vec<u8>) -> Result<()> {
+        let mut cursor = Cursor::new(payload);
+        let output = cursor.read_string()?;
+
+        tracing::debug!(device_id = %device_id, "Shell execution response");
+
+        let result = CommandResult::success("shell_execution", output);
+        self.event_bus.command_executed(device_id.as_uuid().clone(), result);
+
+        Ok(())
+    }
+}
+
+/// Handles INSTALLED_APPS_RESPONSE (0x12) packets
+struct InstalledAppsResponseHandler {
+    event_bus: Arc<EventBus>,
+}
+
+impl InstalledAppsResponseHandler {
+    fn new(event_bus: Arc<EventBus>) -> Self {
+        Self { event_bus }
+    }
+}
+
+#[async_trait]
+impl PacketHandler for InstalledAppsResponseHandler {
+    fn opcode(&self) -> u8 {
+        crate::protocol::opcodes::INSTALLED_APPS_RESPONSE
+    }
+
+    async fn handle(&self, device_id: DeviceId, payload: Vec<u8>) -> Result<()> {
+        let mut cursor = Cursor::new(payload);
+        let count = cursor.read_u32::<BigEndian>()? as usize;
+
+        let mut apps = Vec::with_capacity(count);
+        for _ in 0..count {
+            let package_name = cursor.read_string()?;
+            apps.push(package_name);
+        }
+
+        tracing::debug!(device_id = %device_id, app_count = count, "Installed apps response");
+
+        self.event_bus.installed_apps_received(device_id.as_uuid().clone(), apps);
+
+        Ok(())
+    }
+}
+
+/// Handles APK_INSTALL_RESPONSE (0x14) packets
+struct ApkInstallResponseHandler {
+    event_bus: Arc<EventBus>,
+}
+
+impl ApkInstallResponseHandler {
+    fn new(event_bus: Arc<EventBus>) -> Self {
+        Self { event_bus }
+    }
+}
+
+#[async_trait]
+impl PacketHandler for ApkInstallResponseHandler {
+    fn opcode(&self) -> u8 {
+        crate::protocol::opcodes::APK_INSTALL_RESPONSE
+    }
+
+    async fn handle(&self, device_id: DeviceId, payload: Vec<u8>) -> Result<()> {
+        let mut cursor = Cursor::new(payload);
+        let success = cursor.read_u8()? != 0;
+
+        if success {
+            tracing::info!(device_id = %device_id, "APK installed successfully");
+        } else {
+            tracing::warn!(device_id = %device_id, "APK installation failed");
+        }
+
+        let result = if success {
+            CommandResult::success("apk_install", "APK installed successfully")
+        } else {
+            CommandResult::failure("apk_install", "Failed to install APK")
+        };
+        self.event_bus.command_executed(device_id.as_uuid().clone(), result);
+
+        Ok(())
+    }
+}
+
+/// Handles UNINSTALL_APP_RESPONSE (0x15) packets
+struct UninstallAppResponseHandler {
+    event_bus: Arc<EventBus>,
+}
+
+impl UninstallAppResponseHandler {
+    fn new(event_bus: Arc<EventBus>) -> Self {
+        Self { event_bus }
+    }
+}
+
+#[async_trait]
+impl PacketHandler for UninstallAppResponseHandler {
+    fn opcode(&self) -> u8 {
+        crate::protocol::opcodes::UNINSTALL_APP_RESPONSE
+    }
+
+    async fn handle(&self, device_id: DeviceId, payload: Vec<u8>) -> Result<()> {
+        let mut cursor = Cursor::new(payload);
+        let success = cursor.read_u8()? != 0;
+
+        tracing::debug!(device_id = %device_id, success, "Uninstall app response");
+
+        let result = if success {
+            CommandResult::success("uninstall_app", "App uninstalled successfully")
+        } else {
+            CommandResult::failure("uninstall_app", "Failed to uninstall app")
+        };
+        self.event_bus.command_executed(device_id.as_uuid().clone(), result);
+
+        Ok(())
+    }
+}
+
+/// Handles VOLUME_SET_RESPONSE (0x16) packets
+struct VolumeSetResponseHandler {
+    event_bus: Arc<EventBus>,
+}
+
+impl VolumeSetResponseHandler {
+    fn new(event_bus: Arc<EventBus>) -> Self {
+        Self { event_bus }
+    }
+}
+
+#[async_trait]
+impl PacketHandler for VolumeSetResponseHandler {
+    fn opcode(&self) -> u8 {
+        crate::protocol::opcodes::VOLUME_SET_RESPONSE
+    }
+
+    async fn handle(&self, device_id: DeviceId, payload: Vec<u8>) -> Result<()> {
+        let mut cursor = Cursor::new(payload);
+        let success = cursor.read_u8()? != 0;
+
+        tracing::debug!(device_id = %device_id, success, "Volume set response");
+
+        let result = if success {
+            CommandResult::success("volume_set", "Volume updated successfully")
+        } else {
+            CommandResult::failure("volume_set", "Failed to set volume")
+        };
+        self.event_bus.command_executed(device_id.as_uuid().clone(), result);
+
+        Ok(())
+    }
+}
+
+/// Handles APK_DOWNLOAD_STARTED (0x17) packets
+struct ApkDownloadStartedHandler {
+    event_bus: Arc<EventBus>,
+}
+
+impl ApkDownloadStartedHandler {
+    fn new(event_bus: Arc<EventBus>) -> Self {
+        Self { event_bus }
+    }
+}
+
+#[async_trait]
+impl PacketHandler for ApkDownloadStartedHandler {
+    fn opcode(&self) -> u8 {
+        crate::protocol::opcodes::APK_DOWNLOAD_STARTED
+    }
+
+    async fn handle(&self, device_id: DeviceId, _payload: Vec<u8>) -> Result<()> {
+        tracing::info!(device_id = %device_id, "APK download started on device");
+
+        let result = CommandResult::success("apk_download", "APK download started");
+        self.event_bus.command_executed(device_id.as_uuid().clone(), result);
+
+        Ok(())
+    }
+}

@@ -34,7 +34,6 @@ pub const REQUEST_BATTERY: u8 = 0x42;
 pub const REQUEST_INSTALLED_APPS: u8 = 0x43;
 pub const PING: u8 = 0x45;
 pub const INSTALL_APK: u8 = 0x46;
-pub const INSTALL_LOCAL_APK: u8 = 0x47;
 pub const SHUTDOWN: u8 = 0x48;
 pub const UNINSTALL_APP: u8 = 0x49;
 pub const SET_VOLUME: u8 = 0x4A;

@@ -1,11 +1,13 @@
+// New layered architecture modules
+mod domain;
+mod application;
+mod infrastructure;
+
+// Core modules
 mod commands;
 mod core;
-mod handlers;
-mod net;
-mod network;
 mod protocol;
-mod services;
-mod storage;
+mod net; // Network utilities
 
 use commands::{
     execute_shell, get_device, get_devices, get_installed_apps, get_volume, install_local_apk,
@@ -16,10 +18,11 @@ use commands::{
 };
 
 use core::{AppConfig, EventBus};
-use handlers::HandlerRegistry;
-use network::{ConnectionManager, HttpServer, TcpServer};
-use services::{update_service::create_update_service, ApkService, BatteryMonitor, DeviceService};
-use storage::DeviceNamesStore;
+
+// New architecture imports
+use application::services::{ApkApplicationService, BatteryMonitor, DeviceApplicationService};
+use infrastructure::repositories::{FsApkRepository, InMemoryDeviceRepository, SledDeviceNameRepository};
+use infrastructure::network::{HttpServer, TcpServer};
 
 use std::sync::Arc;
 use tauri::Manager;
@@ -39,6 +42,8 @@ pub fn run() {
         .setup(|app| {
             tracing::info!("Starting Arceus application...");
 
+            // Update service
+            use application::services::update_service::create_update_service;
             let update_service = create_update_service(app.handle().clone());
             app.manage(update_service);
 
@@ -62,67 +67,83 @@ pub fn run() {
             std::fs::create_dir_all(&config.apk_directory)
                 .expect("Failed to create APK directory");
 
+            // NEW ARCHITECTURE: Create event bus
             let event_bus = Arc::new(EventBus::new(app_handle.clone()));
 
-            let device_names_store = Arc::new(
-                DeviceNamesStore::new(&config.database_path)
-                    .expect("Failed to initialize device names store"),
+            // NEW ARCHITECTURE: Create repositories
+            let device_repo = Arc::new(InMemoryDeviceRepository::new());
+            let device_name_repo = Arc::new(
+                SledDeviceNameRepository::new(&config.database_path)
+                    .expect("Failed to initialize device names repository"),
             );
 
-            let connection_manager =
-                Arc::new(ConnectionManager::new(config.server.max_connections));
-
-            let mut handler_registry = HandlerRegistry::new();
-
-            // Register all response handlers
-            use handlers::r#impl::*;
-            handler_registry.register(Arc::new(DeviceConnectedHandler::new()));
-            handler_registry.register(Arc::new(HeartbeatHandler::new()));
-            handler_registry.register(Arc::new(BatteryStatusHandler::new()));
-            handler_registry.register(Arc::new(VolumeStatusHandler::new()));
-            handler_registry.register(Arc::new(LaunchAppResponseHandler::new()));
-            handler_registry.register(Arc::new(ShellExecutionResponseHandler::new()));
-            handler_registry.register(Arc::new(InstalledAppsResponseHandler::new()));
-            handler_registry.register(Arc::new(PingResponseHandler::new()));
-            handler_registry.register(Arc::new(ApkInstallResponseHandler::new()));
-            handler_registry.register(Arc::new(ApkDownloadStartedHandler::new()));
-            handler_registry.register(Arc::new(UninstallAppResponseHandler::new()));
-            handler_registry.register(Arc::new(VolumeSetResponseHandler::new()));
-
-            let handler_registry = Arc::new(handler_registry);
-
-            let tcp_server = Arc::new(TcpServer::new(
-                config.server.clone(),
-                Arc::clone(&connection_manager),
-                Arc::clone(&handler_registry),
-                Arc::clone(&event_bus),
-                Arc::clone(&device_names_store),
-            ));
-
+            // NEW ARCHITECTURE: Create HTTP server for APK serving
             let http_server = Arc::new(HttpServer::new(
                 config.server.http_port,
                 config.apk_directory.clone(),
                 Arc::clone(&event_bus),
             ));
 
-            let device_service = Arc::new(DeviceService::new(
-                Arc::clone(&connection_manager),
-                Arc::clone(&device_names_store),
-            ));
-
-            let apk_service = Arc::new(ApkService::new(
+            // NEW ARCHITECTURE: APK repository
+            // Determine the HTTP base URL for APK downloads
+            // If tcp_host is 0.0.0.0, try to detect local network IP
+            let http_host = if config.server.tcp_host == "0.0.0.0" {
+                // Try to get local network IP
+                if let Ok(local_ip) = local_ip_address::local_ip() {
+                    local_ip.to_string()
+                } else {
+                    // Fallback to localhost (won't work for remote devices but prevents crash)
+                    tracing::warn!("Could not detect local IP address, using localhost (remote devices won't be able to download APKs)");
+                    "127.0.0.1".to_string()
+                }
+            } else {
+                config.server.tcp_host.clone()
+            };
+            tracing::info!("APK download base URL: http://{}:{}", http_host, config.server.http_port);
+            let base_url = format!("http://{}:{}", http_host, config.server.http_port);
+            let apk_repo = Arc::new(FsApkRepository::new(
                 config.apk_directory.clone(),
-                Arc::clone(&http_server),
+                base_url,
             ));
 
+            // NEW ARCHITECTURE: Create TCP server with new repositories
+            let (tcp_server, shutdown_rx, session_manager) = TcpServer::new(
+                config.server.clone(),
+                device_repo.clone(),
+                device_name_repo.clone(),
+                event_bus.clone(),
+            );
+            let tcp_server = Arc::new(tcp_server);
+
+            // NEW ARCHITECTURE: Create command executor with session manager
+            let command_executor = Arc::new(crate::domain::services::CommandExecutor::new(
+                device_repo.clone(),
+                session_manager,
+            ));
+
+            // NEW ARCHITECTURE: Device service
+            let device_service = Arc::new(DeviceApplicationService::new(
+                device_repo.clone(),
+                device_name_repo.clone(),
+                command_executor.clone(),
+            ));
+
+            // NEW ARCHITECTURE: APK service
+            let apk_service = Arc::new(ApkApplicationService::new(apk_repo.clone()));
+
+            // NEW ARCHITECTURE: Battery monitor
+            let battery_interval = std::time::Duration::from_secs(config.server.battery_update_interval);
             let battery_monitor = Arc::new(BatteryMonitor::new(
-                Arc::clone(&connection_manager),
-                config.server.battery_update_interval,
+                device_repo.clone(),
+                command_executor.clone(),
+                battery_interval,
             ));
 
-            app.manage(Arc::clone(&device_service));
-            app.manage(Arc::clone(&apk_service));
+            // Manage services for Tauri commands
+            app.manage(device_service);
+            app.manage(apk_service);
 
+            // Start TCP server
             let tcp_server_clone = Arc::clone(&tcp_server);
             tauri::async_runtime::spawn(async move {
                 if let Err(e) = tcp_server_clone.start().await {
@@ -130,6 +151,7 @@ pub fn run() {
                 }
             });
 
+            // Start HTTP server
             let http_server_clone = Arc::clone(&http_server);
             tauri::async_runtime::spawn(async move {
                 if let Err(e) = http_server_clone.start().await {
@@ -137,11 +159,13 @@ pub fn run() {
                 }
             });
 
+            // Start battery monitor
             let battery_monitor_clone = Arc::clone(&battery_monitor);
             tauri::async_runtime::spawn(async move {
-                battery_monitor_clone.start().await;
+                battery_monitor_clone.start(shutdown_rx).await;
             });
 
+            // Show updater or main window
             if let Some(updater_window) = app.get_webview_window("updater") {
                 let _ = updater_window.show();
                 let _ = updater_window.set_focus();

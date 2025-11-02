@@ -101,10 +101,6 @@ impl EventBus {
         self.emit(ArceusEvent::DeviceConnected { device });
     }
 
-    pub fn device_disconnected(&self, device_id: Uuid, serial: String) {
-        self.emit(ArceusEvent::DeviceDisconnected { device_id, serial });
-    }
-
     pub fn battery_updated(&self, device_id: Uuid, battery_info: BatteryInfo) {
         self.emit(ArceusEvent::BatteryUpdated {
             device_id,
@@ -125,14 +121,6 @@ impl EventBus {
 
     pub fn installed_apps_received(&self, device_id: Uuid, apps: Vec<String>) {
         self.emit(ArceusEvent::InstalledAppsReceived { device_id, apps });
-    }
-
-    pub fn device_name_changed(&self, device_id: Uuid, serial: String, new_name: Option<String>) {
-        self.emit(ArceusEvent::DeviceNameChanged {
-            device_id,
-            serial,
-            new_name,
-        });
     }
 
     pub fn server_started(&self, tcp_port: u16, http_port: u16) {

@@ -9,19 +9,6 @@ pub struct RawPacket {
     pub payload: Vec<u8>,
 }
 
-impl RawPacket {
-    pub fn new(opcode: u8, payload: Vec<u8>) -> Self {
-        Self { opcode, payload }
-    }
-
-    pub fn empty(opcode: u8) -> Self {
-        Self {
-            opcode,
-            payload: Vec::new(),
-        }
-    }
-}
-
 /// Simple codec for reading/writing raw packets
 pub struct RawPacketCodec;
 
