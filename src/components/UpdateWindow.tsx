@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { check } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
 import { invoke } from '@tauri-apps/api/core';
 
@@ -14,11 +13,25 @@ export function UpdateWindow() {
 
   const checkForUpdates = async () => {
     try {
-      const update = await check();
+      const updateStatus = await invoke('check_for_updates');
 
-      if (update?.available) {
-        setStatus(`Update available: ${update.version}`);
-        await downloadAndInstall();
+      if (updateStatus && typeof updateStatus === 'object' && 'type' in updateStatus) {
+        const status = updateStatus as any;
+
+        if (status.type === 'UpdateAvailable' && status.data) {
+          setStatus(`Update available: ${status.data.version}`);
+          await downloadAndInstall();
+        } else if (status.type === 'NoUpdate') {
+          setStatus('No updates available');
+          setTimeout(() => {
+            invoke('close_updater_and_show_main');
+          }, 1000);
+        } else {
+          setStatus('No updates available');
+          setTimeout(() => {
+            invoke('close_updater_and_show_main');
+          }, 1000);
+        }
       } else {
         setStatus('No updates available');
         setTimeout(() => {
