@@ -60,13 +60,6 @@ export function DeviceCard({ device, isSelected, onToggle }: DeviceCardProps) {
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3 flex-1">
-            <input
-              type="checkbox"
-              checked={isSelected}
-              onChange={onToggle}
-              onClick={(e) => e.stopPropagation()}
-              className="h-4 w-4 rounded border-discord-dark bg-discord-dark-3"
-            />
             <div className="flex-1">
               <div className="flex items-center gap-2">
                 {isEditingName ? (
@@ -114,7 +107,7 @@ export function DeviceCard({ device, isSelected, onToggle }: DeviceCardProps) {
                         <Pencil className="h-3 w-3" />
                       </button>
                     </div>
-                    <Badge variant={device.isConnected ? 'success' : 'secondary'} className="text-xs ml-auto">
+                    <Badge variant={device.isConnected ? 'success' : 'destructive'} className="text-xs ml-auto">
                       {device.isConnected ? 'Online' : 'Offline'}
                     </Badge>
                   </>
