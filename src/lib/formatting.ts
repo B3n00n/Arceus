@@ -29,9 +29,9 @@ export function formatBatteryLevel(level: number): string {
 }
 
 export function getBatteryColor(level: number): string {
-  if (level >= 70) return 'text-green-500';
-  if (level >= 30) return 'text-yellow-500';
-  return 'text-red-500';
+  if (level >= 70) return 'bg-green-500';
+  if (level >= 30) return 'bg-yellow-500';
+  return 'bg-red-500';
 }
 
 export function getStatusColor(isConnected: boolean): string {
