@@ -97,26 +97,6 @@ export function CommandPanel({
                       variant="outline"
                       size="sm"
                       className="w-full justify-start"
-                      onClick={() => onHandleCommand(() => DeviceService.requestBattery(selectedIds), 'Get Battery')}
-                      disabled={loading}
-                    >
-                      <Battery className="h-4 w-4 mr-2" />
-                      Get Battery
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full justify-start"
-                      onClick={() => onHandleCommand(() => DeviceService.getVolume(selectedIds), 'Get Volume')}
-                      disabled={loading}
-                    >
-                      <Volume2 className="h-4 w-4 mr-2" />
-                      Get Volume
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full justify-start"
                       onClick={() => onHandleCommand(() => DeviceService.pingDevices(selectedIds), 'Ping', false)}
                       disabled={loading}
                     >
@@ -209,6 +189,32 @@ export function CommandPanel({
                 {/* Developer Commands */}
                 <div>
                   <p className="text-xs text-gray-400 mb-2 uppercase font-semibold">Developer Tools</p>
+                  <div className="space-y-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full justify-start"
+                      onClick={() => onHandleCommand(() => DeviceService.requestBattery(selectedIds), 'Get Battery')}
+                      disabled={loading}
+                    >
+                      <Battery className="h-4 w-4 mr-2" />
+                      Get Battery
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full justify-start"
+                      onClick={() => onHandleCommand(() => DeviceService.getVolume(selectedIds), 'Get Volume')}
+                      disabled={loading}
+                    >
+                      <Volume2 className="h-4 w-4 mr-2" />
+                      Get Volume
+                    </Button>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-xs text-gray-400 mb-2 uppercase font-semibold">B3n00n Tools</p>
                   <div className="space-y-2">
                     <Button
                       variant="outline"
