@@ -5,5 +5,4 @@ pub mod session_manager;
 pub mod tcp_server;
 
 pub use http_server::HttpServer;
-pub use session_manager::SessionManager;
 pub use tcp_server::TcpServer;

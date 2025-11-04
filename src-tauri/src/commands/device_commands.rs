@@ -53,7 +53,6 @@ fn convert_device_to_state(device: &crate::domain::models::Device) -> DeviceStat
         battery,
         volume,
         command_history: std::collections::VecDeque::new(),
-        is_connected: device.is_connected(),
     }
 }
 

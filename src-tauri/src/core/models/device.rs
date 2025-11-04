@@ -24,5 +24,4 @@ pub struct DeviceState {
     pub battery: Option<BatteryInfo>,
     pub volume: Option<VolumeInfo>,
     pub command_history: VecDeque<CommandResult>,
-    pub is_connected: bool,
 }

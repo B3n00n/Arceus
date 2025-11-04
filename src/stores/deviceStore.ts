@@ -6,7 +6,6 @@ interface DeviceStoreState {
   devices: DeviceState[];
   selectedDeviceIds: Set<string>;
   searchQuery: string;
-  filterStatus: 'all' | 'connected' | 'disconnected';
   viewMode: 'grid' | 'list';
 
   setDevices: (devices: DeviceState[]) => void;
@@ -20,7 +19,6 @@ interface DeviceStoreState {
   clearSelection: () => void;
 
   setSearchQuery: (query: string) => void;
-  setFilterStatus: (status: 'all' | 'connected' | 'disconnected') => void;
   setViewMode: (mode: 'grid' | 'list') => void;
 
   getFilteredDevices: () => DeviceState[];
@@ -31,7 +29,6 @@ export const useDeviceStore = create<DeviceStoreState>((set, get) => ({
   devices: [],
   selectedDeviceIds: new Set(),
   searchQuery: '',
-  filterStatus: 'all',
   viewMode: 'grid',
 
   setDevices: (devices) => set({ devices }),
@@ -79,11 +76,10 @@ export const useDeviceStore = create<DeviceStoreState>((set, get) => ({
   clearSelection: () => set({ selectedDeviceIds: new Set() }),
 
   setSearchQuery: (query) => set({ searchQuery: query }),
-  setFilterStatus: (status) => set({ filterStatus: status }),
   setViewMode: (mode) => set({ viewMode: mode }),
 
   getFilteredDevices: () => {
-    const { devices, searchQuery, filterStatus } = get();
+    const { devices, searchQuery } = get();
 
     return devices.filter((device) => {
       const matchesSearch =
@@ -93,12 +89,7 @@ export const useDeviceStore = create<DeviceStoreState>((set, get) => ({
         device.info.ip.includes(searchQuery) ||
         (device.info.customName?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
 
-      const matchesStatus =
-        filterStatus === 'all' ||
-        (filterStatus === 'connected' && device.isConnected) ||
-        (filterStatus === 'disconnected' && !device.isConnected);
-
-      return matchesSearch && matchesStatus;
+      return matchesSearch;
     });
   },
 

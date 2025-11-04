@@ -33,7 +33,3 @@ export function getBatteryColor(level: number): string {
   if (level >= 30) return 'text-yellow-500';
   return 'text-red-500';
 }
-
-export function getStatusColor(isConnected: boolean): string {
-  return isConnected ? 'bg-green-500' : 'bg-gray-500';
-}

@@ -76,15 +76,6 @@ impl DeviceRepository for InMemoryDeviceRepository {
             .collect())
     }
 
-    async fn find_all_connected(&self) -> Result<Vec<Device>, RepositoryError> {
-        Ok(self
-            .by_id
-            .iter()
-            .filter(|entry| entry.value().is_connected())
-            .map(|entry| entry.value().clone())
-            .collect())
-    }
-
     async fn save(&self, device: Device) -> Result<(), RepositoryError> {
         let id = device.id();
         let serial = device.serial().clone();

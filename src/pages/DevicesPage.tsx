@@ -26,8 +26,6 @@ export function DevicesPage() {
   const {
     viewMode,
     setViewMode,
-    filterStatus,
-    setFilterStatus,
     selectedDeviceIds,
     toggleDevice,
     selectAll,
@@ -272,16 +270,6 @@ export function DevicesPage() {
                 <List className="h-4 w-4" />
               </Button>
             </div>
-
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value as any)}
-              className="px-3 py-1.5 rounded-md bg-discord-dark-3 border border-discord-dark text-sm text-gray-300"
-            >
-              <option value="all">All</option>
-              <option value="connected">Connected</option>
-              <option value="disconnected">Disconnected</option>
-            </select>
 
             <div className="flex-1" />
 

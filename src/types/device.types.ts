@@ -33,5 +33,4 @@ export interface DeviceState {
   battery: BatteryInfo | null;
   volume: VolumeInfo | null;
   commandHistory: CommandResult[];
-  isConnected: boolean;
 }

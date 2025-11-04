@@ -21,8 +21,6 @@ pub struct Device {
     last_seen: DateTime<Utc>,
     /// Optional custom name set by the user
     custom_name: Option<String>,
-    /// Whether the device is currently connected
-    is_connected: bool,
     /// Battery information (if available)
     battery: Option<Battery>,
     /// Volume information (if available)
@@ -40,7 +38,6 @@ impl Device {
             connected_at: now,
             last_seen: now,
             custom_name: None,
-            is_connected: true,
             battery: None,
             volume: None,
         }
@@ -74,10 +71,6 @@ impl Device {
         self.custom_name.as_deref()
     }
 
-    pub fn is_connected(&self) -> bool {
-        self.is_connected
-    }
-
     pub fn battery(&self) -> Option<&Battery> {
         self.battery.as_ref()
     }
@@ -109,12 +102,6 @@ impl Device {
     pub fn with_volume(mut self, volume: Volume) -> Self {
         self.volume = Some(volume);
         self.last_seen = Utc::now();
-        self
-    }
-
-    /// Mark the device as disconnected
-    pub fn disconnect(mut self) -> Self {
-        self.is_connected = false;
         self
     }
 }

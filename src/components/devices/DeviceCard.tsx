@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Check, X, Pencil } from 'lucide-react';
 import { useDeviceStore } from '@/stores/deviceStore';
@@ -93,23 +92,18 @@ export function DeviceCard({ device, isSelected, onToggle }: DeviceCardProps) {
                   </div>
                 ) : (
                   <>
-                    <div className="flex items-center gap-2 flex-1">
-                      <h3 className="font-semibold text-white">
-                        {device.info.customName || device.info.model}
-                      </h3>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setIsEditingName(true);
-                        }}
-                        className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-white transition-all"
-                      >
-                        <Pencil className="h-3 w-3" />
-                      </button>
-                    </div>
-                    <Badge variant={device.isConnected ? 'success' : 'destructive'} className="text-xs ml-auto">
-                      {device.isConnected ? 'Online' : 'Offline'}
-                    </Badge>
+                    <h3 className="font-semibold text-white">
+                      {device.info.customName || device.info.model}
+                    </h3>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsEditingName(true);
+                      }}
+                      className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-white transition-all"
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </button>
                   </>
                 )}
               </div>

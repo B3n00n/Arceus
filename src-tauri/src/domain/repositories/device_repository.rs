@@ -25,10 +25,6 @@ pub trait DeviceRepository: Send + Sync {
     /// Returns all devices currently stored in the repository.
     async fn find_all(&self) -> Result<Vec<Device>>;
 
-    /// Find all connected devices
-    /// Returns only devices that are currently connected.
-    async fn find_all_connected(&self) -> Result<Vec<Device>>;
-
     /// Save or update a device
     /// If a device with the same ID already exists, it will be updated.
     /// Otherwise, a new device entry will be created.

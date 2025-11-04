@@ -67,7 +67,6 @@ impl ArceusError {
             Self::Network(NetworkError::ConnectionClosed) => true,
             Self::Network(NetworkError::SendFailed(_)) => true,
             Self::Network(NetworkError::ReceiveFailed(_)) => true,
-            Self::Command(CommandError::DeviceDisconnected { .. }) => false,
             Self::Command(CommandError::DeviceNotFound { .. }) => false,
             Self::Command(CommandError::SessionNotFound { .. }) => false,
             Self::Repository(RepositoryError::NotFound { .. }) => false,
@@ -91,7 +90,6 @@ impl ArceusError {
             Self::Handler(_) => "HANDLER_ERROR",
             Self::Service(_) => "SERVICE_ERROR",
             Self::Command(CommandError::DeviceNotFound { .. }) => "DEVICE_NOT_FOUND",
-            Self::Command(CommandError::DeviceDisconnected { .. }) => "DEVICE_DISCONNECTED",
             Self::Command(CommandError::SessionNotFound { .. }) => "SESSION_NOT_FOUND",
             Self::Command(CommandError::ValidationFailed(_)) => "VALIDATION_FAILED",
             Self::Command(_) => "COMMAND_ERROR",
@@ -108,7 +106,6 @@ impl ArceusError {
     pub fn severity(&self) -> tracing::Level {
         match self {
             Self::Command(CommandError::DeviceNotFound { .. }) => tracing::Level::WARN,
-            Self::Command(CommandError::DeviceDisconnected { .. }) => tracing::Level::WARN,
             Self::Network(NetworkError::ConnectionClosed) => tracing::Level::INFO,
             Self::Repository(RepositoryError::NotFound { .. }) => tracing::Level::WARN,
             Self::Config(_) => tracing::Level::ERROR,

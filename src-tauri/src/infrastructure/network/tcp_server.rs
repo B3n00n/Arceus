@@ -36,7 +36,7 @@ impl TcpServer {
     ) -> (Self, broadcast::Receiver<()>, Arc<SessionManager>) {
         let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
 
-        // Create session manager (needed by packet handler)
+        // Create session manager (needed for command execution)
         let session_manager = Arc::new(SessionManager::new());
 
         // Create packet handler registry
@@ -44,7 +44,6 @@ impl TcpServer {
             device_repo.clone(),
             device_name_repo.clone(),
             event_bus.clone(),
-            session_manager.clone(),
         ));
 
         let server = Self {
@@ -190,18 +189,31 @@ impl TcpServer {
         // Cleanup
         let _enter = span.enter();
 
+        // Get device info before removal for the disconnect event
+        let device_info = self.device_repo.find_by_id(device_id).await.ok().flatten();
+
         // Remove session from manager
         self.session_manager.remove_session(&device_id);
 
-        // Mark device as disconnected
-        if let Ok(Some(device)) = self.device_repo.find_by_id(device_id).await {
-            let disconnected_device = device.disconnect();
-            let _ = self.device_repo.save(disconnected_device).await;
+        // Remove device from repository
+        let _ = self.device_repo.remove(device_id).await;
+
+        // Emit DeviceDisconnected event
+        if let Some(device) = device_info {
+            tracing::info!(
+                device_id = %device_id,
+                serial = %device.serial().as_str(),
+                "Device disconnected"
+            );
+            self.event_bus.emit(crate::core::events::ArceusEvent::DeviceDisconnected {
+                device_id: device_id.as_uuid().clone(),
+                serial: device.serial().as_str().to_string(),
+            });
         }
 
         tracing::debug!(
             device_id = %device_id,
-            "Device unregistered"
+            "Device removed"
         );
 
         result

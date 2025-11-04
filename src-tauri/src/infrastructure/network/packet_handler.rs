@@ -34,7 +34,6 @@ impl PacketHandlerRegistry {
         device_repo: Arc<dyn DeviceRepository>,
         device_name_repo: Arc<dyn DeviceNameRepository>,
         event_bus: Arc<EventBus>,
-        session_manager: Arc<crate::infrastructure::network::SessionManager>,
     ) -> Self {
         let mut registry = Self {
             handlers: std::collections::HashMap::new(),
@@ -45,7 +44,6 @@ impl PacketHandlerRegistry {
             device_repo.clone(),
             device_name_repo.clone(),
             event_bus.clone(),
-            session_manager.clone(),
         )));
         registry.register(Arc::new(HeartbeatHandler::new(device_repo.clone())));
         registry.register(Arc::new(BatteryStatusHandler::new(
@@ -101,7 +99,6 @@ struct DeviceConnectedHandler {
     device_repo: Arc<dyn DeviceRepository>,
     device_name_repo: Arc<dyn DeviceNameRepository>,
     event_bus: Arc<EventBus>,
-    session_manager: Arc<crate::infrastructure::network::SessionManager>,
 }
 
 impl DeviceConnectedHandler {
@@ -109,13 +106,11 @@ impl DeviceConnectedHandler {
         device_repo: Arc<dyn DeviceRepository>,
         device_name_repo: Arc<dyn DeviceNameRepository>,
         event_bus: Arc<EventBus>,
-        session_manager: Arc<crate::infrastructure::network::SessionManager>,
     ) -> Self {
         Self {
             device_repo,
             device_name_repo,
             event_bus,
-            session_manager,
         }
     }
 }
@@ -142,96 +137,53 @@ impl PacketHandler for DeviceConnectedHandler {
         let serial = Serial::new(serial_str)
             .map_err(|e| crate::core::error::ArceusError::Other(format!("Invalid serial: {}", e)))?;
 
-        // Check if this device (by serial) already exists in the repository
-        let existing_device = self.device_repo.find_by_serial(&serial).await.ok().flatten();
-
         // Get the temporary device that was created on TCP connection
         let temp_device = self.device_repo.find_by_id(device_id).await.ok().flatten();
 
-        let device_to_save = if let Some(mut existing) = existing_device {
-            // Device reconnected - update with new info and mark as connected
-            tracing::info!(
-                existing_id = %existing.id(),
-                temp_id = %device_id,
-                serial = %serial.as_str(),
-                "Device reconnected - using existing device ID"
-            );
-
-            // Move session from temp_id to existing_id
-            if existing.id() != device_id {
-                if let Some(session) = self.session_manager.get_session(&device_id) {
-                    tracing::debug!(
-                        "Moving session from temp_id {} to existing_id {}",
-                        device_id,
-                        existing.id()
-                    );
-                    self.session_manager.remove_session(&device_id);
-                    self.session_manager.add_session(existing.id(), session);
-                }
-
-                // Remove the temporary device entry
-                tracing::debug!("Removing temporary device entry {}", device_id);
-                let _ = self.device_repo.remove(device_id).await;
+        let temp_device = match temp_device {
+            Some(device) => device,
+            None => {
+                tracing::warn!("Device connected packet without prior TCP connection");
+                return Ok(());
             }
-
-            // Update existing device with latest info
-            let ip = temp_device.as_ref().map(|d| d.ip().clone()).unwrap_or_else(|| existing.ip().clone());
-            existing = Device::new(existing.id(), serial.clone(), model.clone(), ip);
-
-            // Restore battery and volume if they existed
-            if let Some(temp) = temp_device.as_ref() {
-                if let Some(battery) = temp.battery() {
-                    existing = existing.with_battery(battery.clone());
-                }
-                if let Some(volume) = temp.volume() {
-                    existing = existing.with_volume(volume.clone());
-                }
-            }
-
-            existing
-        } else if let Some(temp) = temp_device {
-            // New device - update the temporary entry with real info
-            tracing::info!(
-                device_id = %device_id,
-                serial = %serial.as_str(),
-                "New device registered"
-            );
-
-            Device::new(device_id, serial.clone(), model.clone(), temp.ip().clone())
-        } else {
-            // This shouldn't happen, but handle it gracefully
-            tracing::warn!("Device connected packet without prior TCP connection");
-            return Ok(());
         };
 
-        // Load custom name if exists
+        // Create device with real info from the packet
+        let device = Device::new(device_id, serial.clone(), model.clone(), temp_device.ip().clone());
+
+        // Load custom name from database if exists
         let custom_name = self.device_name_repo.get_name(&serial).await.ok().flatten();
-        let device_to_save = device_to_save.with_custom_name(custom_name.clone());
+        let device = device.with_custom_name(custom_name.clone());
 
-        self.device_repo.save(device_to_save.clone()).await?;
+        self.device_repo.save(device.clone()).await?;
 
-        // Emit event with the CORRECT device ID (not the temporary one)
+        tracing::info!(
+            device_id = %device_id,
+            serial = %serial.as_str(),
+            "Device connected"
+        );
+
+        // Emit DeviceConnected event to frontend
         let device_info = crate::core::models::device::DeviceInfo {
-            id: device_to_save.id().as_uuid().clone(),
+            id: device.id().as_uuid().clone(),
             model: model.clone(),
             serial: serial.as_str().to_string(),
-            ip: device_to_save.ip().as_str().to_string(),
-            connected_at: device_to_save.connected_at(),
-            last_seen: device_to_save.last_seen(),
+            ip: device.ip().as_str().to_string(),
+            connected_at: device.connected_at(),
+            last_seen: device.last_seen(),
             custom_name: custom_name,
         };
         let device_state = crate::core::models::device::DeviceState {
             info: device_info,
-            battery: device_to_save.battery().map(|b| crate::core::models::battery::BatteryInfo {
+            battery: device.battery().map(|b| crate::core::models::battery::BatteryInfo {
                 headset_level: b.level(),
                 is_charging: b.is_charging(),
                 last_updated: b.last_updated(),
             }),
-            volume: device_to_save.volume().map(|v| {
+            volume: device.volume().map(|v| {
                 crate::core::models::volume::VolumeInfo::new(v.percentage(), v.current(), v.max())
             }),
             command_history: std::collections::VecDeque::new(),
-            is_connected: true,
         };
         self.event_bus.device_connected(device_state);
 

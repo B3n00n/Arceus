@@ -52,20 +52,20 @@ impl BatteryMonitor {
         tracing::info!("Battery monitor stopped");
     }
 
-    /// Poll battery status from all connected devices
+    /// Poll battery status from all devices
     async fn poll_batteries(&self) -> Result<(), Box<dyn std::error::Error>> {
-        // Get all connected devices
-        let devices = self.device_repo.find_all_connected().await?;
+        // Get all devices (only connected devices are in the repository)
+        let devices = self.device_repo.find_all().await?;
 
         if devices.is_empty() {
-            tracing::debug!("No connected devices to poll battery status");
+            tracing::debug!("No devices to poll battery status");
             return Ok(());
         }
 
         let device_ids: Vec<_> = devices.iter().map(|d| d.id()).collect();
         let count = device_ids.len();
 
-        tracing::debug!(count, "Polling battery status from connected devices");
+        tracing::debug!(count, "Polling battery status from devices");
 
         // Execute battery request command on all connected devices
         let command = Arc::new(RequestBatteryCommand);

@@ -18,12 +18,6 @@ pub enum CommandError {
     #[error("Device {device_id} not found")]
     DeviceNotFound { device_id: DeviceId },
 
-    #[error("Device {device_id} is not connected (last seen: {last_seen})")]
-    DeviceDisconnected {
-        device_id: DeviceId,
-        last_seen: String,
-    },
-
     #[error("Session not found for device {device_id}")]
     SessionNotFound { device_id: DeviceId },
 
@@ -170,21 +164,14 @@ impl CommandExecutor {
         device_id: DeviceId,
         cmd: Arc<dyn Command>,
     ) -> Result<CommandResponse> {
-        let device = self
+        // Verify device exists
+        let _device = self
             .device_repo
             .find_by_id(device_id)
             .await?
             .ok_or(CommandError::DeviceNotFound { device_id })?;
 
-        // Check if device is connected
-        if !device.is_connected() {
-            return Err(CommandError::DeviceDisconnected {
-                device_id,
-                last_seen: device.last_seen().to_rfc3339(),
-            });
-        }
-
-        // Check if session exists
+        // Check if session exists (device is connected if session exists)
         if !self.session_manager.has_session(&device_id) {
             return Err(CommandError::SessionNotFound { device_id });
         }
