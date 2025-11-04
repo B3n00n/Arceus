@@ -44,6 +44,7 @@ impl TcpServer {
             device_repo.clone(),
             device_name_repo.clone(),
             event_bus.clone(),
+            session_manager.clone(),
         ));
 
         let server = Self {

@@ -123,5 +123,25 @@ eventService.subscribe((event) => {
         });
       }
       break;
+
+    case 'batteryUpdated':
+      const deviceForBattery = store.devices.find(d => d.info.id === event.deviceId);
+      if (deviceForBattery) {
+        store.updateDevice({
+          ...deviceForBattery,
+          battery: event.batteryInfo,
+        });
+      }
+      break;
+
+    case 'volumeUpdated':
+      const deviceForVolume = store.devices.find(d => d.info.id === event.deviceId);
+      if (deviceForVolume) {
+        store.updateDevice({
+          ...deviceForVolume,
+          volume: event.volumeInfo,
+        });
+      }
+      break;
   }
 });

@@ -4,6 +4,7 @@
 use crate::core::{models::CommandResult, EventBus};
 use crate::domain::models::{Battery, Device, DeviceId, Serial, Volume};
 use crate::domain::repositories::{DeviceNameRepository, DeviceRepository};
+use crate::infrastructure::network::session_manager::SessionManager;
 use crate::net::io::ProtocolReadExt;
 use crate::protocol::{opcodes, RawPacket};
 use async_trait::async_trait;
@@ -11,20 +12,14 @@ use byteorder::{BigEndian, ReadBytesExt};
 use std::io::Cursor;
 use std::sync::Arc;
 
-/// Result type for packet handlers
 pub type Result<T> = std::result::Result<T, crate::core::error::ArceusError>;
 
-/// Trait for handling specific packet types
 #[async_trait]
 pub trait PacketHandler: Send + Sync {
-    /// Get the opcode this handler processes
     fn opcode(&self) -> u8;
-
-    /// Handle a packet
     async fn handle(&self, device_id: DeviceId, payload: Vec<u8>) -> Result<()>;
 }
 
-/// Registry for packet handlers
 pub struct PacketHandlerRegistry {
     handlers: std::collections::HashMap<u8, Arc<dyn PacketHandler>>,
 }
@@ -34,16 +29,17 @@ impl PacketHandlerRegistry {
         device_repo: Arc<dyn DeviceRepository>,
         device_name_repo: Arc<dyn DeviceNameRepository>,
         event_bus: Arc<EventBus>,
+        session_manager: Arc<SessionManager>,
     ) -> Self {
         let mut registry = Self {
             handlers: std::collections::HashMap::new(),
         };
 
-        // Client initiated packets
         registry.register(Arc::new(DeviceConnectedHandler::new(
             device_repo.clone(),
             device_name_repo.clone(),
             event_bus.clone(),
+            session_manager.clone(),
         )));
         registry.register(Arc::new(HeartbeatHandler::new(device_repo.clone())));
         registry.register(Arc::new(BatteryStatusHandler::new(
@@ -62,7 +58,10 @@ impl PacketHandlerRegistry {
         registry.register(Arc::new(PingResponseHandler::new(event_bus.clone())));
         registry.register(Arc::new(ApkInstallResponseHandler::new(event_bus.clone())));
         registry.register(Arc::new(UninstallAppResponseHandler::new(event_bus.clone())));
-        registry.register(Arc::new(VolumeSetResponseHandler::new(event_bus.clone())));
+        registry.register(Arc::new(VolumeSetResponseHandler::new(
+            device_repo.clone(),
+            event_bus.clone(),
+        )));
         registry.register(Arc::new(ApkDownloadStartedHandler::new(event_bus.clone())));
 
         registry
@@ -99,6 +98,7 @@ struct DeviceConnectedHandler {
     device_repo: Arc<dyn DeviceRepository>,
     device_name_repo: Arc<dyn DeviceNameRepository>,
     event_bus: Arc<EventBus>,
+    session_manager: Arc<SessionManager>,
 }
 
 impl DeviceConnectedHandler {
@@ -106,12 +106,38 @@ impl DeviceConnectedHandler {
         device_repo: Arc<dyn DeviceRepository>,
         device_name_repo: Arc<dyn DeviceNameRepository>,
         event_bus: Arc<EventBus>,
+        session_manager: Arc<SessionManager>,
     ) -> Self {
         Self {
             device_repo,
             device_name_repo,
             event_bus,
+            session_manager,
         }
+    }
+
+    /// Helper to send initial status requests to a newly connected device
+    async fn send_initial_status_requests(device_id: DeviceId, session_manager: Arc<SessionManager>) {
+        // Brief delay to ensure device is ready
+        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+
+        let Some(session) = session_manager.get_session(&device_id) else {
+            return;
+        };
+
+        // Request battery status
+        let _ = session.send_packet(RawPacket {
+            opcode: opcodes::REQUEST_BATTERY,
+            payload: vec![],
+        }).await;
+
+        // Request volume status
+        let _ = session.send_packet(RawPacket {
+            opcode: opcodes::GET_VOLUME,
+            payload: vec![],
+        }).await;
+
+        tracing::debug!(device_id = %device_id, "Sent initial battery and volume requests");
     }
 }
 
@@ -186,6 +212,12 @@ impl PacketHandler for DeviceConnectedHandler {
             command_history: std::collections::VecDeque::new(),
         };
         self.event_bus.device_connected(device_state);
+        
+        // Request initial connection data
+        tokio::spawn(Self::send_initial_status_requests(
+            device.id(),
+            self.session_manager.clone(),
+        ));
 
         Ok(())
     }
@@ -549,13 +581,15 @@ impl PacketHandler for UninstallAppResponseHandler {
 }
 
 /// Handles VOLUME_SET_RESPONSE (0x16) packets
+/// The client sends back the actual volume percentage achieved after setting
 struct VolumeSetResponseHandler {
+    device_repo: Arc<dyn DeviceRepository>,
     event_bus: Arc<EventBus>,
 }
 
 impl VolumeSetResponseHandler {
-    fn new(event_bus: Arc<EventBus>) -> Self {
-        Self { event_bus }
+    fn new(device_repo: Arc<dyn DeviceRepository>, event_bus: Arc<EventBus>) -> Self {
+        Self { device_repo, event_bus }
     }
 }
 
@@ -568,13 +602,45 @@ impl PacketHandler for VolumeSetResponseHandler {
     async fn handle(&self, device_id: DeviceId, payload: Vec<u8>) -> Result<()> {
         let mut cursor = Cursor::new(payload);
         let success = cursor.read_u8()? != 0;
+        let message = cursor.read_string()?;
 
-        tracing::debug!(device_id = %device_id, success, "Volume set response");
+        tracing::debug!(device_id = %device_id, success, message = %message, "Volume set response");
+
+        if success {
+            if let Some(actual_percentage) = message
+                .split_whitespace()
+                .find_map(|word| word.trim_end_matches('%').parse::<u8>().ok())
+            {
+                if let Ok(Some(device)) = self.device_repo.find_by_id(device_id).await {
+                    let (current, max) = if let Some(volume) = device.volume() {
+                        let max = volume.max();
+                        let current = (actual_percentage as u16 * max as u16 / 100) as u8;
+                        (current, max)
+                    } else {
+                        let max = 15u8;
+                        let current = (actual_percentage as u16 * max as u16 / 100) as u8;
+                        (current, max)
+                    };
+
+                    if let Ok(volume) = Volume::new(current, max) {
+                        let updated_device = device.with_volume(volume);
+                        let _ = self.device_repo.save(updated_device).await;
+
+                        let volume_info = crate::core::models::volume::VolumeInfo::new(
+                            actual_percentage,
+                            current,
+                            max,
+                        );
+                        self.event_bus.volume_updated(device_id.as_uuid().clone(), volume_info);
+                    }
+                }
+            }
+        }
 
         let result = if success {
-            CommandResult::success("volume_set", "Volume updated successfully")
+            CommandResult::success("volume_set", &message)
         } else {
-            CommandResult::failure("volume_set", "Failed to set volume")
+            CommandResult::failure("volume_set", &message)
         };
         self.event_bus.command_executed(device_id.as_uuid().clone(), result);
 
