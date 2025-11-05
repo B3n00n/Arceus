@@ -12,7 +12,7 @@ pub const BATTERY_STATUS: u8 = 0x03;
 pub const VOLUME_STATUS: u8 = 0x04;
 
 // =============================================================================
-// CLIENT → SERVER (Responses to server commands) - 0x10-0x16
+// CLIENT → SERVER (Responses to server commands) - 0x10-0x18
 // =============================================================================
 
 pub const LAUNCH_APP_RESPONSE: u8 = 0x10;
@@ -23,9 +23,10 @@ pub const APK_INSTALL_RESPONSE: u8 = 0x14;
 pub const UNINSTALL_APP_RESPONSE: u8 = 0x15;
 pub const VOLUME_SET_RESPONSE: u8 = 0x16;
 pub const APK_DOWNLOAD_STARTED: u8 = 0x17;
+pub const CLOSE_ALL_APPS_RESPONSE: u8 = 0x18;
 
 // =============================================================================
-// SERVER → CLIENT (Commands from server) - 0x40-0x4B
+// SERVER → CLIENT (Commands from server) - 0x40-0x4C
 // =============================================================================
 
 pub const LAUNCH_APP: u8 = 0x40;
@@ -38,3 +39,4 @@ pub const SHUTDOWN: u8 = 0x48;
 pub const UNINSTALL_APP: u8 = 0x49;
 pub const SET_VOLUME: u8 = 0x4A;
 pub const GET_VOLUME: u8 = 0x4B;
+pub const CLOSE_ALL_APPS: u8 = 0x4C;

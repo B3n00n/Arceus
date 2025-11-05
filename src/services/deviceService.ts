@@ -108,4 +108,10 @@ export class DeviceService {
       name
     });
   }
+
+  static async closeAllApps(deviceIds: string[]): Promise<void> {
+    await invoke("close_all_apps", {
+      deviceIds
+    });
+  }
 }

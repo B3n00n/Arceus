@@ -282,3 +282,22 @@ impl Command for RestartDeviceCommand {
         Ok(Vec::new())
     }
 }
+
+/// Close all running applications on a device
+#[derive(Debug, Clone)]
+pub struct CloseAllAppsCommand;
+
+impl Command for CloseAllAppsCommand {
+    fn opcode(&self) -> u8 {
+        CLOSE_ALL_APPS
+    }
+
+    fn name(&self) -> &'static str {
+        "close_all_apps"
+    }
+
+    fn serialize(&self) -> Result<Vec<u8>, std::io::Error> {
+        // No payload
+        Ok(Vec::new())
+    }
+}

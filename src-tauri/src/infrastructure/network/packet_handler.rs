@@ -63,6 +63,7 @@ impl PacketHandlerRegistry {
             event_bus.clone(),
         )));
         registry.register(Arc::new(ApkDownloadStartedHandler::new(event_bus.clone())));
+        registry.register(Arc::new(CloseAllAppsResponseHandler::new(event_bus.clone())));
 
         registry
     }
@@ -679,6 +680,55 @@ impl PacketHandler for ApkDownloadStartedHandler {
         tracing::info!(device_id = %device_id, "APK download started on device");
 
         let result = CommandResult::success("apk_download", "APK download started");
+        self.event_bus.command_executed(device_id.as_uuid().clone(), result);
+
+        Ok(())
+    }
+}
+
+/// Handles CLOSE_ALL_APPS_RESPONSE (0x18) packets
+/// Payload: [success: u8][message: String][closed_count: u32][closed_apps: List<String>]
+struct CloseAllAppsResponseHandler {
+    event_bus: Arc<EventBus>,
+}
+
+impl CloseAllAppsResponseHandler {
+    fn new(event_bus: Arc<EventBus>) -> Self {
+        Self { event_bus }
+    }
+}
+
+#[async_trait]
+impl PacketHandler for CloseAllAppsResponseHandler {
+    fn opcode(&self) -> u8 {
+        crate::protocol::opcodes::CLOSE_ALL_APPS_RESPONSE
+    }
+
+    async fn handle(&self, device_id: DeviceId, payload: Vec<u8>) -> Result<()> {
+        let mut cursor = Cursor::new(payload);
+        let success = cursor.read_u8()? != 0;
+        let message = cursor.read_string()?;
+        let closed_count = cursor.read_u32::<BigEndian>()? as usize;
+
+        let mut closed_apps = Vec::with_capacity(closed_count);
+        for _ in 0..closed_count {
+            let package_name = cursor.read_string()?;
+            closed_apps.push(package_name);
+        }
+
+        tracing::info!(
+            device_id = %device_id,
+            success = success,
+            closed_count = closed_count,
+            "Close all apps response: {}",
+            message
+        );
+
+        let result = if success {
+            CommandResult::success("close_all_apps", "Successfully closed all apps")
+        } else {
+            CommandResult::failure("close_all_apps", &message)
+        };
         self.event_bus.command_executed(device_id.as_uuid().clone(), result);
 
         Ok(())

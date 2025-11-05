@@ -1,9 +1,9 @@
 use crate::application::services::DeviceApplicationService;
 use crate::core::models::device::{DeviceInfo, DeviceState};
 use crate::domain::commands::{
-    ExecuteShellCommand, GetInstalledAppsCommand, GetVolumeCommand, InstallApkCommand,
-    LaunchAppCommand, PingCommand, RequestBatteryCommand, RestartDeviceCommand,
-    SetVolumeCommand, UninstallAppCommand,
+    CloseAllAppsCommand, ExecuteShellCommand, GetInstalledAppsCommand, GetVolumeCommand,
+    InstallApkCommand, LaunchAppCommand, PingCommand, RequestBatteryCommand,
+    RestartDeviceCommand, SetVolumeCommand, UninstallAppCommand,
 };
 use crate::domain::models::{DeviceId, PackageName, Serial};
 use serde::Serialize;
@@ -365,6 +365,22 @@ pub async fn install_local_apk(
         failed = result.failure_count(),
         "Local APK install batch completed"
     );
+
+    Ok(convert_batch_result_to_dto(result))
+}
+
+/// Close all running applications on multiple devices
+#[tauri::command]
+pub async fn close_all_apps(
+    device_ids: Vec<String>,
+    device_service: State<'_, Arc<DeviceApplicationService>>,
+) -> Result<BatchResultDto, String> {
+    let ids = parse_device_ids(device_ids)?;
+    let command = CloseAllAppsCommand;
+
+    let result = device_service
+        .execute_command_batch(ids, Arc::new(command))
+        .await;
 
     Ok(convert_batch_result_to_dto(result))
 }

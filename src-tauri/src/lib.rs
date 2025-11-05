@@ -10,9 +10,9 @@ mod protocol;
 mod net; // Network utilities
 
 use commands::{
-    execute_shell, get_device, get_devices, get_installed_apps, get_volume, install_local_apk,
-    install_remote_apk, launch_app, ping_devices, request_battery, set_device_name, set_volume,
-    restart_devices, uninstall_app,
+    close_all_apps, execute_shell, get_device, get_devices, get_installed_apps, get_volume,
+    install_local_apk, install_remote_apk, launch_app, ping_devices, request_battery,
+    set_device_name, set_volume, restart_devices, uninstall_app,
     add_apk, list_apks, open_apk_folder, remove_apk,
     check_for_updates, close_updater_and_show_main, download_and_install_update, skip_update,
 };
@@ -193,6 +193,7 @@ pub fn run() {
             install_remote_apk,
             install_local_apk,
             restart_devices,
+            close_all_apps,
             list_apks,
             add_apk,
             remove_apk,

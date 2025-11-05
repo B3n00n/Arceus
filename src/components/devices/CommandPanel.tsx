@@ -12,6 +12,7 @@ import {
   Upload,
   FileText,
   List,
+  XCircle,
 } from 'lucide-react';
 import { DeviceService } from '@/services/deviceService';
 import { cn } from '@/lib/cn';
@@ -119,6 +120,20 @@ export function CommandPanel({
                     >
                       <PlayCircle className="h-4 w-4 mr-2" />
                       Launch App
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full justify-start"
+                      onClick={() => {
+                        if (confirm(`Close all running apps on ${selectedDeviceIds.size} device(s)?`)) {
+                          onHandleCommand(() => DeviceService.closeAllApps(selectedIds), 'Close All Apps');
+                        }
+                      }}
+                      disabled={loading}
+                    >
+                      <XCircle className="h-4 w-4 mr-2" />
+                      Close All Apps
                     </Button>
                     <Button
                       variant="outline"
