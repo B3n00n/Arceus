@@ -1,18 +1,18 @@
 import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
-  Glasses,
   Package,
   Settings,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  RectangleGoggles
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { useUIStore } from '@/stores/uiStore';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { name: 'Devices', href: '/devices', icon: Glasses },
+  { name: 'Devices', href: '/devices', icon: RectangleGoggles },
   { name: 'APK Manager', href: '/apk-manager', icon: Package },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
@@ -24,13 +24,13 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        'fixed left-0 top-0 z-40 h-screen bg-discord-dark-3 border-r border-discord-dark-2 transition-all duration-300',
+        'fixed left-0 top-0 z-40 h-screen border-r border-discord-dark-2 transition-all duration-300 box-content',
         sidebarCollapsed ? 'w-16' : 'w-64'
       )}
     >
       <div className="flex h-full flex-col">
         {/* Header */}
-        <div className="flex h-16 items-center justify-between px-4 border-b border-discord-dark-2">
+        <div className="flex h-16 items-center justify-between px-4 border-discord-dark-2">
           {!sidebarCollapsed && (
             <span className="text-white font-semibold text-lg">Arceus</span>
           )}
@@ -53,33 +53,37 @@ export function Sidebar() {
                 key={item.name}
                 to={item.href}
                 className={cn(
-                  'flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors group',
+                  'flex items-center rounded-md h-12 text-sm font-medium transition-all duration-300 group overflow-hidden px-3 gap-3',
+                
                   isActive
-                    ? 'bg-discord-blurple text-white'
+                    ? 'bg-discord-dark-2 text-white'
                     : 'text-gray-300 hover:bg-discord-dark-2 hover:text-white'
                 )}
                 title={sidebarCollapsed ? item.name : undefined}
               >
-                <Icon size={20} />
-                {!sidebarCollapsed && <span>{item.name}</span>}
+                <Icon size={20} className="shrink-0" />
+                <span
+                  className={cn(
+                    'whitespace-nowrap overflow-hidden transition-all duration-300',
+                    sidebarCollapsed ? 'max-w-0 opacity-0 ml-0' : 'max-w-[160px] opacity-100 ml-1'
+                  )}
+                >
+                  {item.name}
+                </span>
               </Link>
             );
           })}
         </nav>
 
         {/* Footer */}
-        <div className="border-t border-discord-dark-2 p-4">
+        <div className="p-4">
           <div className={cn(
             'flex items-center justify-center',
             sidebarCollapsed && 'flex-col gap-1'
           )}>
-            {!sidebarCollapsed ? (
-              <p className="text-sm font-medium text-white">Arceus v0.1.2</p>
-            ) : (
-              <div className="h-10 w-10 rounded-full bg-discord-dark flex items-center justify-center">
-                <span className="text-[10px] text-gray-400">v0.1.2</span>
-              </div>
-            )}
+            {!sidebarCollapsed && (
+              <span className="text-sm font-medium text-white whitespace-nowrap overflow-hidden">Arceus v0.1.2</span>
+            ) }
           </div>
         </div>
       </div>

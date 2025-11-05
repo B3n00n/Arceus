@@ -4,10 +4,11 @@ import { Input } from '@/components/ui/input';
 import { Check, X, Pencil } from 'lucide-react';
 import { useDeviceStore } from '@/stores/deviceStore';
 import { DeviceService } from '@/services/deviceService';
-import { formatDate, getBatteryColor } from '@/lib/formatting';
+import { formatDate } from '@/lib/formatting';
 import { cn } from '@/lib/cn';
 import { toast } from '@/lib/toast';
 import type { DeviceState } from '@/types/device.types';
+import { DeviceBattery } from '@/components/devices/DeviceBattery';
 
 interface DeviceCardProps {
   device: DeviceState;
@@ -122,12 +123,7 @@ export function DeviceCard({ device, isSelected, onToggle }: DeviceCardProps) {
         {device.battery && (
           <div className="flex items-center justify-between text-xs">
             <span className="text-gray-400">Battery</span>
-            <div className="flex items-center gap-1">
-              <span className={cn('font-medium', getBatteryColor(device.battery.headsetLevel))}>
-                {device.battery.headsetLevel}%
-              </span>
-              {device.battery.isCharging && <span className="text-yellow-500 text-sm">⚡</span>}
-            </div>
+            <DeviceBattery level={device.battery.headsetLevel} isCharging={device.battery.isCharging} />
           </div>
         )}
         {device.volume && (
