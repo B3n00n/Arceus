@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
-  Grid3x3,
-  List,
   RefreshCw,
   CheckSquare,
   Square,
@@ -24,8 +22,6 @@ import { ApkListDialog } from '@/components/dialogs/ApkListDialog';
 
 export function DevicesPage() {
   const {
-    viewMode,
-    setViewMode,
     selectedDeviceIds,
     toggleDevice,
     selectAll,
@@ -254,23 +250,6 @@ export function DevicesPage() {
 
           {/* Controls */}
           <div className="flex items-center gap-3">
-            <div className="flex gap-1 border border-discord-dark rounded-md p-1">
-              <Button
-                variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('grid')}
-              >
-                <Grid3x3 className="h-4 w-4" />
-              </Button>
-              <Button
-                variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('list')}
-              >
-                <List className="h-4 w-4" />
-              </Button>
-            </div>
-
             <div className="flex-1" />
 
             <Button
@@ -288,12 +267,11 @@ export function DevicesPage() {
           </div>
         </div>
 
-        {/* Device Grid/List */}
+        {/* Device List */}
         <div className="flex-1 overflow-y-auto p-6">
           <DeviceList
             devices={filteredDevices}
             selectedDeviceIds={selectedDeviceIds}
-            viewMode={viewMode}
             onToggleDevice={toggleDevice}
           />
         </div>

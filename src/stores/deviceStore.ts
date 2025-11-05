@@ -6,7 +6,6 @@ interface DeviceStoreState {
   devices: DeviceState[];
   selectedDeviceIds: Set<string>;
   searchQuery: string;
-  viewMode: 'grid' | 'list';
 
   setDevices: (devices: DeviceState[]) => void;
   updateDevice: (device: DeviceState) => void;
@@ -19,7 +18,6 @@ interface DeviceStoreState {
   clearSelection: () => void;
 
   setSearchQuery: (query: string) => void;
-  setViewMode: (mode: 'grid' | 'list') => void;
 
   getFilteredDevices: () => DeviceState[];
   getSelectedDevices: () => DeviceState[];
@@ -29,7 +27,6 @@ export const useDeviceStore = create<DeviceStoreState>((set, get) => ({
   devices: [],
   selectedDeviceIds: new Set(),
   searchQuery: '',
-  viewMode: 'grid',
 
   setDevices: (devices) => set({ devices }),
 
@@ -76,7 +73,6 @@ export const useDeviceStore = create<DeviceStoreState>((set, get) => ({
   clearSelection: () => set({ selectedDeviceIds: new Set() }),
 
   setSearchQuery: (query) => set({ searchQuery: query }),
-  setViewMode: (mode) => set({ viewMode: mode }),
 
   getFilteredDevices: () => {
     const { devices, searchQuery } = get();
