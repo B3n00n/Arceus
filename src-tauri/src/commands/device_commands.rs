@@ -37,7 +37,6 @@ fn convert_device_to_state(device: &crate::domain::models::Device) -> DeviceStat
     let battery = device.battery().map(|b| crate::core::models::battery::BatteryInfo {
         headset_level: b.level(),
         is_charging: b.is_charging(),
-        last_updated: b.last_updated(),
     });
 
     let volume = device.volume().map(|v| {

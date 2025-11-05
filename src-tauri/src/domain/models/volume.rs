@@ -1,7 +1,6 @@
 /// Volume entity
 /// Represents the volume state of a device.
 
-use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 /// Volume information for a device
@@ -10,7 +9,6 @@ pub struct Volume {
     percentage: u8,
     current: u8,
     max: u8,
-    last_updated: DateTime<Utc>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -40,7 +38,6 @@ impl Volume {
             percentage,
             current,
             max,
-            last_updated: Utc::now(),
         })
     }
 

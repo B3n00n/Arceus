@@ -1,4 +1,3 @@
-use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -6,5 +5,4 @@ use serde::{Deserialize, Serialize};
 pub struct BatteryInfo {
     pub headset_level: u8,
     pub is_charging: bool,
-    pub last_updated: DateTime<Utc>,
 }

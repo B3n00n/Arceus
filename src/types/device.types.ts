@@ -11,14 +11,12 @@ export interface DeviceInfo {
 export interface BatteryInfo {
   headsetLevel: number;
   isCharging: boolean;
-  lastUpdated: string;
 }
 
 export interface VolumeInfo {
   volumePercentage: number;
   currentVolume: number;
   maxVolume: number;
-  lastUpdated: string;
 }
 
 export interface CommandResult {

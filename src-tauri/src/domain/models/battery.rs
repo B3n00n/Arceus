@@ -1,7 +1,6 @@
 /// Battery entity
 /// Represents the battery state of a device.
 
-use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 /// Battery information for a device
@@ -9,7 +8,6 @@ use serde::{Deserialize, Serialize};
 pub struct Battery {
     level: u8,
     is_charging: bool,
-    last_updated: DateTime<Utc>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -27,7 +25,6 @@ impl Battery {
         Ok(Self {
             level,
             is_charging,
-            last_updated: Utc::now(),
         })
     }
 
@@ -37,9 +34,5 @@ impl Battery {
 
     pub fn is_charging(&self) -> bool {
         self.is_charging
-    }
-
-    pub fn last_updated(&self) -> DateTime<Utc> {
-        self.last_updated
     }
 }

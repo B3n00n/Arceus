@@ -204,7 +204,6 @@ impl PacketHandler for DeviceConnectedHandler {
             battery: device.battery().map(|b| crate::core::models::battery::BatteryInfo {
                 headset_level: b.level(),
                 is_charging: b.is_charging(),
-                last_updated: b.last_updated(),
             }),
             volume: device.volume().map(|v| {
                 crate::core::models::volume::VolumeInfo::new(v.percentage(), v.current(), v.max())
@@ -296,7 +295,6 @@ impl PacketHandler for BatteryStatusHandler {
             let battery_info = crate::core::models::battery::BatteryInfo {
                 headset_level: level,
                 is_charging,
-                last_updated: chrono::Utc::now(),
             };
             self.event_bus.battery_updated(device_id.as_uuid().clone(), battery_info);
         }
