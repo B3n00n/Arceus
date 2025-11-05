@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+@theme {
+  --color-discord-blurple: #7289da;
+  --color-discord-dark: #424549;
+  --color-discord-dark-2: #36393e;
+  --color-discord-dark-3: #282b30;
+  --color-discord-dark-4: #1e2124;
+}
+
 @layer base {
   * {
     border-color: hsl(215, 16%, 26%);
