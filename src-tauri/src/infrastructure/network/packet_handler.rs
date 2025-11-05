@@ -442,6 +442,7 @@ impl PacketHandler for LaunchAppResponseHandler {
 }
 
 /// Handles SHELL_EXECUTION_RESPONSE (0x11) packets
+/// Payload: [success: u8][output: String][exit_code: i32]
 struct ShellExecutionResponseHandler {
     event_bus: Arc<EventBus>,
 }
@@ -460,11 +461,22 @@ impl PacketHandler for ShellExecutionResponseHandler {
 
     async fn handle(&self, device_id: DeviceId, payload: Vec<u8>) -> Result<()> {
         let mut cursor = Cursor::new(payload);
+        let success = cursor.read_u8()? != 0;
         let output = cursor.read_string()?;
+        let exit_code = cursor.read_i32::<BigEndian>()?;
 
-        tracing::debug!(device_id = %device_id, "Shell execution response");
+        tracing::debug!(
+            device_id = %device_id,
+            success = success,
+            exit_code = exit_code,
+            "Shell execution response"
+        );
 
-        let result = CommandResult::success("shell_execution", output);
+        let result = if success {
+            CommandResult::success("shell_execution", output)
+        } else {
+            CommandResult::failure("shell_execution", output)
+        };
         self.event_bus.command_executed(device_id.as_uuid().clone(), result);
 
         Ok(())

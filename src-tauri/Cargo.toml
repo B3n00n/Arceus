@@ -1,6 +1,6 @@
 [package]
 name = "arceus"
-version = "0.1.5"
+version = "0.1.6"
 description = ""
 authors = ["B3n00n"]
 edition = "2024"
