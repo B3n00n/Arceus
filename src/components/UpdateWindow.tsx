@@ -39,7 +39,7 @@ export function UpdateWindow() {
         }, 1000);
       }
     } catch (err) {
-      setError(String(err));
+      setError('Can not check for updates');
       setTimeout(() => {
         invoke('close_updater_and_show_main');
       }, 2000);
@@ -59,7 +59,7 @@ export function UpdateWindow() {
       setStatus('Restarting application...');
       await relaunch();
     } catch (err) {
-      setError(String(err));
+      setError('Can not check for updates');
       setTimeout(() => {
         invoke('close_updater_and_show_main');
       }, 2000);
