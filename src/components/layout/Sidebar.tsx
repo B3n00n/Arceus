@@ -76,7 +76,7 @@ export function Sidebar() {
         </nav>
 
         {/* Footer */}
-        <div className="p-4">
+        <div className="border-t border-discord-dark-2 p-4 h-[53px]">
           <div className={cn(
             'flex items-center justify-center',
             sidebarCollapsed && 'flex-col gap-1'
