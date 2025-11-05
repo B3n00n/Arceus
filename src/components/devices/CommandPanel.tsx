@@ -40,7 +40,7 @@ export function CommandPanel({
   const selectedIds = Array.from(selectedDeviceIds);
 
   return (
-    <div className="w-80 border-l border-discord-dark-2 bg-discord-dark-3 flex flex-col">
+    <div className="w-80 border-l border-discord-dark-2 flex flex-col">
       <div className="p-4 border-b border-discord-dark-2">
         <h3 className="font-semibold text-white">Commands</h3>
         <p className="text-xs text-gray-400 mt-1">

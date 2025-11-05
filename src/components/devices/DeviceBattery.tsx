@@ -1,5 +1,6 @@
 // React import intentionally omitted as it's not directly referenced
 import { cn } from '@/lib/cn';
+import { Battery as BatteryIcon } from 'lucide-react';
 import { getBatteryColor } from '@/lib/formatting';
 
 interface DeviceBatteryProps {
@@ -14,21 +15,19 @@ export function DeviceBattery({ level, isCharging = false, showLabel = true, cla
 
   // Visual metrics based on the provided reference
   // Fill container per latest spec
-  const innerMaxWidthPx = 13.5; // px
+  const innerMaxWidthPx = 10; // px
   const innerHeightPx = 6; // px
-  const innerLeftPaddingPx = 4; // px
-  const innerTopPaddingPx = 9; // px
+  const innerLeftPaddingPx = 4.65; // px
+  const innerTopPaddingPx = 8.5; // px
 
   const currentFillWidth = Math.max(0, Math.min(innerMaxWidthPx, (safeLevel / 100) * innerMaxWidthPx));
   const fillColorClass = getBatteryColor(safeLevel);
 
   return (
     <div className={cn('flex items-center gap-2', className)}>
-      {/* Battery outline using Material Symbols glyph */}
+      {/* Battery outline using lucide-react icon */}
       <div className="relative w-6 h-6">
-        <span className="material-symbols-outlined absolute inset-0 z-0 leading-none text-white/90 text-[24px] flex items-center justify-center select-none">
-          battery_android_0
-        </span>
+        <BatteryIcon className="absolute inset-0 z-0 w-6 h-6 text-white/90" />
 
         {/* Inner fill area positioned by paddings; only the fill changes color */}
         <div
