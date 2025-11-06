@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Check, X, Pencil } from 'lucide-react';
 import { useDeviceStore } from '@/stores/deviceStore';
 import { DeviceService } from '@/services/deviceService';
-import { formatDate } from '@/lib/formatting';
 import { cn } from '@/lib/cn';
 import { toast } from '@/lib/toast';
 import type { DeviceState } from '@/types/device.types';
@@ -28,8 +28,8 @@ export function DeviceCard({ device, isSelected, onToggle }: DeviceCardProps) {
 
   const handleSaveName = async () => {
     if (isSavingName) return;
-
     setIsSavingName(true);
+
     try {
       const nameToSave = editedName.trim() || null;
       await DeviceService.setDeviceName(device.info.serial, nameToSave);
@@ -51,107 +51,110 @@ export function DeviceCard({ device, isSelected, onToggle }: DeviceCardProps) {
 
   return (
     <Card
-      className={cn(
-        'group bg-discord-dark-2 border-discord-dark cursor-pointer transition-all hover:border-discord-blurple',
-        isSelected && 'border-discord-blurple ring-1 ring-discord-blurple'
-      )}
       onClick={onToggle}
+      className={cn(
+        'group p-4 rounded-lg cursor-pointer transition-all text-gray-300',
+        'outline outline-1 outline-offset-[-1px] outline-discord-dark-3 hover:outline-white',
+        'min-w-fit flex items-center w-full gap-8',
+        isSelected && 'outline-white outline-2 outline-offset-[-2px]'
+      )}
     >
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3 flex-1">
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                {isEditingName ? (
-                  <div className="flex items-center gap-2 flex-1" onClick={(e) => e.stopPropagation()}>
-                    <Input
-                      value={editedName}
-                      onChange={(e) => setEditedName(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleSaveName();
-                        if (e.key === 'Escape') handleCancelEdit();
-                      }}
-                      placeholder={device.info.model}
-                      className="h-7 text-sm"
-                      autoFocus
-                      disabled={isSavingName}
-                    />
-                    <button
-                      onClick={handleSaveName}
-                      disabled={isSavingName}
-                      className="text-green-400 hover:text-green-300 transition-colors"
-                    >
-                      <Check className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={handleCancelEdit}
-                      disabled={isSavingName}
-                      className="text-gray-400 hover:text-gray-300 transition-colors"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                ) : (
-                  <>
-                    <h3 className="font-semibold text-white">
-                      {device.info.customName || device.info.model}
-                    </h3>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setIsEditingName(true);
-                      }}
-                      className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-white transition-all"
-                    >
-                      <Pencil className="h-3 w-3" />
-                    </button>
-                  </>
-                )}
-              </div>
-              {!isEditingName && (
-                <p className="text-xs text-gray-400 mt-1">{device.info.serial}</p>
-              )}
-            </div>
-          </div>
+{/* Checkbox */}
+<div className="flex-shrink-0 flex items-center justify-start">
+  <Checkbox
+    checked={isSelected}
+    onCheckedChange={() => onToggle()}
+    className="border-discord-dark-3"
+  />
+</div>
+
+
+
+      {/* Name */}
+      <div
+        className="group/name flex-[2] min-w-[8rem] flex justify-between items-center gap-2"
+        onClick={(e) => {
+          e.stopPropagation();
+          if (!isEditingName) setIsEditingName(true);
+        }}
+      >
+        <div className="text-white text-sm font-bold flex justify-between items-center gap-2 w-full">
+          {isEditingName ? (
+            <>
+              <Input
+                value={editedName}
+                onChange={(e) => setEditedName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSaveName();
+                  if (e.key === 'Escape') handleCancelEdit();
+                }}
+                placeholder={device.info.model}
+                className="h-7 text-sm"
+                autoFocus
+                disabled={isSavingName}
+              />
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleSaveName();
+                }}
+                disabled={isSavingName}
+                className="text-green-400 hover:text-green-300 transition-colors"
+              >
+                <Check className="h-3.5 w-3.5" />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleCancelEdit();
+                }}
+                disabled={isSavingName}
+                className="text-gray-400 hover:text-gray-300 transition-colors"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </>
+          ) : (
+            <>
+              <span className="truncate">{device.info.customName || device.info.model}</span>
+              <Pencil className="h-3 w-3 text-gray-400 group-hover/name:text-white transition-all" />
+            </>
+          )}
         </div>
-      </CardHeader>
-      <CardContent className="space-y-2">
-        <div className="flex items-center justify-between text-xs">
-          <span className="text-gray-400">IP</span>
-          <span className="text-gray-300 font-mono">{device.info.ip}</span>
+      </div>
+
+      {/* MAC / Serial */}
+      <div className="flex-[1.5] min-w-[8rem] flex justify-start items-center">
+        <div className="text-sm truncate">
+          {device.info.serial}
         </div>
-        {device.battery && (
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-gray-400">Battery</span>
-            <DeviceBattery level={device.battery.headsetLevel} isCharging={device.battery.isCharging} />
-          </div>
-        )}
-        {device.volume && (
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-gray-400">Volume</span>
-            <span className="text-gray-300">{device.volume.volumePercentage}%</span>
-          </div>
-        )}
-        <div className="flex items-center justify-between text-xs">
-          <span className="text-gray-400">Last Seen</span>
-          <span className="text-gray-300">{formatDate(device.info.lastSeen)}</span>
+      </div>
+
+      {/* IP */}
+      <div className="flex-[1.5] min-w-[8rem] flex justify-start items-center">
+        <div className="text-sm truncate">
+          {device.info.ip}
         </div>
-        {device.commandHistory.length > 0 && (
-          <div className="pt-2 border-t border-discord-dark">
-            <div className="text-xs text-gray-400 mb-1">Last Command</div>
-            <div
-              className={cn(
-                'text-xs p-1.5 rounded bg-discord-dark-3',
-                device.commandHistory[0].success ? 'text-green-400' : 'text-red-400'
-              )}
-            >
-              <span className="font-medium">{device.commandHistory[0].commandType}</span>
-              <br />
-              <span className="text-gray-400">{device.commandHistory[0].message}</span>
-            </div>
-          </div>
+      </div>
+
+      {/* Volume */}
+      <div className="flex-[0.75] min-w-[5rem] flex justify-start items-center">
+        <div className="text-sm text-gray-300">
+          {device.volume ? `${device.volume.volumePercentage}%` : '--'}
+        </div>
+      </div>
+
+      {/* Battery */}
+      <div className="flex-[0.75] min-w-[5rem] flex justify-start items-center">
+        {device.battery ? (
+          <DeviceBattery
+            level={device.battery.headsetLevel}
+            isCharging={device.battery.isCharging}
+          />
+        ) : (
+          <div className="text-sm font-medium text-gray-300">N/A</div>
         )}
-      </CardContent>
+      </div>
     </Card>
   );
 }

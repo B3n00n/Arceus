@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   RefreshCw,
-  CheckSquare,
-  Square,
   FolderOpen,
 } from 'lucide-react';
 import { useDeviceStore } from '@/stores/deviceStore';
@@ -81,6 +80,9 @@ export function DevicesPage() {
   const filteredDevices = getFilteredDevices();
   const hasSelection = selectedDeviceIds.size > 0;
   const selectedIds = Array.from(selectedDeviceIds);
+  const allSelected =
+  filteredDevices.length > 0 &&
+  selectedDeviceIds.size === filteredDevices.length;
 
   const handleCommand = async (
     action: () => Promise<void>,
@@ -214,12 +216,11 @@ export function DevicesPage() {
   return (
     <div className="h-[calc(100vh-4rem)] flex">
       {/* Left: Device List */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden p-6">
         {/* Header */}
-        <div className="p-6 border-b border-discord-dark-2">
+        <div className="pl-4">
           <div className="flex items-center justify-between mb-4">
-            <div>
-              <h1 className="text-2xl font-bold text-white">Devices</h1>
+            <div>             
               <p className="text-sm text-gray-400 mt-1">
                 {filteredDevices.length} device{filteredDevices.length !== 1 ? 's' : ''}
                 {hasSelection && ` • ${selectedDeviceIds.size} selected`}
@@ -248,27 +249,56 @@ export function DevicesPage() {
             </div>
           </div>
 
-          {/* Controls */}
-          <div className="flex items-center gap-3">
-            <div className="flex-1" />
+        </div> 
 
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={selectedDeviceIds.size === filteredDevices.length ? clearSelection : selectAll}
-            >
-              {selectedDeviceIds.size === filteredDevices.length ? (
-                <CheckSquare className="h-4 w-4 mr-2" />
-              ) : (
-                <Square className="h-4 w-4 mr-2" />
-              )}
-              Select All
-            </Button>
+             {/* Device Header Row */}
+             {filteredDevices.length > 0 && (
+             <div
+          className="
+            p-4 text-gray-400 text-sm
+            min-w-fit flex items-center w-full gap-8 outline-offset-[-1px]
+          "
+        >
+          {/* Checkbox for Select All */}
+          <div className="flex-shrink-0 flex items-center justify-start">
+            <Checkbox
+              checked={allSelected}
+              onCheckedChange={() =>
+                allSelected ? clearSelection() : selectAll()
+              }
+              className="border-discord-dark-3"
+            />
+          </div>
+
+          {/* Device */}
+          <div className="flex-[2] min-w-[8rem] flex justify-start items-center">
+            <span>Device</span>
+          </div>
+
+          {/* MAC */}
+          <div className="flex-[1.5] min-w-[8rem] flex justify-start items-center">
+            <span>MAC</span>
+          </div>
+
+          {/* IP */}
+          <div className="flex-[1.5] min-w-[8rem] flex justify-start items-center">
+            <span>IP</span>
+          </div>
+
+          {/* Volume */}
+          <div className="flex-[0.75] min-w-[5rem] flex justify-start items-center">
+            <span>Volume</span>
+          </div>
+
+          {/* Battery */}
+          <div className="flex-[0.75] min-w-[5rem] flex justify-start items-center">
+            <span>Battery</span>
           </div>
         </div>
-
+             )}
+           
         {/* Device List */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto space-y-2">
           <DeviceList
             devices={filteredDevices}
             selectedDeviceIds={selectedDeviceIds}

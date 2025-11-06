@@ -18,7 +18,7 @@ export function MainLayout() {
         )}
       >
         <Header />
-        <main className="p-6">
+        <main>
           <Outlet />
         </main>
       </div>
