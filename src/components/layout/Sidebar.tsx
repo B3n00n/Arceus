@@ -61,7 +61,7 @@ export function Sidebar() {
                 )}
                 title={sidebarCollapsed ? item.name : undefined}
               >
-                <Icon size={20} className="shrink-0" />
+                <Icon size={24} className="shrink-0" />
                 <span
                   className={cn(
                     'whitespace-nowrap overflow-hidden transition-all duration-300',

@@ -56,7 +56,7 @@ export function DeviceBattery({ level, isCharging = false, showLabel = true, cla
       </div>
 
       {showLabel && (
-        <span className="text-xs font-medium text-gray-300">{safeLevel}%</span>
+        <span className="text-sm text-gray-300">{safeLevel}%</span>
       )}
     </div>
   );
