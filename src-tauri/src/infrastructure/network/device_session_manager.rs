@@ -11,11 +11,11 @@ use std::sync::Arc;
 
 /// Manages active device sessions
 /// Provides O(1) lookup of sessions by device ID for command execution.
-pub struct SessionManager {
+pub struct DeviceSessionManager {
     sessions: Arc<DashMap<DeviceId, Arc<DeviceSession>>>,
 }
 
-impl SessionManager {
+impl DeviceSessionManager {
     /// Create a new SessionManager
     pub fn new() -> Self {
         Self {
@@ -41,7 +41,7 @@ impl SessionManager {
     }
 }
 
-impl Default for SessionManager {
+impl Default for DeviceSessionManager {
     fn default() -> Self {
         Self::new()
     }
@@ -49,7 +49,7 @@ impl Default for SessionManager {
 
 // Implement the domain trait for infrastructure SessionManager
 #[async_trait]
-impl SessionManagerTrait for SessionManager {
+impl SessionManagerTrait for DeviceSessionManager {
     async fn send_packet(&self, device_id: DeviceId, packet: RawPacket) -> Result<(), crate::domain::services::SessionError> {
         let session = self.get_session(&device_id)
             .ok_or(crate::domain::services::SessionError::SessionNotFound(device_id))?;

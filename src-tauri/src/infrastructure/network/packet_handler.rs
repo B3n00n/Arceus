@@ -4,7 +4,7 @@
 use crate::core::{models::CommandResult, EventBus};
 use crate::domain::models::{Battery, Device, DeviceId, Serial, Volume};
 use crate::domain::repositories::{DeviceNameRepository, DeviceRepository};
-use crate::infrastructure::network::session_manager::SessionManager;
+use crate::infrastructure::network::device_session_manager::DeviceSessionManager;
 use crate::net::io::ProtocolReadExt;
 use crate::protocol::{opcodes, RawPacket};
 use async_trait::async_trait;
@@ -29,7 +29,7 @@ impl PacketHandlerRegistry {
         device_repo: Arc<dyn DeviceRepository>,
         device_name_repo: Arc<dyn DeviceNameRepository>,
         event_bus: Arc<EventBus>,
-        session_manager: Arc<SessionManager>,
+        session_manager: Arc<DeviceSessionManager>,
     ) -> Self {
         let mut registry = Self {
             handlers: std::collections::HashMap::new(),
@@ -99,7 +99,7 @@ struct DeviceConnectedHandler {
     device_repo: Arc<dyn DeviceRepository>,
     device_name_repo: Arc<dyn DeviceNameRepository>,
     event_bus: Arc<EventBus>,
-    session_manager: Arc<SessionManager>,
+    session_manager: Arc<DeviceSessionManager>,
 }
 
 impl DeviceConnectedHandler {
@@ -107,7 +107,7 @@ impl DeviceConnectedHandler {
         device_repo: Arc<dyn DeviceRepository>,
         device_name_repo: Arc<dyn DeviceNameRepository>,
         event_bus: Arc<EventBus>,
-        session_manager: Arc<SessionManager>,
+        session_manager: Arc<DeviceSessionManager>,
     ) -> Self {
         Self {
             device_repo,
@@ -118,7 +118,7 @@ impl DeviceConnectedHandler {
     }
 
     /// Helper to send initial status requests to a newly connected device
-    async fn send_initial_status_requests(device_id: DeviceId, session_manager: Arc<SessionManager>) {
+    async fn send_initial_status_requests(device_id: DeviceId, session_manager: Arc<DeviceSessionManager>) {
         // Brief delay to ensure device is ready
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 

@@ -6,7 +6,7 @@ use crate::domain::models::{Device, DeviceId, IpAddress, Serial};
 use crate::domain::repositories::{DeviceNameRepository, DeviceRepository};
 use crate::infrastructure::network::device_session::DeviceSession;
 use crate::infrastructure::network::packet_handler::PacketHandlerRegistry;
-use crate::infrastructure::network::session_manager::SessionManager;
+use crate::infrastructure::network::device_session_manager::DeviceSessionManager;
 use crate::protocol::RawPacket;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -22,7 +22,7 @@ pub struct TcpServer {
     device_name_repo: Arc<dyn DeviceNameRepository>,
     event_bus: Arc<EventBus>,
     packet_handler: Arc<PacketHandlerRegistry>,
-    session_manager: Arc<SessionManager>,
+    session_manager: Arc<DeviceSessionManager>,
     running: Arc<RwLock<bool>>,
     shutdown_tx: broadcast::Sender<()>,
 }
@@ -33,11 +33,11 @@ impl TcpServer {
         device_repo: Arc<dyn DeviceRepository>,
         device_name_repo: Arc<dyn DeviceNameRepository>,
         event_bus: Arc<EventBus>,
-    ) -> (Self, broadcast::Receiver<()>, Arc<SessionManager>) {
+    ) -> (Self, broadcast::Receiver<()>, Arc<DeviceSessionManager>) {
         let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
 
         // Create session manager (needed for command execution)
-        let session_manager = Arc::new(SessionManager::new());
+        let session_manager = Arc::new(DeviceSessionManager::new());
 
         // Create packet handler registry
         let packet_handler = Arc::new(PacketHandlerRegistry::new(
