@@ -1,7 +1,8 @@
 /// Packet handler system for processing incoming device packets
 /// Handlers update the device repository based on received packets.
 
-use crate::core::{models::CommandResult, EventBus};
+use crate::core::EventBus;
+use crate::presentation::dto::{BatteryInfoDto, CommandResultDto, DeviceInfoDto, DeviceStateDto, VolumeInfoDto};
 use crate::domain::models::{Battery, Device, DeviceId, Serial, Volume};
 use crate::domain::repositories::{DeviceNameRepository, DeviceRepository};
 use crate::infrastructure::network::device_session_manager::DeviceSessionManager;
@@ -41,7 +42,7 @@ impl PacketHandlerRegistry {
             event_bus.clone(),
             session_manager.clone(),
         )));
-        registry.register(Arc::new(HeartbeatHandler::new(device_repo.clone())));
+        registry.register(Arc::new(HeartbeatHandler::new()));
         registry.register(Arc::new(BatteryStatusHandler::new(
             device_repo.clone(),
             event_bus.clone(),
@@ -162,7 +163,7 @@ impl PacketHandler for DeviceConnectedHandler {
         );
 
         let serial = Serial::new(serial_str)
-            .map_err(|e| crate::core::error::ArceusError::Other(format!("Invalid serial: {}", e)))?;
+            .map_err(|e| crate::core::error::ArceusError::DomainValidation(format!("Invalid serial: {}", e)))?;
 
         // Get the temporary device that was created on TCP connection
         let temp_device = self.device_repo.find_by_id(device_id).await.ok().flatten();
@@ -191,7 +192,7 @@ impl PacketHandler for DeviceConnectedHandler {
         );
 
         // Emit DeviceConnected event to frontend
-        let device_info = crate::core::models::device::DeviceInfo {
+        let device_info = DeviceInfoDto {
             id: device.id().as_uuid().clone(),
             model: model.clone(),
             serial: serial.as_str().to_string(),
@@ -200,14 +201,14 @@ impl PacketHandler for DeviceConnectedHandler {
             last_seen: device.last_seen(),
             custom_name: custom_name,
         };
-        let device_state = crate::core::models::device::DeviceState {
+        let device_state = DeviceStateDto {
             info: device_info,
-            battery: device.battery().map(|b| crate::core::models::battery::BatteryInfo {
+            battery: device.battery().map(|b| BatteryInfoDto {
                 headset_level: b.level(),
                 is_charging: b.is_charging(),
             }),
             volume: device.volume().map(|v| {
-                crate::core::models::volume::VolumeInfo::new(v.percentage(), v.current(), v.max())
+                VolumeInfoDto::new(v.percentage(), v.current(), v.max())
             }),
             command_history: std::collections::VecDeque::new(),
         };
@@ -228,7 +229,7 @@ impl PacketHandler for DeviceConnectedHandler {
 struct HeartbeatHandler {}
 
 impl HeartbeatHandler {
-    fn new(_device_repo: Arc<dyn DeviceRepository>) -> Self {
+    fn new() -> Self {
         Self {}
     }
 }
@@ -285,20 +286,20 @@ impl PacketHandler for BatteryStatusHandler {
         );
 
         // Update device with battery info
+        let battery = Battery::new(level, is_charging)
+            .map_err(|e| crate::core::error::ArceusError::DomainValidation(format!("Invalid battery: {}", e)))?;
+
         if let Ok(Some(device)) = self.device_repo.find_by_id(device_id).await {
-            let battery = Battery::new(level, is_charging)
-                .map_err(|e| crate::core::error::ArceusError::Other(format!("Invalid battery: {}", e)))?;
-
-            let updated_device = device.with_battery(battery);
+            let updated_device = device.as_ref().clone().with_battery(battery);
             self.device_repo.save(updated_device).await?;
-
-            // Emit event
-            let battery_info = crate::core::models::battery::BatteryInfo {
-                headset_level: level,
-                is_charging,
-            };
-            self.event_bus.battery_updated(device_id.as_uuid().clone(), battery_info);
         }
+
+        // Emit event
+        let battery_info = BatteryInfoDto {
+            headset_level: level,
+            is_charging,
+        };
+        self.event_bus.battery_updated(device_id.as_uuid().clone(), battery_info);
 
         Ok(())
     }
@@ -355,22 +356,22 @@ impl PacketHandler for VolumeStatusHandler {
         );
 
         // Update device with volume info
+        let volume = Volume::new(current, max)
+            .map_err(|e| crate::core::error::ArceusError::DomainValidation(format!("Invalid volume: {}", e)))?;
+
         if let Ok(Some(device)) = self.device_repo.find_by_id(device_id).await {
-            let volume = Volume::new(current, max)
-                .map_err(|e| crate::core::error::ArceusError::Other(format!("Invalid volume: {}", e)))?;
-
-            let updated_device = device.with_volume(volume);
+            let updated_device = device.as_ref().clone().with_volume(volume);
             self.device_repo.save(updated_device).await?;
-
-            // Emit event
-            let percentage = ((current as f32 / max as f32) * 100.0) as u8;
-            let volume_info = crate::core::models::volume::VolumeInfo::new(
-                percentage,
-                current,
-                max,
-            );
-            self.event_bus.volume_updated(device_id.as_uuid().clone(), volume_info);
         }
+
+        // Emit event
+        let percentage = ((current as f32 / max as f32) * 100.0) as u8;
+        let volume_info = VolumeInfoDto::new(
+            percentage,
+            current,
+            max,
+        );
+        self.event_bus.volume_updated(device_id.as_uuid().clone(), volume_info);
 
         Ok(())
     }
@@ -401,7 +402,7 @@ impl PacketHandler for PingResponseHandler {
         tracing::debug!(device_id = %device_id, "Ping response received");
 
         // Emit event to frontend
-        let result = CommandResult::success("ping", "Ping successful");
+        let result = CommandResultDto::success("ping", "Ping successful");
         self.event_bus.command_executed(device_id.as_uuid().clone(), result);
 
         Ok(())
@@ -432,9 +433,9 @@ impl PacketHandler for LaunchAppResponseHandler {
         tracing::debug!(device_id = %device_id, success, "Launch app response");
 
         let result = if success {
-            CommandResult::success("launch_app", "App launched successfully")
+            CommandResultDto::success("launch_app", "App launched successfully")
         } else {
-            CommandResult::failure("launch_app", "Failed to launch app")
+            CommandResultDto::failure("launch_app", "Failed to launch app")
         };
         self.event_bus.command_executed(device_id.as_uuid().clone(), result);
 
@@ -474,9 +475,9 @@ impl PacketHandler for ShellExecutionResponseHandler {
         );
 
         let result = if success {
-            CommandResult::success("shell_execution", output)
+            CommandResultDto::success("shell_execution", output)
         } else {
-            CommandResult::failure("shell_execution", output)
+            CommandResultDto::failure("shell_execution", output)
         };
         self.event_bus.command_executed(device_id.as_uuid().clone(), result);
 
@@ -547,9 +548,9 @@ impl PacketHandler for ApkInstallResponseHandler {
         }
 
         let result = if success {
-            CommandResult::success("apk_install", "APK installed successfully")
+            CommandResultDto::success("apk_install", "APK installed successfully")
         } else {
-            CommandResult::failure("apk_install", "Failed to install APK")
+            CommandResultDto::failure("apk_install", "Failed to install APK")
         };
         self.event_bus.command_executed(device_id.as_uuid().clone(), result);
 
@@ -581,9 +582,9 @@ impl PacketHandler for UninstallAppResponseHandler {
         tracing::debug!(device_id = %device_id, success, "Uninstall app response");
 
         let result = if success {
-            CommandResult::success("uninstall_app", "App uninstalled successfully")
+            CommandResultDto::success("uninstall_app", "App uninstalled successfully")
         } else {
-            CommandResult::failure("uninstall_app", "Failed to uninstall app")
+            CommandResultDto::failure("uninstall_app", "Failed to uninstall app")
         };
         self.event_bus.command_executed(device_id.as_uuid().clone(), result);
 
@@ -634,10 +635,12 @@ impl PacketHandler for VolumeSetResponseHandler {
                     };
 
                     if let Ok(volume) = Volume::new(current, max) {
-                        let updated_device = device.with_volume(volume);
-                        let _ = self.device_repo.save(updated_device).await;
+                        if let Ok(Some(device)) = self.device_repo.find_by_id(device_id).await {
+                            let updated_device = device.as_ref().clone().with_volume(volume);
+                            let _ = self.device_repo.save(updated_device).await;
+                        }
 
-                        let volume_info = crate::core::models::volume::VolumeInfo::new(
+                        let volume_info = VolumeInfoDto::new(
                             actual_percentage,
                             current,
                             max,
@@ -649,9 +652,9 @@ impl PacketHandler for VolumeSetResponseHandler {
         }
 
         let result = if success {
-            CommandResult::success("volume_set", &message)
+            CommandResultDto::success("volume_set", &message)
         } else {
-            CommandResult::failure("volume_set", &message)
+            CommandResultDto::failure("volume_set", &message)
         };
         self.event_bus.command_executed(device_id.as_uuid().clone(), result);
 
@@ -679,7 +682,7 @@ impl PacketHandler for ApkDownloadStartedHandler {
     async fn handle(&self, device_id: DeviceId, _payload: Vec<u8>) -> Result<()> {
         tracing::info!(device_id = %device_id, "APK download started on device");
 
-        let result = CommandResult::success("apk_download", "APK download started");
+        let result = CommandResultDto::success("apk_download", "APK download started");
         self.event_bus.command_executed(device_id.as_uuid().clone(), result);
 
         Ok(())
@@ -725,9 +728,9 @@ impl PacketHandler for CloseAllAppsResponseHandler {
         );
 
         let result = if success {
-            CommandResult::success("close_all_apps", "Successfully closed all apps")
+            CommandResultDto::success("close_all_apps", "Successfully closed all apps")
         } else {
-            CommandResult::failure("close_all_apps", &message)
+            CommandResultDto::failure("close_all_apps", &message)
         };
         self.event_bus.command_executed(device_id.as_uuid().clone(), result);
 

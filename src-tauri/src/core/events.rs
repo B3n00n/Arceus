@@ -1,4 +1,4 @@
-use crate::core::models::{BatteryInfo, CommandResult, DeviceState, VolumeInfo};
+use crate::presentation::dto::{BatteryInfoDto, CommandResultDto, DeviceStateDto, VolumeInfoDto};
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter};
 use uuid::Uuid;
@@ -8,7 +8,7 @@ use uuid::Uuid;
 pub enum ArceusEvent {
     #[serde(rename_all = "camelCase")]
     DeviceConnected {
-        device: DeviceState,
+        device: DeviceStateDto,
     },
 
     #[serde(rename_all = "camelCase")]
@@ -25,19 +25,19 @@ pub enum ArceusEvent {
     #[serde(rename_all = "camelCase")]
     BatteryUpdated {
         device_id: Uuid,
-        battery_info: BatteryInfo,
+        battery_info: BatteryInfoDto,
     },
 
     #[serde(rename_all = "camelCase")]
     VolumeUpdated {
         device_id: Uuid,
-        volume_info: VolumeInfo,
+        volume_info: VolumeInfoDto,
     },
 
     #[serde(rename_all = "camelCase")]
     CommandExecuted {
         device_id: Uuid,
-        result: CommandResult,
+        result: CommandResultDto,
     },
 
     #[serde(rename_all = "camelCase")]
@@ -97,25 +97,25 @@ impl EventBus {
         }
     }
 
-    pub fn device_connected(&self, device: DeviceState) {
+    pub fn device_connected(&self, device: DeviceStateDto) {
         self.emit(ArceusEvent::DeviceConnected { device });
     }
 
-    pub fn battery_updated(&self, device_id: Uuid, battery_info: BatteryInfo) {
+    pub fn battery_updated(&self, device_id: Uuid, battery_info: BatteryInfoDto) {
         self.emit(ArceusEvent::BatteryUpdated {
             device_id,
             battery_info,
         });
     }
 
-    pub fn volume_updated(&self, device_id: Uuid, volume_info: VolumeInfo) {
+    pub fn volume_updated(&self, device_id: Uuid, volume_info: VolumeInfoDto) {
         self.emit(ArceusEvent::VolumeUpdated {
             device_id,
             volume_info,
         });
     }
 
-    pub fn command_executed(&self, device_id: Uuid, result: CommandResult) {
+    pub fn command_executed(&self, device_id: Uuid, result: CommandResultDto) {
         self.emit(ArceusEvent::CommandExecuted { device_id, result });
     }
 

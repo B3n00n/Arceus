@@ -38,8 +38,8 @@ pub enum ArceusError {
     #[error("Configuration error: {0}")]
     Config(String),
 
-    #[error("{0}")]
-    Other(String),
+    #[error("Domain validation error: {0}")]
+    DomainValidation(String),
 }
 
 impl ArceusError {
@@ -56,7 +56,7 @@ impl ArceusError {
             Self::Repository(e) => format!("Repository error: {}", e),
             Self::Application(e) => format!("Application error: {}", e),
             Self::Config(msg) => format!("Configuration error: {}", msg),
-            Self::Other(msg) => msg.clone(),
+            Self::DomainValidation(msg) => format!("Validation error: {}", msg),
         }
     }
 
@@ -98,7 +98,7 @@ impl ArceusError {
             Self::Repository(_) => "REPOSITORY_ERROR",
             Self::Application(_) => "APPLICATION_ERROR",
             Self::Config(_) => "CONFIG_ERROR",
-            Self::Other(_) => "UNKNOWN_ERROR",
+            Self::DomainValidation(_) => "DOMAIN_VALIDATION_ERROR",
         }
     }
 

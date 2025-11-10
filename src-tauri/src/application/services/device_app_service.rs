@@ -49,19 +49,19 @@ impl DeviceApplicationService {
     }
 
     /// Get all devices
-    pub async fn get_all_devices(&self) -> Result<Vec<Device>> {
+    pub async fn get_all_devices(&self) -> Result<Vec<Arc<Device>>> {
         Ok(self.device_repo.find_all().await?)
     }
 
     /// Get a single device by ID
-    pub async fn get_device(&self, id: DeviceId) -> Result<Option<Device>> {
+    pub async fn get_device(&self, id: DeviceId) -> Result<Option<Arc<Device>>> {
         Ok(self.device_repo.find_by_id(id).await?)
     }
 
     /// Set a custom name for a device
     pub async fn set_device_name(&self, serial: Serial, name: Option<String>) -> Result<()> {
         if let Some(device) = self.device_repo.find_by_serial(&serial).await? {
-            let updated_device = device.with_custom_name(name.clone());
+            let updated_device = device.as_ref().clone().with_custom_name(name.clone());
             self.device_repo.save(updated_device).await?;
         }
 

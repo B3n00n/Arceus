@@ -1,5 +1,5 @@
 use crate::application::services::DeviceApplicationService;
-use crate::core::models::device::{DeviceInfo, DeviceState};
+use crate::presentation::dto::{BatteryInfoDto, DeviceInfoDto, DeviceStateDto, VolumeInfoDto};
 use crate::domain::commands::{
     CloseAllAppsCommand, ExecuteShellCommand, GetInstalledAppsCommand, GetVolumeCommand,
     InstallApkCommand, LaunchAppCommand, PingCommand, RequestBatteryCommand,
@@ -22,9 +22,9 @@ fn parse_device_ids(ids: Vec<String>) -> Result<Vec<DeviceId>, String> {
         .collect()
 }
 
-/// Helper to convert domain Device to DeviceState for frontend compatibility
-fn convert_device_to_state(device: &crate::domain::models::Device) -> DeviceState {
-    let info = DeviceInfo {
+/// Helper to convert domain Device to DeviceStateDto for frontend compatibility
+fn convert_device_to_state(device: &Arc<crate::domain::models::Device>) -> DeviceStateDto {
+    let info = DeviceInfoDto {
         id: device.id().as_uuid().clone(),
         model: device.model().to_string(),
         serial: device.serial().as_str().to_string(),
@@ -34,20 +34,20 @@ fn convert_device_to_state(device: &crate::domain::models::Device) -> DeviceStat
         custom_name: device.custom_name().map(|s| s.to_string()),
     };
 
-    let battery = device.battery().map(|b| crate::core::models::battery::BatteryInfo {
+    let battery = device.battery().map(|b| BatteryInfoDto {
         headset_level: b.level(),
         is_charging: b.is_charging(),
     });
 
     let volume = device.volume().map(|v| {
-        crate::core::models::volume::VolumeInfo::new(
+        VolumeInfoDto::new(
             v.percentage(),
             v.current(),
             v.max(),
         )
     });
 
-    DeviceState {
+    DeviceStateDto {
         info,
         battery,
         volume,
@@ -105,14 +105,14 @@ pub struct FailedDeviceDto {
 #[tauri::command]
 pub async fn get_devices(
     device_service: State<'_, Arc<DeviceApplicationService>>,
-) -> Result<Vec<DeviceState>, String> {
+) -> Result<Vec<DeviceStateDto>, String> {
     let devices = device_service
         .get_all_devices()
         .await
         .map_err(|e| format!("Failed to get devices: {}", e))?;
 
-    // Convert domain Device to DeviceState for frontend compatibility
-    let device_states: Vec<DeviceState> = devices
+    // Convert domain Device to DeviceStateDto for frontend compatibility
+    let device_states: Vec<DeviceStateDto> = devices
         .iter()
         .map(convert_device_to_state)
         .collect();
@@ -125,7 +125,7 @@ pub async fn get_devices(
 pub async fn get_device(
     device_id: String,
     device_service: State<'_, Arc<DeviceApplicationService>>,
-) -> Result<Option<DeviceState>, String> {
+) -> Result<Option<DeviceStateDto>, String> {
     let uuid = Uuid::parse_str(&device_id)
         .map_err(|e| format!("Invalid device ID: {}", e))?;
     let device_id = DeviceId::from_uuid(uuid);

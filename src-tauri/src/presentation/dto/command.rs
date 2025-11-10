@@ -1,16 +1,17 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
+/// Command execution result DTO for frontend
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct CommandResult {
+pub struct CommandResultDto {
     pub timestamp: DateTime<Utc>,
     pub command_type: String,
     pub success: bool,
     pub message: String,
 }
 
-impl CommandResult {
+impl CommandResultDto {
     pub fn success(command_type: impl Into<String>, message: impl Into<String>) -> Self {
         Self {
             timestamp: Utc::now(),

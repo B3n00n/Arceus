@@ -3,11 +3,12 @@ use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 use uuid::Uuid;
 
-use super::{BatteryInfo, CommandResult, VolumeInfo};
+use super::{BatteryInfoDto, CommandResultDto, VolumeInfoDto};
 
+/// Device information DTO for frontend
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct DeviceInfo {
+pub struct DeviceInfoDto {
     pub id: Uuid,
     pub model: String,
     pub serial: String,
@@ -17,11 +18,12 @@ pub struct DeviceInfo {
     pub custom_name: Option<String>,
 }
 
+/// Complete device state DTO for frontend
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct DeviceState {
-    pub info: DeviceInfo,
-    pub battery: Option<BatteryInfo>,
-    pub volume: Option<VolumeInfo>,
-    pub command_history: VecDeque<CommandResult>,
+pub struct DeviceStateDto {
+    pub info: DeviceInfoDto,
+    pub battery: Option<BatteryInfoDto>,
+    pub volume: Option<VolumeInfoDto>,
+    pub command_history: VecDeque<CommandResultDto>,
 }

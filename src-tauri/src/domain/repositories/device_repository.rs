@@ -3,6 +3,7 @@
 
 use crate::domain::models::{Device, DeviceId, Serial};
 use async_trait::async_trait;
+use std::sync::Arc;
 
 use super::error::RepositoryError;
 
@@ -15,15 +16,15 @@ pub type Result<T> = std::result::Result<T, RepositoryError>;
 pub trait DeviceRepository: Send + Sync {
     /// Find a device by its unique ID
     /// Returns `None` if no device with the given ID exists.
-    async fn find_by_id(&self, id: DeviceId) -> Result<Option<Device>>;
+    async fn find_by_id(&self, id: DeviceId) -> Result<Option<Arc<Device>>>;
 
     /// Find a device by its serial number
     /// Returns `None` if no device with the given serial exists.
-    async fn find_by_serial(&self, serial: &Serial) -> Result<Option<Device>>;
+    async fn find_by_serial(&self, serial: &Serial) -> Result<Option<Arc<Device>>>;
 
     /// Find all devices
     /// Returns all devices currently stored in the repository.
-    async fn find_all(&self) -> Result<Vec<Device>>;
+    async fn find_all(&self) -> Result<Vec<Arc<Device>>>;
 
     /// Save or update a device
     /// If a device with the same ID already exists, it will be updated.
@@ -36,7 +37,7 @@ pub trait DeviceRepository: Send + Sync {
 
     /// Count the number of devices
     /// Returns the total number of devices in the repository.
-    async fn count(&self) -> Result<usize>;
+    fn count(&self) -> Result<usize>;
 
     // Note: find_where is not included in the trait because it would make
     // the trait not object-safe (dyn DeviceRepository). Implementations can

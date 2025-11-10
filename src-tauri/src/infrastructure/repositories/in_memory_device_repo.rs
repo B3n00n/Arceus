@@ -15,9 +15,10 @@ use std::sync::Arc;
 /// - O(1) lookup by serial number (secondary index)
 /// - Thread-safe with DashMap (lock-free reads)
 /// - Configurable capacity limit
+/// - Uses Arc<Device> internally for efficient cloning
 pub struct InMemoryDeviceRepository {
-    /// Primary index: device_id -> Device
-    by_id: Arc<DashMap<DeviceId, Device>>,
+    /// Primary index: device_id -> Arc<Device>
+    by_id: Arc<DashMap<DeviceId, Arc<Device>>>,
     /// Secondary index: serial -> device_id (for O(1) serial lookups)
     by_serial: Arc<DashMap<Serial, DeviceId>>,
     /// Maximum number of devices allowed
@@ -53,26 +54,26 @@ impl Default for InMemoryDeviceRepository {
 
 #[async_trait]
 impl DeviceRepository for InMemoryDeviceRepository {
-    async fn find_by_id(&self, id: DeviceId) -> Result<Option<Device>, RepositoryError> {
-        Ok(self.by_id.get(&id).map(|entry| entry.value().clone()))
+    async fn find_by_id(&self, id: DeviceId) -> Result<Option<Arc<Device>>, RepositoryError> {
+        Ok(self.by_id.get(&id).map(|entry| Arc::clone(entry.value())))
     }
 
-    async fn find_by_serial(&self, serial: &Serial) -> Result<Option<Device>, RepositoryError> {
+    async fn find_by_serial(&self, serial: &Serial) -> Result<Option<Arc<Device>>, RepositoryError> {
         // O(1) lookup using secondary index
         if let Some(device_id_ref) = self.by_serial.get(serial) {
             let device_id = *device_id_ref.value();
             drop(device_id_ref); // Release the lock before next lookup
-            Ok(self.by_id.get(&device_id).map(|entry| entry.value().clone()))
+            Ok(self.by_id.get(&device_id).map(|entry| Arc::clone(entry.value())))
         } else {
             Ok(None)
         }
     }
 
-    async fn find_all(&self) -> Result<Vec<Device>, RepositoryError> {
+    async fn find_all(&self) -> Result<Vec<Arc<Device>>, RepositoryError> {
         Ok(self
             .by_id
             .iter()
-            .map(|entry| entry.value().clone())
+            .map(|entry| Arc::clone(entry.value()))
             .collect())
     }
 
@@ -97,7 +98,7 @@ impl DeviceRepository for InMemoryDeviceRepository {
         }
 
         // Update primary index
-        self.by_id.insert(id, device);
+        self.by_id.insert(id, Arc::new(device));
 
         // Update secondary index
         self.by_serial.insert(serial, id);
@@ -114,7 +115,7 @@ impl DeviceRepository for InMemoryDeviceRepository {
         Ok(())
     }
 
-    async fn count(&self) -> Result<usize, RepositoryError> {
+    fn count(&self) -> Result<usize, RepositoryError> {
         Ok(self.by_id.len())
     }
 }

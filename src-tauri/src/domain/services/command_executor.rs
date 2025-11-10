@@ -1,15 +1,13 @@
 /// Command Executor
-/// Executes commands on devices with middleware support.
+/// Executes commands on devices.
 
 use crate::domain::commands::{BatchResult, Command, CommandResponse};
 use crate::domain::models::DeviceId;
 use crate::domain::repositories::{DeviceRepository, RepositoryError};
 use crate::domain::services::SessionManager;
-use async_trait::async_trait;
 use futures::stream::FuturesUnordered;
 use futures::StreamExt;
 use std::sync::Arc;
-use std::time::Instant;
 
 pub type Result<T> = std::result::Result<T, CommandError>;
 
@@ -56,29 +54,10 @@ pub enum CommandError {
     },
 }
 
-/// Middleware for command execution
-/// Middleware can intercept command execution to add cross-cutting concerns
-/// like logging, metrics, validation, rate limiting, etc.
-#[async_trait]
-pub trait CommandMiddleware: Send + Sync {
-    /// Called before command execution
-    async fn before_execute(&self, device_id: DeviceId, cmd: &dyn Command) -> Result<()>;
-
-    /// Called after command execution
-    async fn after_execute(
-        &self,
-        device_id: DeviceId,
-        cmd: &dyn Command,
-        result: &Result<CommandResponse>,
-        duration: std::time::Duration,
-    ) -> Result<()>;
-}
-
-/// Executes commands on devices with middleware support
+/// Executes commands on devices
 pub struct CommandExecutor {
     device_repo: Arc<dyn DeviceRepository>,
     session_manager: Arc<dyn SessionManager>,
-    middleware: Vec<Arc<dyn CommandMiddleware>>,
 }
 
 impl CommandExecutor {
@@ -89,7 +68,6 @@ impl CommandExecutor {
         Self {
             device_repo,
             session_manager,
-            middleware: Vec::new(),
         }
     }
 
@@ -103,24 +81,8 @@ impl CommandExecutor {
             return Err(CommandError::ValidationFailed(e));
         }
 
-        // Apply pre-execution middleware
-        for mw in &self.middleware {
-            mw.before_execute(device_id, cmd.as_ref()).await?;
-        }
-
-        let start = Instant::now();
-
         // Execute command
-        let result = self.execute_internal(device_id, Arc::clone(&cmd)).await;
-
-        let duration = start.elapsed();
-
-        // Apply post-execution middleware
-        for mw in &self.middleware {
-            mw.after_execute(device_id, cmd.as_ref(), &result, duration).await?;
-        }
-
-        result
+        self.execute_internal(device_id, cmd).await
     }
 
     /// Execute a command on multiple devices in parallel
@@ -208,7 +170,6 @@ impl CommandExecutor {
         Self {
             device_repo: Arc::clone(&self.device_repo),
             session_manager: Arc::clone(&self.session_manager),
-            middleware: self.middleware.clone(),
         }
     }
 }
