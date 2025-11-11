@@ -17,8 +17,8 @@ export function DeviceBattery({ level, isCharging = false, showLabel = true, cla
   // Fill container per latest spec
   const innerMaxWidthPx = 10; // px
   const innerHeightPx = 6; // px
-  const innerLeftPaddingPx = 4.65; // px
-  const innerTopPaddingPx = 8.5; // px
+  const innerLeftPaddingPx = 5; // px
+  const innerTopPaddingPx = 9; // px
 
   const currentFillWidth = Math.max(0, Math.min(innerMaxWidthPx, (safeLevel / 100) * innerMaxWidthPx));
   const fillColorClass = getBatteryColor(safeLevel);
