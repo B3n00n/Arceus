@@ -138,14 +138,14 @@ export function DeviceCard({ device, isSelected, onToggle }: DeviceCardProps) {
       </div>
 
       {/* Volume */}
-      <div className="flex-[0.75] min-w-[4rem] flex justify-start items-center">
+      <div className="flex-[0.75] min-w-[5rem] flex justify-start items-center">
         <div className="text-sm text-gray-300">
           {device.volume ? `${device.volume.volumePercentage}%` : '--'}
         </div>
       </div>
 
       {/* Battery */}
-      <div className="flex-[0.75] min-w-[4rem] flex justify-start items-center">
+      <div className="flex-[0.75] min-w-[5rem] flex justify-start items-center">
         {device.battery ? (
           <DeviceBattery
             level={device.battery.headsetLevel}

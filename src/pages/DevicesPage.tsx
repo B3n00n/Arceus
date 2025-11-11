@@ -39,6 +39,7 @@ export function DevicesPage() {
 
   const [dialogType, setDialogType] = useState<string>('');
   const [dialogInput, setDialogInput] = useState('');
+  const [volumeValue] = useState(50);
 
   // Data states
   const [installedApps, setInstalledApps] = useState<string[]>([]);
@@ -150,6 +151,11 @@ export function DevicesPage() {
     const inputString = typeof input === 'number' ? input.toString() : input;
     const inputNumber = typeof input === 'number' ? input : 50;
 
+    if (dialogType !== 'volume' && !inputString.trim()) {
+      toast.error('Please enter a value');
+      return;
+    }
+
     setLoading(true);
     try {
       switch (dialogType) {
@@ -245,61 +251,60 @@ export function DevicesPage() {
 
         </div> 
 
-            {/* Device Scrollable Area */}
-<div className="flex-1 overflow-y-auto overflow-x-auto space-y-2">
-  {filteredDevices.length > 0 && (
-    <div
-      className="
-        p-4 text-gray-400 text-sm
-        min-w-fit flex items-center w-full gap-8 outline-offset-[-1px]
-      "
-    >
-      {/* Checkbox for Select All */}
-      <div className="flex-shrink-0 flex items-center justify-start">
-        <Checkbox
-          checked={allSelected}
-          onCheckedChange={() =>
-            allSelected ? clearSelection() : selectAll()
-          }
-          className="border-discord-dark-3"
-        />
-      </div>
+             {/* Device Header Row */}
+             {filteredDevices.length > 0 && (
+             <div
+          className="
+            p-4 text-gray-400 text-sm
+            min-w-fit flex items-center w-full gap-8 outline-offset-[-1px]
+          "
+        >
+          {/* Checkbox for Select All */}
+          <div className="flex-shrink-0 flex items-center justify-start">
+            <Checkbox
+              checked={allSelected}
+              onCheckedChange={() =>
+                allSelected ? clearSelection() : selectAll()
+              }
+              className="border-discord-dark-3"
+            />
+          </div>
 
-      {/* Device */}
-      <div className="flex-[2] min-w-[8rem] flex justify-start items-center">
-        <span>Device</span>
-      </div>
+          {/* Device */}
+          <div className="flex-[2] min-w-[8rem] flex justify-start items-center">
+            <span>Device</span>
+          </div>
 
-      {/* MAC */}
-      <div className="flex-[1.5] min-w-[8rem] flex justify-start items-center">
-        <span>MAC</span>
-      </div>
+          {/* MAC */}
+          <div className="flex-[1.5] min-w-[8rem] flex justify-start items-center">
+            <span>MAC</span>
+          </div>
 
-      {/* IP */}
-      <div className="flex-[1.5] min-w-[8rem] flex justify-start items-center">
-        <span>IP</span>
-      </div>
+          {/* IP */}
+          <div className="flex-[1.5] min-w-[8rem] flex justify-start items-center">
+            <span>IP</span>
+          </div>
 
-      {/* Volume */}
-      <div className="flex-[0.75] min-w-[4rem] flex justify-start items-center">
-        <span>Volume</span>
-      </div>
+          {/* Volume */}
+          <div className="flex-[0.75] min-w-[5rem] flex justify-start items-center">
+            <span>Volume</span>
+          </div>
 
-      {/* Battery */}
-      <div className="flex-[0.75] min-w-[4rem] flex justify-start items-center">
-        <span>Battery</span>
-      </div>
-    </div>
-  )}
-
-  {/* Device List */}
-  <DeviceList
-    devices={filteredDevices}
-    selectedDeviceIds={selectedDeviceIds}
-    onToggleDevice={toggleDevice}
-  />
-</div>
-
+          {/* Battery */}
+          <div className="flex-[0.75] min-w-[5rem] flex justify-start items-center">
+            <span>Battery</span>
+          </div>
+        </div>
+             )}
+           
+        {/* Device List */}
+        <div className="flex-1 overflow-y-auto space-y-2">
+          <DeviceList
+            devices={filteredDevices}
+            selectedDeviceIds={selectedDeviceIds}
+            onToggleDevice={toggleDevice}
+          />
+        </div>
       </div>
 
       {/* Right: Command Panel */}
@@ -316,11 +321,11 @@ export function DevicesPage() {
       <SimpleInputDialog
         isOpen={showSimpleInputDialog}
         onClose={() => setShowSimpleInputDialog(false)}
-        dialogType={dialogType as 'launch-manual' | 'uninstall-manual' | 'shell' | 'remote-apk'}
+        dialogType={dialogType as 'launch-manual' | 'uninstall-manual' | 'shell' | 'volume' | 'remote-apk'}
         selectedCount={selectedDeviceIds.size}
         onExecute={executeSimpleCommand}
         loading={loading}
-        initialValue={dialogInput}
+        initialValue={dialogType === 'volume' ? volumeValue : dialogInput}
       />
 
       <AppListDialog

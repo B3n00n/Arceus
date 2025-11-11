@@ -1,19 +1,18 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Slider } from '@/components/ui/slider';
-import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import {
   Battery,
-  BellRing,
+  Wifi,
   Volume2,
   Power,
   Trash2,
-  Rocket,
+  PlayCircle,
   Terminal,
   Download,
   Upload,
-  Package,
+  FileText,
   List,
+  XCircle,
 } from 'lucide-react';
 import { DeviceService } from '@/services/deviceService';
 import { cn } from '@/lib/cn';
@@ -26,11 +25,7 @@ interface CommandPanelProps {
   onOpenAppListDialog: (type: 'launch' | 'uninstall') => void;
   onOpenApkPickerDialog: () => void;
   onOpenSimpleInputDialog: (type: string) => void;
-  onHandleCommand: (
-    action: () => Promise<void>,
-    actionName: string,
-    showSuccessNotification?: boolean
-  ) => Promise<void>;
+  onHandleCommand: (action: () => Promise<void>, actionName: string, showSuccessNotification?: boolean) => Promise<void>;
 }
 
 export function CommandPanel({
@@ -42,26 +37,11 @@ export function CommandPanel({
   onHandleCommand,
 }: CommandPanelProps) {
   const [commandTab, setCommandTab] = useState<CommandTab>('standard');
-  const [isVolumeExpanded, setIsVolumeExpanded] = useState(false);
-  const [volumeValue, setVolumeValue] = useState(50);
-
   const hasSelection = selectedDeviceIds.size > 0;
   const selectedIds = Array.from(selectedDeviceIds);
 
-  const handleSetVolume = async () => {
-    await onHandleCommand(
-      () => DeviceService.setVolume(selectedIds, volumeValue),
-      'Set Volume'
-    );
-    setIsVolumeExpanded(false);
-  };
-
   return (
-    <div className="sm:w-60 2xl:w-80
-    min-w-[12rem] max-w-80
- border-l border-discord-dark-2 flex flex-col
-  transition-all duration-300">
-      {/* Header */}
+    <div className="w-80 border-l border-discord-dark-2 flex flex-col">
       <div className="p-4 border-b border-discord-dark-2">
         <h3 className="font-semibold text-white">Commands</h3>
         <p className="text-xs text-gray-400 mt-1">
@@ -71,55 +51,65 @@ export function CommandPanel({
         </p>
       </div>
 
-      {/* No selection placeholder */}
       {!hasSelection ? (
         <div className="flex-1 flex items-center justify-center p-6">
           <div className="text-center">
-            <p className="text-gray-400 text-sm">Select a device to execute commands</p>
+            <p className="text-gray-400 text-sm">
+              Select a device to execute commands
+            </p>
           </div>
         </div>
       ) : (
         <>
           {/* Tab Switcher */}
-          <SegmentedControl
-  options={[
-    { label: "Standard", value: "standard" },
-    { label: "Developer", value: "dev" },
-  ]}
-  value={commandTab}
-  onChange={(val) => setCommandTab(val as "standard" | "dev")}
-/>
+          <div className="flex border-b border-discord-dark-2">
+            <button
+              className={cn(
+                'flex-1 px-4 py-2 text-sm font-medium transition-colors',
+                commandTab === 'standard'
+                  ? 'text-white bg-discord-dark-2 border-b-2 border-discord-blurple'
+                  : 'text-gray-400 hover:text-white'
+              )}
+              onClick={() => setCommandTab('standard')}
+            >
+              Standard
+            </button>
+            <button
+              className={cn(
+                'flex-1 px-4 py-2 text-sm font-medium transition-colors',
+                commandTab === 'dev'
+                  ? 'text-white bg-discord-dark-2 border-b-2 border-discord-blurple'
+                  : 'text-gray-400 hover:text-white'
+              )}
+              onClick={() => setCommandTab('dev')}
+            >
+              Developer
+            </button>
+          </div>
 
-          {/* Tab Content */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {commandTab === 'standard' ? (
               <>
                 {/* Device Info */}
                 <div>
-                  <p className="text-xs text-gray-400 mb-2 font-semibold">Device info</p>
+                  <p className="text-xs text-gray-400 mb-2 uppercase font-semibold">Device Info</p>
                   <div className="space-y-2">
                     <Button
                       variant="outline"
                       size="sm"
                       className="w-full justify-start"
-                      onClick={() =>
-                        onHandleCommand(
-                          () => DeviceService.pingDevices(selectedIds),
-                          'Ping',
-                          false
-                        )
-                      }
+                      onClick={() => onHandleCommand(() => DeviceService.pingDevices(selectedIds), 'Ping', false)}
                       disabled={loading}
                     >
-                      <BellRing className="h-4 w-4 mr-2" />
-                      Ping device
+                      <Wifi className="h-4 w-4 mr-2" />
+                      Ping
                     </Button>
                   </div>
                 </div>
 
                 {/* App Management */}
                 <div>
-                  <p className="text-xs text-gray-400 mb-2 font-semibold">App management</p>
+                  <p className="text-xs text-gray-400 mb-2 uppercase font-semibold">App Management</p>
                   <div className="space-y-2">
                     <Button
                       variant="outline"
@@ -128,8 +118,22 @@ export function CommandPanel({
                       onClick={() => onOpenAppListDialog('launch')}
                       disabled={loading}
                     >
-                      <Rocket className="h-4 w-4 mr-2" />
-                      Launch app
+                      <PlayCircle className="h-4 w-4 mr-2" />
+                      Launch App
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full justify-start"
+                      onClick={() => {
+                        if (confirm(`Close all running apps on ${selectedDeviceIds.size} device(s)?`)) {
+                          onHandleCommand(() => DeviceService.closeAllApps(selectedIds), 'Close All Apps');
+                        }
+                      }}
+                      disabled={loading}
+                    >
+                      <XCircle className="h-4 w-4 mr-2" />
+                      Close All Apps
                     </Button>
                     <Button
                       variant="outline"
@@ -139,7 +143,7 @@ export function CommandPanel({
                       disabled={loading}
                     >
                       <Trash2 className="h-4 w-4 mr-2" />
-                      Uninstall app
+                      Uninstall App
                     </Button>
                     <Button
                       variant="outline"
@@ -159,103 +163,38 @@ export function CommandPanel({
                       disabled={loading}
                     >
                       <Upload className="h-4 w-4 mr-2" />
-                      Install local APK
+                      Install Local APK
                     </Button>
                   </div>
                 </div>
 
                 {/* Device Control */}
                 <div>
-                  <p className="text-xs text-gray-400 mb-2 font-semibold">Device control</p>
+                  <p className="text-xs text-gray-400 mb-2 uppercase font-semibold">Device Control</p>
                   <div className="space-y-2">
-                  {/* Set Volume */}
-<div className="transition-all duration-300 ease-in-out">
-  <button
-    onClick={() => setIsVolumeExpanded((prev) => !prev)}
-    disabled={loading}
-    className={cn(
-      'w-full border-2 bg-transparent cursor-pointer',
-      'rounded-md px-3 py-2 text-xs',
-      'hover:bg-[#7289da]/20 hover:border-[#7289da] hover:text-white',
-      isVolumeExpanded
-        ? 'text-white border-white hover:bg-transparent'
-        : 'text-gray-300 border-gray-600/50'
-    )}
-  >
-    {/* Header row (icon + label + value) */}
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-2">
-        <Volume2 className="h-4 w-4 mr-2" />
-        <span className="font-medium">Set volume</span>
-      </div>
-      {isVolumeExpanded && (
-        <span className="font-medium text-white">{volumeValue}</span>
-      )}
-    </div>
-
-    {/* Animated reveal content */}
-    <div
-      className={cn(
-        'overflow-hidden transition-all duration-300 ease-in-out',
-        isVolumeExpanded ? 'max-h-40 opacity-100 mt-1 pt-px' : 'max-h-0 opacity-0'
-      )}
-      onClick={(e) => e.stopPropagation()}
-    >
-      <Slider
-        min={0}
-        max={100}
-        value={volumeValue}
-        onValueChange={setVolumeValue}
-        className="w-full mb-3"
-      />
-
-      <div className="flex flex-row-reverse gap-2">
-        <Button
-          size="sm"
-          variant="default"
-          onClick={(e) => {
-            e.stopPropagation();
-            handleSetVolume();
-          }}
-          disabled={loading}          
-        >
-          Set
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsVolumeExpanded(false);
-          }}
-          disabled={loading}
-          className=""
-        >
-          Dismiss
-        </Button>
-      </div>
-    </div>
-  </button>
-</div>
-
-                    {/* Restart device */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full justify-start"
+                      onClick={() => onOpenSimpleInputDialog('volume')}
+                      disabled={loading}
+                    >
+                      <Volume2 className="h-4 w-4 mr-2" />
+                      Set Volume
+                    </Button>
                     <Button
                       variant="outline"
                       size="sm"
                       className="w-full justify-start"
                       onClick={() => {
                         if (confirm(`Restart ${selectedDeviceIds.size} device(s)?`)) {
-                          onHandleCommand(
-                            () => DeviceService.restartDevices(selectedIds),
-                            'Restart',
-                            false
-                          );
+                          onHandleCommand(() => DeviceService.restartDevices(selectedIds), 'Restart', false);
                         }
                       }}
                       disabled={loading}
                     >
                       <Power className="h-4 w-4 mr-2" />
-                      Restart device
+                      Restart Device
                     </Button>
                   </div>
                 </div>
@@ -264,59 +203,43 @@ export function CommandPanel({
               <>
                 {/* Developer Commands */}
                 <div>
-                  <p className="text-xs text-gray-400 mb-2 font-semibold">Developer tools</p>
+                  <p className="text-xs text-gray-400 mb-2 uppercase font-semibold">Developer Tools</p>
                   <div className="space-y-2">
                     <Button
                       variant="outline"
                       size="sm"
                       className="w-full justify-start"
-                      onClick={() =>
-                        onHandleCommand(
-                          () => DeviceService.requestBattery(selectedIds),
-                          'Get Battery'
-                        )
-                      }
+                      onClick={() => onHandleCommand(() => DeviceService.requestBattery(selectedIds), 'Get Battery')}
                       disabled={loading}
                     >
                       <Battery className="h-4 w-4 mr-2" />
-                      Get battery
+                      Get Battery
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
                       className="w-full justify-start"
-                      onClick={() =>
-                        onHandleCommand(
-                          () => DeviceService.getVolume(selectedIds),
-                          'Get Volume'
-                        )
-                      }
+                      onClick={() => onHandleCommand(() => DeviceService.getVolume(selectedIds), 'Get Volume')}
                       disabled={loading}
                     >
                       <Volume2 className="h-4 w-4 mr-2" />
-                      Get volume
+                      Get Volume
                     </Button>
                   </div>
                 </div>
 
-                {/* B3n00n Tools */}
                 <div>
-                  <p className="text-xs text-gray-400 mb-2 font-semibold">B3n00n tools</p>
+                  <p className="text-xs text-gray-400 mb-2 uppercase font-semibold">B3n00n Tools</p>
                   <div className="space-y-2">
                     <Button
                       variant="outline"
                       size="sm"
                       className="w-full justify-start"
-                      onClick={() =>
-                        onHandleCommand(
-                          () => DeviceService.getInstalledApps(selectedIds),
-                          'Get Apps'
-                        )
-                      }
+                      onClick={() => onHandleCommand(() => DeviceService.getInstalledApps(selectedIds), 'Get Apps')}
                       disabled={loading}
                     >
                       <List className="h-4 w-4 mr-2" />
-                      Get installed apps
+                      Get Installed Apps
                     </Button>
                     <Button
                       variant="outline"
@@ -326,7 +249,7 @@ export function CommandPanel({
                       disabled={loading}
                     >
                       <Terminal className="h-4 w-4 mr-2" />
-                      Shell command
+                      Shell Command
                     </Button>
                     <Button
                       variant="outline"
@@ -335,8 +258,8 @@ export function CommandPanel({
                       onClick={() => onOpenSimpleInputDialog('launch-manual')}
                       disabled={loading}
                     >
-                      <Package className="h-4 w-4 mr-2" />
-                      Launch by package
+                      <FileText className="h-4 w-4 mr-2" />
+                      Launch by Package
                     </Button>
                     <Button
                       variant="outline"
@@ -345,8 +268,8 @@ export function CommandPanel({
                       onClick={() => onOpenSimpleInputDialog('uninstall-manual')}
                       disabled={loading}
                     >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Uninstall by package
+                      <FileText className="h-4 w-4 mr-2" />
+                      Uninstall by Package
                     </Button>
                   </div>
                 </div>
