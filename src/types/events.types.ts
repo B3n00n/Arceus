@@ -75,4 +75,14 @@ export type ArceusEvent =
   | {
       type: 'info';
       message: string;
+    }
+  | {
+      type: 'gameStarted';
+      gameName: string;
+      processId: number | null;
+      contentServerUrl: string;
+    }
+  | {
+      type: 'gameStopped';
+      gameName: string;
     };

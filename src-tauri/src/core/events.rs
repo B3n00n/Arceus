@@ -77,6 +77,18 @@ pub enum ArceusEvent {
     Info {
         message: String,
     },
+
+    #[serde(rename_all = "camelCase")]
+    GameStarted {
+        game_name: String,
+        process_id: Option<u32>,
+        content_server_url: String,
+    },
+
+    #[serde(rename_all = "camelCase")]
+    GameStopped {
+        game_name: String,
+    },
 }
 
 #[derive(Clone)]
@@ -136,6 +148,18 @@ impl EventBus {
 
     pub fn http_server_started(&self, port: u16, url: String) {
         self.emit(ArceusEvent::HttpServerStarted { port, url });
+    }
+
+    pub fn game_started(&self, game_name: String, process_id: Option<u32>, content_server_url: String) {
+        self.emit(ArceusEvent::GameStarted {
+            game_name,
+            process_id,
+            content_server_url,
+        });
+    }
+
+    pub fn game_stopped(&self, game_name: String) {
+        self.emit(ArceusEvent::GameStopped { game_name });
     }
 }
 

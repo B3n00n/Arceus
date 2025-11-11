@@ -1,10 +1,12 @@
 import { Bell } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { useToastHistoryStore } from '@/stores/toastHistoryStore';
+import { useGameStore } from '@/stores/gameStore';
 import { ToastHistory } from '@/components/ToastHistory';
 
 export function Header() {
   const { togglePanel, unreadCount } = useToastHistoryStore();
+  const currentGame = useGameStore((state) => state.currentGame);
   const location = useLocation();
 
   const pathname = location.pathname || '/';
@@ -29,20 +31,31 @@ export function Header() {
             <h1 className="text-base font-semibold text-white text-lg">{title}</h1>
           </div>
 
-          {/* Notification Bell */}
-          <button
-            onClick={togglePanel}
-            className="relative p-2 rounded-lg hover:bg-discord-dark-2 transition-colors group"
-          >
-            <Bell className="h-5 w-5 text-gray-400 group-hover:text-white transition-colors" />
-            {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 rounded-full flex items-center justify-center">
-                <span className="text-xs font-semibold text-white">
-                  {unreadCount > 9 ? '9+' : unreadCount}
+          <div className="flex items-center gap-3">
+            {/* Game Running Indicator */}
+            {currentGame && (
+              <div className="px-3 py-1.5 rounded-lg bg-green-500/10 border border-green-500/30">
+                <span className="text-xs font-medium text-green-400">
+                  Running: {currentGame.gameName}
                 </span>
-              </span>
+              </div>
             )}
-          </button>
+
+            {/* Notification Bell */}
+            <button
+              onClick={togglePanel}
+              className="relative p-2 rounded-lg hover:bg-discord-dark-2 transition-colors group"
+            >
+              <Bell className="h-5 w-5 text-gray-400 group-hover:text-white transition-colors" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 rounded-full flex items-center justify-center">
+                  <span className="text-xs font-semibold text-white">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                </span>
+              )}
+            </button>
+          </div>
         </div>
       </header>
 
