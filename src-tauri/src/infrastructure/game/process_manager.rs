@@ -1,7 +1,6 @@
-use crate::core::{error::ArceusError, Result};
+use crate::core::{error::ArceusError, HiddenCommand, Result};
 use crate::domain::models::GameConfig;
-use std::process::Stdio;
-use tokio::process::{Child, Command};
+use tokio::process::Child;
 
 /// Manages the lifecycle of a Unity game process
 pub struct GameProcessManager {
@@ -34,11 +33,9 @@ impl GameProcessManager {
             ))
         })?;
 
-        let child = Command::new(&self.config.exe_path)
+        let child = HiddenCommand::new(&self.config.exe_path)
             .current_dir(exe_dir)
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .stdin(Stdio::null())
+            .silence_all()
             .spawn()
             .map_err(|e| {
                 ArceusError::Config(format!(

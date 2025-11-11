@@ -12,8 +12,6 @@ use std::time::Duration;
 use tokio::net::TcpListener;
 use tokio::sync::{broadcast, RwLock};
 
-/// TCP server that accepts device connections
-/// Delegates connection handling to ConnectionHandler
 pub struct TcpServer {
     config: ServerConfig,
     connection_handler: Arc<ConnectionHandler>,
@@ -32,10 +30,8 @@ impl TcpServer {
     ) -> (Self, broadcast::Receiver<()>, Arc<DeviceSessionManager>) {
         let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
 
-        // Create session manager (needed for command execution)
         let session_manager = Arc::new(DeviceSessionManager::new());
 
-        // Create packet handler registry
         let packet_handler = Arc::new(PacketHandlerRegistry::new(
             device_repo.clone(),
             device_name_repo.clone(),
@@ -43,7 +39,6 @@ impl TcpServer {
             session_manager.clone(),
         ));
 
-        // Create connection handler (business logic)
         let connection_handler = Arc::new(ConnectionHandler::new(
             device_repo.clone(),
             device_name_repo.clone(),
@@ -65,8 +60,6 @@ impl TcpServer {
         (server, shutdown_rx, session_manager)
     }
 
-    /// Start the TCP server
-    /// Listens for incoming connections and spawns handlers
     pub async fn start(self: Arc<Self>) -> Result<()> {
         let addr = format!("{}:{}", self.config.tcp_host, self.config.tcp_port);
         let listener = TcpListener::bind(&addr).await.map_err(|e| {
@@ -90,7 +83,6 @@ impl TcpServer {
                 accept_result = listener.accept() => {
                     match accept_result {
                         Ok((stream, addr)) => {
-                            // Check capacity before accepting
                             if !self.check_capacity() {
                                 let current_count = self.device_repo.count().unwrap_or(0);
                                 tracing::warn!(
@@ -103,7 +95,6 @@ impl TcpServer {
                                 continue;
                             }
 
-                            // Delegate to connection handler
                             let handler = Arc::clone(&self.connection_handler);
                             tokio::spawn(async move {
                                 if let Err(e) = handler.handle_connection(stream, addr).await {
@@ -134,21 +125,13 @@ impl TcpServer {
         Ok(())
     }
 
-    /// Check if we can accept more connections
     fn check_capacity(&self) -> bool {
         let current_count = self.device_repo.count().unwrap_or(0);
         current_count < self.config.max_connections
     }
 
     /// Shutdown the server
-    #[allow(dead_code)]
     pub fn shutdown(&self) {
         let _ = self.shutdown_tx.send(());
-    }
-
-    /// Check if server is running
-    #[allow(dead_code)]
-    pub async fn is_running(&self) -> bool {
-        *self.running.read().await
     }
 }

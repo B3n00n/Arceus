@@ -1,5 +1,6 @@
 use crate::application::services::update_service::UpdateService;
 use crate::core::models::update::UpdateStatus;
+use crate::core::{AppState, ServerManager};
 use std::sync::Arc;
 use tauri::{AppHandle, Manager, State};
 use tokio::sync::Mutex;
@@ -31,6 +32,13 @@ pub async fn close_updater_and_show_main(app: AppHandle) -> Result<(), String> {
 fn transition_to_main_window(app: AppHandle) -> Result<(), String> {
     if let Some(updater_window) = app.get_webview_window("updater") {
         let _ = updater_window.close();
+    }
+
+    if let (Some(server_manager), Some(app_state)) = (
+        app.try_state::<Arc<ServerManager>>(),
+        app.try_state::<Arc<AppState>>(),
+    ) {
+        server_manager.start(&app_state);
     }
 
     if let Some(main_window) = app.get_webview_window("main") {

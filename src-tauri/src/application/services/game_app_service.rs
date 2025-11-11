@@ -1,5 +1,5 @@
 use crate::application::services::HttpServerService;
-use crate::core::EventBus;
+use crate::core::{EventBus, HiddenCommandSync};
 use crate::domain::models::{GameConfig, GameState};
 use crate::infrastructure::game::{GameProcess, GameProcessManager};
 use parking_lot::RwLock;
@@ -70,13 +70,14 @@ impl GameApplicationService {
 
         let process_id = game_process.process_id();
 
-        let (http_server_process, content_server_url) = HttpServerService::start_server(
+        let http_server_process = HttpServerService::start_server(
             GAME_CONTENT_PORT,
             config.content_path.clone(),
             &format!("Game Content Server ({})", config.name),
         )
         .await?;
 
+        let content_server_url = format!("http://127.0.0.1:{}", GAME_CONTENT_PORT);
         let game_state = GameState::new(config.clone(), process_id, content_server_url.clone());
         let (shutdown_tx, shutdown_rx) = broadcast::channel::<()>(1);
 
@@ -170,7 +171,7 @@ impl GameApplicationService {
             _ = shutdown_rx.recv() => {
                 tracing::info!(game = %game_name, "Manual shutdown requested, killing game process");
                 if let Some(process_id) = pid {
-                    let _ = std::process::Command::new("taskkill")
+                    let _ = HiddenCommandSync::new("taskkill")
                         .args(["/F", "/T", "/PID", &process_id.to_string()])
                         .output();
                 }

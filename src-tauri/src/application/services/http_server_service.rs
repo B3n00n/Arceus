@@ -1,6 +1,6 @@
-use crate::core::{error::ArceusError, Result};
+use crate::core::{error::ArceusError, HiddenCommand, Result};
 use std::path::PathBuf;
-use tokio::process::{Child, Command};
+use tokio::process::Child;
 
 pub struct HttpServerService;
 
@@ -9,7 +9,7 @@ impl HttpServerService {
         port: u16,
         directory: PathBuf,
         server_name: &str,
-    ) -> Result<(Child, String)> {
+    ) -> Result<Child> {
         tracing::info!(
             port = port,
             directory = ?directory,
@@ -17,43 +17,22 @@ impl HttpServerService {
             "Starting Python HTTP server"
         );
 
-        if !directory.exists() {
-            return Err(ArceusError::Config(format!(
-                "Directory not found: {:?}",
-                directory
-            )));
-        }
-
-        let child = Command::new("python")
+        let child = HiddenCommand::new("python")
             .args(["-m", "http.server", &port.to_string()])
             .current_dir(&directory)
-            .stdout(std::process::Stdio::null())
-            .stderr(std::process::Stdio::null())
-            .stdin(std::process::Stdio::null())
+            .silence_all()
             .spawn()
-            .map_err(|e| {
-                ArceusError::Config(format!(
-                    "Failed to spawn Python HTTP server: {} (Make sure Python is installed)",
-                    e
-                ))
-            })?;
+            .map_err(|e| ArceusError::Config(format!("Failed to spawn HTTP server: {}", e)))?;
 
         let pid = child.id();
-
-        let local_ip = match local_ip_address::local_ip() {
-            Ok(ip) => ip.to_string(),
-            Err(_) => "127.0.0.1".to_string(),
-        };
-        let url = format!("http://{}:{}", local_ip, port);
 
         tracing::info!(
             port = port,
             pid = ?pid,
-            url = %url,
             server = %server_name,
             "Python HTTP server started"
         );
 
-        Ok((child, url))
+        Ok(child)
     }
 }
