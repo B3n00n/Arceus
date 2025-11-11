@@ -2,17 +2,16 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Slider } from '@/components/ui/slider';
 import { DialogOverlay } from './DialogOverlay';
 
 interface SimpleInputDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  dialogType: 'launch-manual' | 'uninstall-manual' | 'shell' | 'volume' | 'remote-apk';
+  dialogType: 'launch-manual' | 'uninstall-manual' | 'shell' | 'remote-apk';
   selectedCount: number;
-  onExecute: (input: string | number) => void;
+  onExecute: (input: string) => void;
   loading?: boolean;
-  initialValue?: string | number;
+  initialValue?: string;
 }
 
 export function SimpleInputDialog({
@@ -22,23 +21,15 @@ export function SimpleInputDialog({
   selectedCount,
   onExecute,
   loading = false,
-  initialValue,
+  initialValue = '',
 }: SimpleInputDialogProps) {
-  const [dialogInput, setDialogInput] = useState(
-    typeof initialValue === 'string' ? initialValue : ''
-  );
-  const [volumeValue, setVolumeValue] = useState(
-    typeof initialValue === 'number' ? initialValue : 50
-  );
+  const [dialogInput, setDialogInput] = useState(initialValue);
 
   if (!isOpen) return null;
 
   const handleExecute = () => {
-    if (dialogType === 'volume') {
-      onExecute(volumeValue);
-    } else {
-      onExecute(dialogInput);
-    }
+    if (!dialogInput.trim()) return;
+    onExecute(dialogInput);
   };
 
   const getTitle = () => {
@@ -49,8 +40,6 @@ export function SimpleInputDialog({
         return 'Uninstall App by Package';
       case 'shell':
         return 'Execute Shell Command';
-      case 'volume':
-        return 'Set Volume';
       case 'remote-apk':
         return 'Install APK from URL';
     }
@@ -63,8 +52,6 @@ export function SimpleInputDialog({
         return 'Package Name';
       case 'shell':
         return 'Shell Command';
-      case 'volume':
-        return 'Volume Level (0-100)';
       case 'remote-apk':
         return 'APK URL';
     }
@@ -91,42 +78,28 @@ export function SimpleInputDialog({
           <h3 className="text-lg font-semibold text-white">{getTitle()}</h3>
           <p className="text-sm text-gray-400">For {selectedCount} device(s)</p>
         </CardHeader>
+
         <CardContent className="space-y-4">
           <div>
             <label className="text-sm text-gray-300 mb-2 block">{getLabel()}</label>
-            {dialogType === 'volume' ? (
-              <div className="space-y-3">
-                <Slider
-                  min={0}
-                  max={100}
-                  value={volumeValue}
-                  onValueChange={setVolumeValue}
-                  className="w-full"
-                />
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-400">0</span>
-                  <span className="text-lg font-semibold text-white">{volumeValue}%</span>
-                  <span className="text-xs text-gray-400">100</span>
-                </div>
-              </div>
-            ) : (
-              <Input
-                value={dialogInput}
-                onChange={(e) => setDialogInput(e.target.value)}
-                placeholder={getPlaceholder()}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleExecute();
-                  if (e.key === 'Escape') onClose();
-                }}
-                autoFocus
-              />
-            )}
+            <Input
+              value={dialogInput}
+              onChange={(e) => setDialogInput(e.target.value)}
+              placeholder={getPlaceholder()}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleExecute();
+                if (e.key === 'Escape') onClose();
+              }}
+              autoFocus
+              disabled={loading}
+            />
           </div>
+
           <div className="flex gap-2 justify-between">
             <Button
               variant="outline"
               onClick={handleExecute}
-              disabled={loading || (dialogType !== 'volume' && !dialogInput.trim())}
+              disabled={loading || !dialogInput.trim()}
             >
               Execute
             </Button>

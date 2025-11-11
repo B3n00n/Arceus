@@ -6,6 +6,15 @@
   --color-discord-dark-2: #36393e;
   --color-discord-dark-3: #282b30;
   --color-discord-dark-4: #1e2124;
+
+  --color-system-info: #4AA8FF;
+    --color-system-success: #3DDC91;
+    --color-system-warning: #F4B740;
+    --color-system-error: #FF5C5C;
+    --color-system-critical: #D72638;
+    --color-system-gray: #9E9E9E;
+    --color-system-purple: #7E57C2;
+    --color-system-orange: #FF8F00;
 }
 
 @layer base {
@@ -26,6 +35,7 @@
 
 ::-webkit-scrollbar-track {
   background: #282b30;
+   border-radius: 6px;
 }
 
 ::-webkit-scrollbar-thumb {
