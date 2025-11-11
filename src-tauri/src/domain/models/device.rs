@@ -63,10 +63,6 @@ impl Device {
         self.connected_at
     }
 
-    pub fn last_seen(&self) -> DateTime<Utc> {
-        self.last_seen
-    }
-
     pub fn custom_name(&self) -> Option<&str> {
         self.custom_name.as_deref()
     }

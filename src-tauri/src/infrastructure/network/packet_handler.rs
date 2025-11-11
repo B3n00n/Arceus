@@ -2,7 +2,7 @@
 /// Handlers update the device repository based on received packets.
 
 use crate::app::EventBus;
-use crate::application::dto::{BatteryInfoDto, CommandResultDto, DeviceInfoDto, DeviceStateDto, VolumeInfoDto};
+use crate::application::dto::{BatteryInfoDto, CommandResultDto, DeviceStateDto, VolumeInfoDto};
 use crate::domain::models::{Battery, Device, DeviceId, Serial, Volume};
 use crate::domain::repositories::{DeviceNameRepository, DeviceRepository};
 use crate::infrastructure::network::device_session_manager::DeviceSessionManager;
@@ -192,26 +192,7 @@ impl PacketHandler for DeviceConnectedHandler {
         );
 
         // Emit DeviceConnected event to frontend
-        let device_info = DeviceInfoDto {
-            id: device.id().as_uuid().clone(),
-            model: model.clone(),
-            serial: serial.as_str().to_string(),
-            ip: device.ip().as_str().to_string(),
-            connected_at: device.connected_at(),
-            last_seen: device.last_seen(),
-            custom_name: custom_name,
-        };
-        let device_state = DeviceStateDto {
-            info: device_info,
-            battery: device.battery().map(|b| BatteryInfoDto {
-                headset_level: b.level(),
-                is_charging: b.is_charging(),
-            }),
-            volume: device.volume().map(|v| {
-                VolumeInfoDto::new(v.percentage(), v.current(), v.max())
-            }),
-            command_history: std::collections::VecDeque::new(),
-        };
+        let device_state = DeviceStateDto::from(&Arc::new(device.clone()));
         self.event_bus.device_connected(device_state);
         
         // Request initial connection data

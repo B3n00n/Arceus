@@ -3,6 +3,7 @@
 mod apk_commands;
 mod device_commands;
 mod game_commands;
+mod helpers;
 mod update_commands;
 
 pub use apk_commands::*;

@@ -1,105 +1,15 @@
+use crate::api::helpers::execute_batch_command;
+use crate::application::dto::{BatchResultDto, DeviceStateDto};
 use crate::application::services::DeviceApplicationService;
-use crate::application::dto::{BatteryInfoDto, DeviceInfoDto, DeviceStateDto, VolumeInfoDto};
 use crate::domain::commands::{
     CloseAllAppsCommand, ExecuteShellCommand, GetInstalledAppsCommand, GetVolumeCommand,
     InstallApkCommand, LaunchAppCommand, PingCommand, RequestBatteryCommand,
     RestartDeviceCommand, SetVolumeCommand, UninstallAppCommand,
 };
 use crate::domain::models::{DeviceId, PackageName, Serial};
-use serde::Serialize;
 use std::sync::Arc;
 use tauri::State;
 use uuid::Uuid;
-
-/// Helper to parse UUID strings to DeviceIds
-fn parse_device_ids(ids: Vec<String>) -> Result<Vec<DeviceId>, String> {
-    ids.iter()
-        .map(|s| {
-            Uuid::parse_str(s)
-                .map(DeviceId::from_uuid)
-                .map_err(|e| format!("Invalid device ID '{}': {}", s, e))
-        })
-        .collect()
-}
-
-/// Helper to convert domain Device to DeviceStateDto for frontend compatibility
-fn convert_device_to_state(device: &Arc<crate::domain::models::Device>) -> DeviceStateDto {
-    let info = DeviceInfoDto {
-        id: device.id().as_uuid().clone(),
-        model: device.model().to_string(),
-        serial: device.serial().as_str().to_string(),
-        ip: device.ip().as_str().to_string(),
-        connected_at: device.connected_at(),
-        last_seen: device.last_seen(),
-        custom_name: device.custom_name().map(|s| s.to_string()),
-    };
-
-    let battery = device.battery().map(|b| BatteryInfoDto {
-        headset_level: b.level(),
-        is_charging: b.is_charging(),
-    });
-
-    let volume = device.volume().map(|v| {
-        VolumeInfoDto::new(
-            v.percentage(),
-            v.current(),
-            v.max(),
-        )
-    });
-
-    DeviceStateDto {
-        info,
-        battery,
-        volume,
-        command_history: std::collections::VecDeque::new(),
-    }
-}
-
-/// Helper to convert BatchResult to BatchResultDto for frontend
-fn convert_batch_result_to_dto<T>(result: crate::domain::commands::BatchResult<T>) -> BatchResultDto {
-    BatchResultDto {
-        success_count: result.success_count(),
-        failure_count: result.failure_count(),
-        total_count: result.total_count(),
-        success_rate: result.success_rate(),
-        succeeded: result
-            .succeeded
-            .iter()
-            .map(|(id, _)| id.as_uuid().to_string())
-            .collect(),
-        failed: result
-            .failed
-            .iter()
-            .map(|(id, err)| FailedDeviceDto {
-                device_id: id.as_uuid().to_string(),
-                error_message: err.clone(),
-                error_code: "COMMAND_FAILED".to_string(),
-                is_retriable: false,
-            })
-            .collect(),
-    }
-}
-
-/// DTO for batch command results
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct BatchResultDto {
-    pub success_count: usize,
-    pub failure_count: usize,
-    pub total_count: usize,
-    pub success_rate: f64,
-    pub succeeded: Vec<String>,
-    pub failed: Vec<FailedDeviceDto>,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct FailedDeviceDto {
-    pub device_id: String,
-    pub error_message: String,
-    pub error_code: String,
-    pub is_retriable: bool,
-}
 
 /// Get all connected devices
 #[tauri::command]
@@ -111,13 +21,7 @@ pub async fn get_devices(
         .await
         .map_err(|e| format!("Failed to get devices: {}", e))?;
 
-    // Convert domain Device to DeviceStateDto for frontend compatibility
-    let device_states: Vec<DeviceStateDto> = devices
-        .iter()
-        .map(convert_device_to_state)
-        .collect();
-
-    Ok(device_states)
+    Ok(devices.iter().map(DeviceStateDto::from).collect())
 }
 
 /// Get a specific device by ID
@@ -135,7 +39,7 @@ pub async fn get_device(
         .await
         .map_err(|e| format!("Failed to get device: {}", e))?;
 
-    Ok(device.as_ref().map(convert_device_to_state))
+    Ok(device.as_ref().map(DeviceStateDto::from))
 }
 
 /// Set a custom name for a device
@@ -161,16 +65,15 @@ pub async fn launch_app(
     package_name: String,
     device_service: State<'_, Arc<DeviceApplicationService>>,
 ) -> Result<BatchResultDto, String> {
-    let ids = parse_device_ids(device_ids)?;
     let package_name = PackageName::new(package_name)
         .map_err(|e| format!("Invalid package name: {}", e))?;
 
-    let command = LaunchAppCommand::new(package_name);
-    let result = device_service
-        .execute_command_batch(ids, Arc::new(command))
-        .await;
-
-    Ok(convert_batch_result_to_dto(result))
+    execute_batch_command(
+        device_ids,
+        &device_service,
+        LaunchAppCommand::new(package_name),
+    )
+    .await
 }
 
 /// Execute a shell command on multiple devices
@@ -180,14 +83,12 @@ pub async fn execute_shell(
     command: String,
     device_service: State<'_, Arc<DeviceApplicationService>>,
 ) -> Result<BatchResultDto, String> {
-    let ids = parse_device_ids(device_ids)?;
-    let shell_command = ExecuteShellCommand::new(command);
-
-    let result = device_service
-        .execute_command_batch(ids, Arc::new(shell_command))
-        .await;
-
-    Ok(convert_batch_result_to_dto(result))
+    execute_batch_command(
+        device_ids,
+        &device_service,
+        ExecuteShellCommand::new(command),
+    )
+    .await
 }
 
 /// Uninstall an app from multiple devices
@@ -197,16 +98,15 @@ pub async fn uninstall_app(
     package_name: String,
     device_service: State<'_, Arc<DeviceApplicationService>>,
 ) -> Result<BatchResultDto, String> {
-    let ids = parse_device_ids(device_ids)?;
     let package_name = PackageName::new(package_name)
         .map_err(|e| format!("Invalid package name: {}", e))?;
 
-    let command = UninstallAppCommand::new(package_name);
-    let result = device_service
-        .execute_command_batch(ids, Arc::new(command))
-        .await;
-
-    Ok(convert_batch_result_to_dto(result))
+    execute_batch_command(
+        device_ids,
+        &device_service,
+        UninstallAppCommand::new(package_name),
+    )
+    .await
 }
 
 /// Request battery status from multiple devices
@@ -215,14 +115,7 @@ pub async fn request_battery(
     device_ids: Vec<String>,
     device_service: State<'_, Arc<DeviceApplicationService>>,
 ) -> Result<BatchResultDto, String> {
-    let ids = parse_device_ids(device_ids)?;
-    let command = RequestBatteryCommand;
-
-    let result = device_service
-        .execute_command_batch(ids, Arc::new(command))
-        .await;
-
-    Ok(convert_batch_result_to_dto(result))
+    execute_batch_command(device_ids, &device_service, RequestBatteryCommand).await
 }
 
 /// Ping multiple devices
@@ -231,14 +124,7 @@ pub async fn ping_devices(
     device_ids: Vec<String>,
     device_service: State<'_, Arc<DeviceApplicationService>>,
 ) -> Result<BatchResultDto, String> {
-    let ids = parse_device_ids(device_ids)?;
-    let command = PingCommand;
-
-    let result = device_service
-        .execute_command_batch(ids, Arc::new(command))
-        .await;
-
-    Ok(convert_batch_result_to_dto(result))
+    execute_batch_command(device_ids, &device_service, PingCommand).await
 }
 
 /// Set volume on multiple devices
@@ -248,19 +134,10 @@ pub async fn set_volume(
     level: u8,
     device_service: State<'_, Arc<DeviceApplicationService>>,
 ) -> Result<BatchResultDto, String> {
-    if level > 100 {
-        return Err(format!("Volume level must be 0-100, got {}", level));
-    }
-
-    let ids = parse_device_ids(device_ids)?;
     let command = SetVolumeCommand::new(level)
         .map_err(|e| format!("Invalid volume level: {}", e))?;
 
-    let result = device_service
-        .execute_command_batch(ids, Arc::new(command))
-        .await;
-
-    Ok(convert_batch_result_to_dto(result))
+    execute_batch_command(device_ids, &device_service, command).await
 }
 
 /// Get volume from multiple devices
@@ -269,14 +146,7 @@ pub async fn get_volume(
     device_ids: Vec<String>,
     device_service: State<'_, Arc<DeviceApplicationService>>,
 ) -> Result<BatchResultDto, String> {
-    let ids = parse_device_ids(device_ids)?;
-    let command = GetVolumeCommand;
-
-    let result = device_service
-        .execute_command_batch(ids, Arc::new(command))
-        .await;
-
-    Ok(convert_batch_result_to_dto(result))
+    execute_batch_command(device_ids, &device_service, GetVolumeCommand).await
 }
 
 /// Get installed apps from multiple devices
@@ -285,14 +155,7 @@ pub async fn get_installed_apps(
     device_ids: Vec<String>,
     device_service: State<'_, Arc<DeviceApplicationService>>,
 ) -> Result<BatchResultDto, String> {
-    let ids = parse_device_ids(device_ids)?;
-    let command = GetInstalledAppsCommand;
-
-    let result = device_service
-        .execute_command_batch(ids, Arc::new(command))
-        .await;
-
-    Ok(convert_batch_result_to_dto(result))
+    execute_batch_command(device_ids, &device_service, GetInstalledAppsCommand).await
 }
 
 /// Restart multiple devices
@@ -301,14 +164,7 @@ pub async fn restart_devices(
     device_ids: Vec<String>,
     device_service: State<'_, Arc<DeviceApplicationService>>,
 ) -> Result<BatchResultDto, String> {
-    let ids = parse_device_ids(device_ids)?;
-    let command = RestartDeviceCommand;
-
-    let result = device_service
-        .execute_command_batch(ids, Arc::new(command))
-        .await;
-
-    Ok(convert_batch_result_to_dto(result))
+    execute_batch_command(device_ids, &device_service, RestartDeviceCommand).await
 }
 
 /// Install APK from remote URL on multiple devices
@@ -318,14 +174,7 @@ pub async fn install_remote_apk(
     url: String,
     device_service: State<'_, Arc<DeviceApplicationService>>,
 ) -> Result<BatchResultDto, String> {
-    let ids = parse_device_ids(device_ids)?;
-    let command = InstallApkCommand::new(url);
-
-    let result = device_service
-        .execute_command_batch(ids, Arc::new(command))
-        .await;
-
-    Ok(convert_batch_result_to_dto(result))
+    execute_batch_command(device_ids, &device_service, InstallApkCommand::new(url)).await
 }
 
 /// Install APK from local file on multiple devices
@@ -353,20 +202,20 @@ pub async fn install_local_apk(
         "Installing local APK"
     );
 
-    let ids = parse_device_ids(device_ids)?;
-    let command = InstallApkCommand::new(apk.url.clone());
-
-    let result = device_service
-        .execute_command_batch(ids, Arc::new(command))
-        .await;
+    let result = execute_batch_command(
+        device_ids,
+        &device_service,
+        InstallApkCommand::new(apk.url.clone()),
+    )
+    .await?;
 
     tracing::info!(
-        succeeded = result.success_count(),
-        failed = result.failure_count(),
+        succeeded = result.success_count,
+        failed = result.failure_count,
         "Local APK install batch completed"
     );
 
-    Ok(convert_batch_result_to_dto(result))
+    Ok(result)
 }
 
 /// Close all running applications on multiple devices
@@ -375,12 +224,5 @@ pub async fn close_all_apps(
     device_ids: Vec<String>,
     device_service: State<'_, Arc<DeviceApplicationService>>,
 ) -> Result<BatchResultDto, String> {
-    let ids = parse_device_ids(device_ids)?;
-    let command = CloseAllAppsCommand;
-
-    let result = device_service
-        .execute_command_batch(ids, Arc::new(command))
-        .await;
-
-    Ok(convert_batch_result_to_dto(result))
+    execute_batch_command(device_ids, &device_service, CloseAllAppsCommand).await
 }
