@@ -1,5 +1,5 @@
 use crate::application::services::DeviceApplicationService;
-use crate::presentation::dto::{BatteryInfoDto, DeviceInfoDto, DeviceStateDto, VolumeInfoDto};
+use crate::application::dto::{BatteryInfoDto, DeviceInfoDto, DeviceStateDto, VolumeInfoDto};
 use crate::domain::commands::{
     CloseAllAppsCommand, ExecuteShellCommand, GetInstalledAppsCommand, GetVolumeCommand,
     InstallApkCommand, LaunchAppCommand, PingCommand, RequestBatteryCommand,

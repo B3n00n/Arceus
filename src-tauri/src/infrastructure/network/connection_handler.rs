@@ -1,12 +1,12 @@
 /// Connection Handler
 /// Manages device lifecycle for a single connection.
-use crate::core::{error::NetworkError, EventBus, Result};
+use crate::app::{error::NetworkError, EventBus, Result};
 use crate::domain::models::{Device, DeviceId, IpAddress, Serial};
 use crate::domain::repositories::{DeviceNameRepository, DeviceRepository};
 use crate::infrastructure::network::device_session::DeviceSession;
 use crate::infrastructure::network::device_session_manager::DeviceSessionManager;
 use crate::infrastructure::network::packet_handler::PacketHandlerRegistry;
-use crate::protocol::RawPacket;
+use crate::infrastructure::protocol::RawPacket;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
@@ -193,7 +193,7 @@ impl ConnectionHandler {
                 serial = %device.serial().as_str(),
                 "Device disconnected"
             );
-            self.event_bus.emit(crate::core::events::ArceusEvent::DeviceDisconnected {
+            self.event_bus.emit(crate::app::events::ArceusEvent::DeviceDisconnected {
                 device_id: device_id.as_uuid().clone(),
                 serial: device.serial().as_str().to_string(),
             });

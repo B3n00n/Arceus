@@ -4,7 +4,7 @@
 use crate::domain::models::DeviceId;
 use crate::domain::services::SessionManager as SessionManagerTrait;
 use crate::infrastructure::network::device_session::DeviceSession;
-use crate::protocol::RawPacket;
+use crate::infrastructure::protocol::RawPacket;
 use async_trait::async_trait;
 use dashmap::DashMap;
 use std::sync::Arc;

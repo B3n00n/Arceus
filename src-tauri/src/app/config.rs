@@ -1,4 +1,4 @@
-use crate::core::{error::Result, models::ServerConfig};
+use crate::app::{error::Result, models::ServerConfig};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
@@ -20,25 +20,25 @@ impl AppConfig {
 
     pub fn validate(&self) -> Result<()> {
         if self.server.tcp_port == 0 {
-            return Err(crate::core::error::ArceusError::Config(
+            return Err(crate::app::error::ArceusError::Config(
                 "TCP port must be greater than 0".to_string(),
             ));
         }
 
         if self.server.http_port == 0 {
-            return Err(crate::core::error::ArceusError::Config(
+            return Err(crate::app::error::ArceusError::Config(
                 "HTTP port must be greater than 0".to_string(),
             ));
         }
 
         if self.server.tcp_port == self.server.http_port {
-            return Err(crate::core::error::ArceusError::Config(
+            return Err(crate::app::error::ArceusError::Config(
                 "TCP and HTTP ports must be different".to_string(),
             ));
         }
 
         if self.server.max_connections == 0 {
-            return Err(crate::core::error::ArceusError::Config(
+            return Err(crate::app::error::ArceusError::Config(
                 "Max connections must be greater than 0".to_string(),
             ));
         }

@@ -1,4 +1,4 @@
-use crate::core::models::update::{UpdateInfo, UpdateProgress, UpdateStatus};
+use crate::app::models::update::{UpdateInfo, UpdateProgress, UpdateStatus};
 use std::sync::Arc;
 use tauri::{AppHandle, Emitter};
 use tauri_plugin_updater::{Update, UpdaterExt};

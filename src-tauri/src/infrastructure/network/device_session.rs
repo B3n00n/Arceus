@@ -3,7 +3,7 @@
 /// No business logic, state management, or event emission - just I/O.
 
 use crate::domain::models::DeviceId;
-use crate::protocol::{RawPacket, RawPacketCodec};
+use crate::infrastructure::protocol::{RawPacket, RawPacketCodec};
 use futures::{SinkExt, StreamExt};
 use std::net::SocketAddr;
 use std::sync::Arc;

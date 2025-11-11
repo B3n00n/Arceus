@@ -1,6 +1,6 @@
 use crate::application::services::update_service::UpdateService;
-use crate::core::models::update::UpdateStatus;
-use crate::core::{AppState, ServerManager};
+use crate::app::models::update::UpdateStatus;
+use crate::app::{AppState, ServerManager};
 use std::sync::Arc;
 use tauri::{AppHandle, Manager, State};
 use tokio::sync::Mutex;

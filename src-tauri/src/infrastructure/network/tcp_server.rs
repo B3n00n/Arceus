@@ -2,7 +2,7 @@
 /// Accepts incoming TCP connections and delegates to ConnectionHandler.
 /// Focuses solely on TCP transport concerns.
 
-use crate::core::{error::NetworkError, EventBus, Result, ServerConfig};
+use crate::app::{error::NetworkError, EventBus, Result, ServerConfig};
 use crate::domain::repositories::{DeviceNameRepository, DeviceRepository};
 use crate::infrastructure::network::connection_handler::ConnectionHandler;
 use crate::infrastructure::network::device_session_manager::DeviceSessionManager;

@@ -1,5 +1,6 @@
 use crate::application::services::HttpServerService;
-use crate::core::{EventBus, HiddenCommandSync};
+use crate::app::EventBus;
+use crate::infrastructure::process::HiddenCommandSync;
 use crate::domain::models::{GameConfig, GameState};
 use crate::infrastructure::game::{GameProcess, GameProcessManager};
 use parking_lot::RwLock;
@@ -14,7 +15,7 @@ pub type GameResult<T> = std::result::Result<T, GameApplicationError>;
 #[derive(Debug, thiserror::Error)]
 pub enum GameApplicationError {
     #[error("Arceus error: {0}")]
-    Arceus(#[from] crate::core::error::ArceusError),
+    Arceus(#[from] crate::app::error::ArceusError),
 
     #[error("Game is already running: {0}")]
     GameAlreadyRunning(String),

@@ -1,5 +1,5 @@
 use crate::application::services::{BatteryMonitor, HttpServerService};
-use crate::core::{AppConfig, AppState, EventBus};
+use crate::app::{AppConfig, AppState, EventBus};
 use crate::infrastructure::network::TcpServer;
 use parking_lot::RwLock;
 use std::sync::Arc;

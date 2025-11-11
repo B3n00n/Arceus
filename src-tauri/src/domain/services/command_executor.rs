@@ -140,7 +140,7 @@ impl CommandExecutor {
 
         // Serialize command to packet
         let payload = cmd.serialize()?;
-        let packet = crate::protocol::RawPacket {
+        let packet = crate::infrastructure::protocol::RawPacket {
             opcode: cmd.opcode(),
             payload,
         };

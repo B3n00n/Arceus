@@ -1,5 +1,5 @@
 use crate::domain::models::DeviceId;
-use crate::protocol::RawPacket;
+use crate::infrastructure::protocol::RawPacket;
 use async_trait::async_trait;
 
 /// Error type for session operations

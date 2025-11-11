@@ -1,4 +1,4 @@
-use crate::presentation::dto::{BatteryInfoDto, CommandResultDto, DeviceStateDto, VolumeInfoDto};
+use crate::application::dto::{BatteryInfoDto, CommandResultDto, DeviceStateDto, VolumeInfoDto};
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter};
 use uuid::Uuid;

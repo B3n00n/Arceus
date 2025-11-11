@@ -1,19 +1,19 @@
 /// Packet handler system for processing incoming device packets
 /// Handlers update the device repository based on received packets.
 
-use crate::core::EventBus;
-use crate::presentation::dto::{BatteryInfoDto, CommandResultDto, DeviceInfoDto, DeviceStateDto, VolumeInfoDto};
+use crate::app::EventBus;
+use crate::application::dto::{BatteryInfoDto, CommandResultDto, DeviceInfoDto, DeviceStateDto, VolumeInfoDto};
 use crate::domain::models::{Battery, Device, DeviceId, Serial, Volume};
 use crate::domain::repositories::{DeviceNameRepository, DeviceRepository};
 use crate::infrastructure::network::device_session_manager::DeviceSessionManager;
 use crate::net::io::ProtocolReadExt;
-use crate::protocol::{opcodes, RawPacket};
+use crate::infrastructure::protocol::{opcodes, RawPacket};
 use async_trait::async_trait;
 use byteorder::{BigEndian, ReadBytesExt};
 use std::io::Cursor;
 use std::sync::Arc;
 
-pub type Result<T> = std::result::Result<T, crate::core::error::ArceusError>;
+pub type Result<T> = std::result::Result<T, crate::app::error::ArceusError>;
 
 #[async_trait]
 pub trait PacketHandler: Send + Sync {
@@ -163,7 +163,7 @@ impl PacketHandler for DeviceConnectedHandler {
         );
 
         let serial = Serial::new(serial_str)
-            .map_err(|e| crate::core::error::ArceusError::DomainValidation(format!("Invalid serial: {}", e)))?;
+            .map_err(|e| crate::app::error::ArceusError::DomainValidation(format!("Invalid serial: {}", e)))?;
 
         // Get the temporary device that was created on TCP connection
         let temp_device = self.device_repo.find_by_id(device_id).await.ok().flatten();
@@ -287,7 +287,7 @@ impl PacketHandler for BatteryStatusHandler {
 
         // Update device with battery info
         let battery = Battery::new(level, is_charging)
-            .map_err(|e| crate::core::error::ArceusError::DomainValidation(format!("Invalid battery: {}", e)))?;
+            .map_err(|e| crate::app::error::ArceusError::DomainValidation(format!("Invalid battery: {}", e)))?;
 
         if let Ok(Some(device)) = self.device_repo.find_by_id(device_id).await {
             let updated_device = device.as_ref().clone().with_battery(battery);
@@ -357,7 +357,7 @@ impl PacketHandler for VolumeStatusHandler {
 
         // Update device with volume info
         let volume = Volume::new(current, max)
-            .map_err(|e| crate::core::error::ArceusError::DomainValidation(format!("Invalid volume: {}", e)))?;
+            .map_err(|e| crate::app::error::ArceusError::DomainValidation(format!("Invalid volume: {}", e)))?;
 
         if let Ok(Some(device)) = self.device_repo.find_by_id(device_id).await {
             let updated_device = device.as_ref().clone().with_volume(volume);
@@ -395,7 +395,7 @@ impl PingResponseHandler {
 #[async_trait]
 impl PacketHandler for PingResponseHandler {
     fn opcode(&self) -> u8 {
-        crate::protocol::opcodes::PING_RESPONSE
+        crate::infrastructure::protocol::opcodes::PING_RESPONSE
     }
 
     async fn handle(&self, device_id: DeviceId, _payload: Vec<u8>) -> Result<()> {
@@ -423,7 +423,7 @@ impl LaunchAppResponseHandler {
 #[async_trait]
 impl PacketHandler for LaunchAppResponseHandler {
     fn opcode(&self) -> u8 {
-        crate::protocol::opcodes::LAUNCH_APP_RESPONSE
+        crate::infrastructure::protocol::opcodes::LAUNCH_APP_RESPONSE
     }
 
     async fn handle(&self, device_id: DeviceId, payload: Vec<u8>) -> Result<()> {
@@ -458,7 +458,7 @@ impl ShellExecutionResponseHandler {
 #[async_trait]
 impl PacketHandler for ShellExecutionResponseHandler {
     fn opcode(&self) -> u8 {
-        crate::protocol::opcodes::SHELL_EXECUTION_RESPONSE
+        crate::infrastructure::protocol::opcodes::SHELL_EXECUTION_RESPONSE
     }
 
     async fn handle(&self, device_id: DeviceId, payload: Vec<u8>) -> Result<()> {
@@ -499,7 +499,7 @@ impl InstalledAppsResponseHandler {
 #[async_trait]
 impl PacketHandler for InstalledAppsResponseHandler {
     fn opcode(&self) -> u8 {
-        crate::protocol::opcodes::INSTALLED_APPS_RESPONSE
+        crate::infrastructure::protocol::opcodes::INSTALLED_APPS_RESPONSE
     }
 
     async fn handle(&self, device_id: DeviceId, payload: Vec<u8>) -> Result<()> {
@@ -534,7 +534,7 @@ impl ApkInstallResponseHandler {
 #[async_trait]
 impl PacketHandler for ApkInstallResponseHandler {
     fn opcode(&self) -> u8 {
-        crate::protocol::opcodes::APK_INSTALL_RESPONSE
+        crate::infrastructure::protocol::opcodes::APK_INSTALL_RESPONSE
     }
 
     async fn handle(&self, device_id: DeviceId, payload: Vec<u8>) -> Result<()> {
@@ -572,7 +572,7 @@ impl UninstallAppResponseHandler {
 #[async_trait]
 impl PacketHandler for UninstallAppResponseHandler {
     fn opcode(&self) -> u8 {
-        crate::protocol::opcodes::UNINSTALL_APP_RESPONSE
+        crate::infrastructure::protocol::opcodes::UNINSTALL_APP_RESPONSE
     }
 
     async fn handle(&self, device_id: DeviceId, payload: Vec<u8>) -> Result<()> {
@@ -608,7 +608,7 @@ impl VolumeSetResponseHandler {
 #[async_trait]
 impl PacketHandler for VolumeSetResponseHandler {
     fn opcode(&self) -> u8 {
-        crate::protocol::opcodes::VOLUME_SET_RESPONSE
+        crate::infrastructure::protocol::opcodes::VOLUME_SET_RESPONSE
     }
 
     async fn handle(&self, device_id: DeviceId, payload: Vec<u8>) -> Result<()> {
@@ -676,7 +676,7 @@ impl ApkDownloadStartedHandler {
 #[async_trait]
 impl PacketHandler for ApkDownloadStartedHandler {
     fn opcode(&self) -> u8 {
-        crate::protocol::opcodes::APK_DOWNLOAD_STARTED
+        crate::infrastructure::protocol::opcodes::APK_DOWNLOAD_STARTED
     }
 
     async fn handle(&self, device_id: DeviceId, _payload: Vec<u8>) -> Result<()> {
@@ -704,7 +704,7 @@ impl CloseAllAppsResponseHandler {
 #[async_trait]
 impl PacketHandler for CloseAllAppsResponseHandler {
     fn opcode(&self) -> u8 {
-        crate::protocol::opcodes::CLOSE_ALL_APPS_RESPONSE
+        crate::infrastructure::protocol::opcodes::CLOSE_ALL_APPS_RESPONSE
     }
 
     async fn handle(&self, device_id: DeviceId, payload: Vec<u8>) -> Result<()> {

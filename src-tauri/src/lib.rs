@@ -1,14 +1,12 @@
-mod domain;
+mod api;
+mod app;
 mod application;
+mod domain;
 mod infrastructure;
-mod presentation;
-mod commands;
-mod core;
-mod protocol;
 mod net;
 
-use commands::*;
-use core::{AppConfig, AppState, EventBus, ServerManager, setup_signal_handlers};
+use api::*;
+use app::{AppConfig, AppState, EventBus, ServerManager, setup_signal_handlers};
 use application::services::{
     ApkApplicationService, BatteryMonitor, DeviceApplicationService,
     GameApplicationService, update_service::create_update_service

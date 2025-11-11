@@ -3,7 +3,7 @@
 use crate::domain::commands::Command;
 use crate::domain::models::PackageName;
 use crate::net::io::ProtocolWriteExt;
-use crate::protocol::opcodes::*;
+use crate::infrastructure::protocol::opcodes::*;
 use byteorder::WriteBytesExt;
 
 /// Launch an application on a device

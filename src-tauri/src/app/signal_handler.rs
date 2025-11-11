@@ -1,4 +1,4 @@
-use crate::core::AppState;
+use crate::app::AppState;
 use std::sync::Arc;
 
 pub fn setup_signal_handlers(app_state: Arc<AppState>) {
