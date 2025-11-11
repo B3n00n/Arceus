@@ -16,7 +16,8 @@
         "title": "arceus",
         "width": 1280,
         "height": 720,
-          "minWidth": 1075,
+        "minWidth": 1075,
+        "minHeight": 600,
         "visible": false
       },
       {

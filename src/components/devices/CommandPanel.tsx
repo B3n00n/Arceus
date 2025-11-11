@@ -14,6 +14,7 @@ import {
   Upload,
   Package,
   List,
+  XCircle,
 } from 'lucide-react';
 import { DeviceService } from '@/services/deviceService';
 import { cn } from '@/lib/cn';
@@ -82,13 +83,13 @@ export function CommandPanel({
         <>
           {/* Tab Switcher */}
           <SegmentedControl
-  options={[
-    { label: "Standard", value: "standard" },
-    { label: "Developer", value: "dev" },
-  ]}
-  value={commandTab}
-  onChange={(val) => setCommandTab(val as "standard" | "dev")}
-/>
+            options={[
+              { label: "Standard", value: "standard" },
+              { label: "Developer", value: "dev" },
+            ]}
+            value={commandTab}
+            onChange={(val) => setCommandTab(val as "standard" | "dev")}
+          />
 
           {/* Tab Content */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -135,6 +136,19 @@ export function CommandPanel({
                       variant="outline"
                       size="sm"
                       className="w-full justify-start"
+                      onClick={() => {
+                        if (confirm(`Close all running apps on ${selectedDeviceIds.size} device(s)?`)) {
+                          onHandleCommand(() => DeviceService.closeAllApps(selectedIds), 'Close All Apps');
+                        }
+                      }}
+                      disabled={loading}>
+                      <XCircle className="h-4 w-4 mr-2" />
+                      Close All Apps
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full justify-start"
                       onClick={() => onOpenAppListDialog('uninstall')}
                       disabled={loading}
                     >
@@ -168,75 +182,75 @@ export function CommandPanel({
                 <div>
                   <p className="text-xs text-gray-400 mb-2 font-semibold">Device control</p>
                   <div className="space-y-2">
-                  {/* Set Volume */}
-<div className="transition-all duration-300 ease-in-out">
-  <button
-    onClick={() => setIsVolumeExpanded((prev) => !prev)}
-    disabled={loading}
-    className={cn(
-      'w-full border-2 bg-transparent cursor-pointer',
-      'rounded-md px-3 py-2 text-xs',
-      'hover:bg-[#7289da]/20 hover:border-[#7289da] hover:text-white',
-      isVolumeExpanded
-        ? 'text-white border-white hover:bg-transparent'
-        : 'text-gray-300 border-gray-600/50'
-    )}
-  >
-    {/* Header row (icon + label + value) */}
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-2">
-        <Volume2 className="h-4 w-4 mr-2" />
-        <span className="font-medium">Set volume</span>
-      </div>
-      {isVolumeExpanded && (
-        <span className="font-medium text-white">{volumeValue}</span>
-      )}
-    </div>
+                    {/* Set Volume */}
+                    <div className="transition-all duration-300 ease-in-out">
+                      <button
+                        onClick={() => setIsVolumeExpanded((prev) => !prev)}
+                        disabled={loading}
+                        className={cn(
+                          'w-full border-2 bg-transparent cursor-pointer',
+                          'rounded-md px-3 py-2 text-xs',
+                          'hover:bg-[#7289da]/20 hover:border-[#7289da] hover:text-white',
+                          isVolumeExpanded
+                            ? 'text-white border-white hover:bg-transparent'
+                            : 'text-gray-300 border-gray-600/50'
+                        )}
+                      >
+                        {/* Header row (icon + label + value) */}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Volume2 className="h-4 w-4 mr-2" />
+                            <span className="font-medium">Set volume</span>
+                          </div>
+                          {isVolumeExpanded && (
+                            <span className="font-medium text-white">{volumeValue}</span>
+                          )}
+                        </div>
 
-    {/* Animated reveal content */}
-    <div
-      className={cn(
-        'overflow-hidden transition-all duration-300 ease-in-out',
-        isVolumeExpanded ? 'max-h-40 opacity-100 mt-1 pt-px' : 'max-h-0 opacity-0'
-      )}
-      onClick={(e) => e.stopPropagation()}
-    >
-      <Slider
-        min={0}
-        max={100}
-        value={volumeValue}
-        onValueChange={setVolumeValue}
-        className="w-full mb-3"
-      />
+                        {/* Animated reveal content */}
+                        <div
+                          className={cn(
+                            'overflow-hidden transition-all duration-300 ease-in-out',
+                            isVolumeExpanded ? 'max-h-40 opacity-100 mt-1 pt-px' : 'max-h-0 opacity-0'
+                          )}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Slider
+                            min={0}
+                            max={100}
+                            value={volumeValue}
+                            onValueChange={setVolumeValue}
+                            className="w-full mb-3"
+                          />
 
-      <div className="flex flex-row-reverse gap-2">
-        <Button
-          size="sm"
-          variant="default"
-          onClick={(e) => {
-            e.stopPropagation();
-            handleSetVolume();
-          }}
-          disabled={loading}          
-        >
-          Set
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsVolumeExpanded(false);
-          }}
-          disabled={loading}
-          className=""
-        >
-          Dismiss
-        </Button>
-      </div>
-    </div>
-  </button>
-</div>
+                          <div className="flex flex-row-reverse gap-2">
+                            <Button
+                              size="sm"
+                              variant="default"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSetVolume();
+                              }}
+                              disabled={loading}
+                            >
+                              Set
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setIsVolumeExpanded(false);
+                              }}
+                              disabled={loading}
+                              className=""
+                            >
+                              Dismiss
+                            </Button>
+                          </div>
+                        </div>
+                      </button>
+                    </div>
 
                     {/* Restart device */}
                     <Button
