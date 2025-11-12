@@ -29,7 +29,7 @@ export function formatBatteryLevel(level: number): string {
 }
 
 export function getBatteryColor(level: number): string {
-  if (level >= 70) return 'bg-system-success';
-  if (level >= 30) return 'bg-system-warning';
+  if (level >= 70) return 'bg-system-success/80';
+  if (level >= 30) return 'bg-system-warning/80';
   return 'bg-system-critical';
 }
