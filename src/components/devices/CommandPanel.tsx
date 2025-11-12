@@ -143,7 +143,7 @@ export function CommandPanel({
                       }}
                       disabled={loading}>
                       <XCircle className="h-4 w-4 mr-2" />
-                      Close All Apps
+                      Close all apps
                     </Button>
                     <Button
                       variant="outline"
