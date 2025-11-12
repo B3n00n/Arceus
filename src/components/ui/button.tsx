@@ -3,7 +3,7 @@ import { cn } from "@/lib/cn"
 
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link"
+  variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link" | "danger" | "danger-outline"
   size?: "default" | "sm" | "lg" | "icon"
 }
 
@@ -14,6 +14,11 @@ const buttonVariants = {
   secondary: "bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/70 active:bg-secondary/60",
   ghost: "hover:bg-accent hover:text-accent-foreground active:bg-accent/70",
   link: "text-discord-blurple underline-offset-4 hover:underline",
+  danger:
+    "bg-system-critical text-white shadow hover:bg-system-critical/80 active:bg-system-critical/70",
+  "danger-outline":
+    "border-2 border-[#8e3f42] text-system-critical bg-transparent " +
+    "hover:border-system-error hover:bg-system-error/15 active:bg-system-error/25 transition-colors",
 }
 
 const buttonSizes = {
