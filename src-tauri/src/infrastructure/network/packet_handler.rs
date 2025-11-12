@@ -15,6 +15,43 @@ use std::sync::Arc;
 
 pub type Result<T> = std::result::Result<T, crate::app::error::ArceusError>;
 
+macro_rules! simple_response_handler {
+    ($handler_name:ident, $opcode:expr, $command_name:expr, $success_msg:expr, $failure_msg:expr) => {
+        struct $handler_name {
+            event_bus: Arc<EventBus>,
+        }
+
+        impl $handler_name {
+            fn new(event_bus: Arc<EventBus>) -> Self {
+                Self { event_bus }
+            }
+        }
+
+        #[async_trait]
+        impl PacketHandler for $handler_name {
+            fn opcode(&self) -> u8 {
+                $opcode
+            }
+
+            async fn handle(&self, device_id: DeviceId, payload: Vec<u8>) -> Result<()> {
+                let mut cursor = Cursor::new(payload);
+                let success = cursor.read_u8()? != 0;
+
+                tracing::debug!(device_id = %device_id, success, concat!($command_name, " response"));
+
+                let result = if success {
+                    CommandResultDto::success($command_name, $success_msg)
+                } else {
+                    CommandResultDto::failure($command_name, $failure_msg)
+                };
+                self.event_bus.command_executed(device_id.as_uuid().clone(), result);
+
+                Ok(())
+            }
+        }
+    };
+}
+
 #[async_trait]
 pub trait PacketHandler: Send + Sync {
     fn opcode(&self) -> u8;
@@ -390,39 +427,14 @@ impl PacketHandler for PingResponseHandler {
     }
 }
 
-/// Handles LAUNCH_APP_RESPONSE (0x10) packets
-struct LaunchAppResponseHandler {
-    event_bus: Arc<EventBus>,
-}
-
-impl LaunchAppResponseHandler {
-    fn new(event_bus: Arc<EventBus>) -> Self {
-        Self { event_bus }
-    }
-}
-
-#[async_trait]
-impl PacketHandler for LaunchAppResponseHandler {
-    fn opcode(&self) -> u8 {
-        crate::infrastructure::protocol::opcodes::LAUNCH_APP_RESPONSE
-    }
-
-    async fn handle(&self, device_id: DeviceId, payload: Vec<u8>) -> Result<()> {
-        let mut cursor = Cursor::new(payload);
-        let success = cursor.read_u8()? != 0;
-
-        tracing::debug!(device_id = %device_id, success, "Launch app response");
-
-        let result = if success {
-            CommandResultDto::success("launch_app", "App launched successfully")
-        } else {
-            CommandResultDto::failure("launch_app", "Failed to launch app")
-        };
-        self.event_bus.command_executed(device_id.as_uuid().clone(), result);
-
-        Ok(())
-    }
-}
+// Handles LAUNCH_APP_RESPONSE (0x10) packets
+simple_response_handler!(
+    LaunchAppResponseHandler,
+    opcodes::LAUNCH_APP_RESPONSE,
+    "launch_app",
+    "App launched successfully",
+    "Failed to launch app"
+);
 
 /// Handles SHELL_EXECUTION_RESPONSE (0x11) packets
 /// Payload: [success: u8][output: String][exit_code: i32]
@@ -501,77 +513,23 @@ impl PacketHandler for InstalledAppsResponseHandler {
     }
 }
 
-/// Handles APK_INSTALL_RESPONSE (0x14) packets
-struct ApkInstallResponseHandler {
-    event_bus: Arc<EventBus>,
-}
+// Handles APK_INSTALL_RESPONSE (0x14) packets
+simple_response_handler!(
+    ApkInstallResponseHandler,
+    opcodes::APK_INSTALL_RESPONSE,
+    "apk_install",
+    "APK installed successfully",
+    "Failed to install APK"
+);
 
-impl ApkInstallResponseHandler {
-    fn new(event_bus: Arc<EventBus>) -> Self {
-        Self { event_bus }
-    }
-}
-
-#[async_trait]
-impl PacketHandler for ApkInstallResponseHandler {
-    fn opcode(&self) -> u8 {
-        crate::infrastructure::protocol::opcodes::APK_INSTALL_RESPONSE
-    }
-
-    async fn handle(&self, device_id: DeviceId, payload: Vec<u8>) -> Result<()> {
-        let mut cursor = Cursor::new(payload);
-        let success = cursor.read_u8()? != 0;
-
-        if success {
-            tracing::info!(device_id = %device_id, "APK installed successfully");
-        } else {
-            tracing::warn!(device_id = %device_id, "APK installation failed");
-        }
-
-        let result = if success {
-            CommandResultDto::success("apk_install", "APK installed successfully")
-        } else {
-            CommandResultDto::failure("apk_install", "Failed to install APK")
-        };
-        self.event_bus.command_executed(device_id.as_uuid().clone(), result);
-
-        Ok(())
-    }
-}
-
-/// Handles UNINSTALL_APP_RESPONSE (0x15) packets
-struct UninstallAppResponseHandler {
-    event_bus: Arc<EventBus>,
-}
-
-impl UninstallAppResponseHandler {
-    fn new(event_bus: Arc<EventBus>) -> Self {
-        Self { event_bus }
-    }
-}
-
-#[async_trait]
-impl PacketHandler for UninstallAppResponseHandler {
-    fn opcode(&self) -> u8 {
-        crate::infrastructure::protocol::opcodes::UNINSTALL_APP_RESPONSE
-    }
-
-    async fn handle(&self, device_id: DeviceId, payload: Vec<u8>) -> Result<()> {
-        let mut cursor = Cursor::new(payload);
-        let success = cursor.read_u8()? != 0;
-
-        tracing::debug!(device_id = %device_id, success, "Uninstall app response");
-
-        let result = if success {
-            CommandResultDto::success("uninstall_app", "App uninstalled successfully")
-        } else {
-            CommandResultDto::failure("uninstall_app", "Failed to uninstall app")
-        };
-        self.event_bus.command_executed(device_id.as_uuid().clone(), result);
-
-        Ok(())
-    }
-}
+// Handles UNINSTALL_APP_RESPONSE (0x15) packets
+simple_response_handler!(
+    UninstallAppResponseHandler,
+    opcodes::UNINSTALL_APP_RESPONSE,
+    "uninstall_app",
+    "App uninstalled successfully",
+    "Failed to uninstall app"
+);
 
 /// Handles VOLUME_SET_RESPONSE (0x16) packets
 /// The client sends back the actual volume percentage achieved after setting

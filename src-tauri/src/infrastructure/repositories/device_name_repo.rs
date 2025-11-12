@@ -52,10 +52,6 @@ impl DeviceNameRepository for SledDeviceNameRepository {
             }
         }
 
-        self.db
-            .flush()
-            .map_err(|e| crate::domain::repositories::RepositoryError::DatabaseError(e.to_string()))?;
-
         Ok(())
     }
 }

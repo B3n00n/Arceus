@@ -85,7 +85,7 @@ pub fn run() {
 
             let command_executor = Arc::new(crate::domain::services::CommandExecutor::new(
                 device_repo.clone(),
-                session_manager,
+                session_manager.clone(),
             ));
 
             let device_service = Arc::new(DeviceApplicationService::new(
@@ -99,6 +99,7 @@ pub fn run() {
             let battery_interval = std::time::Duration::from_secs(config.server.battery_update_interval);
             let battery_monitor = Arc::new(BatteryMonitor::new(
                 device_repo.clone(),
+                session_manager.clone(),
                 command_executor.clone(),
                 battery_interval,
             ));
@@ -117,14 +118,12 @@ pub fn run() {
             app.manage(app_state.clone());
             app.manage(server_manager);
 
-            // Setup OS signal handlers for graceful shutdown (Ctrl+C, SIGTERM, etc.)
             setup_signal_handlers(app_state.clone());
 
             if let Some(updater_window) = app.get_webview_window("updater") {
                 let _ = updater_window.show();
                 let _ = updater_window.set_focus();
             } else if let Some(main_window) = app.get_webview_window("main") {
-                // No updater: start servers immediately
                 if let (Some(server_mgr), Some(app_state)) = (
                     app.try_state::<Arc<ServerManager>>(),
                     app.try_state::<Arc<AppState>>(),
