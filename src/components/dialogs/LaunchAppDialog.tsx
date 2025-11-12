@@ -61,7 +61,7 @@ export function LaunchAppDialog({
               disabled={loading}
             />
             <span className="text-sm text-gray-300">
-              Also aunch on connected devices
+              Also launch on connected devices
             </span>
           </div>
 

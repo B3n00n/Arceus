@@ -69,11 +69,11 @@ class EventService {
         break;
 
       case 'gameStarted':
-        toast.success(`${event.gameName}: Started`);
+        toast.success(`Launched ${event.gameName}`);
         break;
 
       case 'gameStopped':
-        toast.info(`${event.gameName}: Stopped`);
+        toast.info(`Stopped ${event.gameName}`);
         break;
     }
   }
