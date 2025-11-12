@@ -68,7 +68,7 @@ export function AppListDialog({
 
   return (
     <DialogOverlay onClose={handleClose}>
-      <Card className="bg-discord-dark-2 border-discord-dark w-[500px] max-h-[600px] flex flex-col">
+      <Card className="w-[500px] max-h-[600px] flex flex-col">
         <CardHeader>
           <h3 className="text-lg font-semibold text-white">
             {dialogType === 'launch' ? 'Select App to Launch' : 'Select App to Uninstall'}
@@ -105,15 +105,15 @@ export function AppListDialog({
                 {loading
                   ? 'Loading apps...'
                   : installedApps.length === 0
-                  ? 'No apps found'
-                  : 'No CombaticaLTD apps found'}
+                    ? 'No apps found'
+                    : 'No CombaticaLTD apps found'}
               </div>
             )}
           </div>
         </CardContent>
-        <div className="p-4 border-t border-discord-dark flex gap-2 justify-between">
+        <div className="p-4 flex-row-reverse border-t border-discord-dark flex gap-2 justify-between">
           <Button
-            variant="outline"
+            variant={dialogType === 'launch' ? 'default' : 'danger'}
             onClick={handleSelectAndExecute}
             disabled={loading || !selectedApp}
           >

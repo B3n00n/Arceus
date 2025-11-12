@@ -60,7 +60,7 @@ export function ApkListDialog({
 
   return (
     <DialogOverlay onClose={handleClose}>
-      <Card className="bg-discord-dark-2 border-discord-dark w-[500px] max-h-[600px] flex flex-col">
+      <Card className="w-[500px] max-h-[600px] flex flex-col">
         <CardHeader>
           <h3 className="text-lg font-semibold text-white">Select APK to Install</h3>
           <p className="text-sm text-gray-400">For {selectedCount} device(s)</p>
@@ -100,8 +100,8 @@ export function ApkListDialog({
             )}
           </div>
         </CardContent>
-        <div className="p-4 border-t border-discord-dark flex gap-2 justify-between">
-          <Button variant="outline" onClick={handleSelectAndInstall} disabled={loading || !selectedApk}>
+        <div className="p-4 border-t border-discord-dark flex-row-reverse flex gap-2 justify-between">
+          <Button variant="default" onClick={handleSelectAndInstall} disabled={loading || !selectedApk}>
             Install
           </Button>
           <Button variant="outline" onClick={handleClose} disabled={loading}>

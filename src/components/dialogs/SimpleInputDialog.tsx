@@ -73,7 +73,7 @@ export function SimpleInputDialog({
 
   return (
     <DialogOverlay onClose={onClose}>
-      <Card className="bg-discord-dark-2 border-discord-dark w-96">
+      <Card className="w-96">
         <CardHeader>
           <h3 className="text-lg font-semibold text-white">{getTitle()}</h3>
           <p className="text-sm text-gray-400">For {selectedCount} device(s)</p>
@@ -95,9 +95,9 @@ export function SimpleInputDialog({
             />
           </div>
 
-          <div className="flex gap-2 justify-between">
+          <div className="flex gap-2 flex-row-reverse justify-between">
             <Button
-              variant="outline"
+              variant="default"
               onClick={handleExecute}
               disabled={loading || !dialogInput.trim()}
             >
