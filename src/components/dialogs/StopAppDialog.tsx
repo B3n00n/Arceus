@@ -2,7 +2,6 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DialogOverlay } from "./DialogOverlay";
 import { GameService } from "@/services/gameService";
-import { toast } from "@/lib/toast";
 import { useGameStore } from "@/stores/gameStore";
 
 interface StopAppDialogProps {
@@ -19,12 +18,8 @@ export function StopAppDialog({ isOpen, onClose }: StopAppDialogProps) {
     try {
       await GameService.stopGame();
       setCurrentGame(null);
-      toast.success(
-        `Stopped ${currentGame?.gameName || "running application"} successfully`
-      );
       onClose();
     } catch (error) {
-      toast.error(`Failed to stop: ${error}`);
     }
   };
 

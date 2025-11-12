@@ -4,7 +4,6 @@ import { useLocation } from "react-router-dom";
 import { useToastHistoryStore } from "@/stores/toastHistoryStore";
 import { useGameStore } from "@/stores/gameStore";
 import { GameService } from "@/services/gameService";
-import { toast } from "@/lib/toast";
 import { Button } from "@/components/ui/button";
 import { ToastHistory } from "@/components/ToastHistory";
 import { LaunchAppDialog } from "@/components/dialogs/LaunchAppDialog";
@@ -39,10 +38,8 @@ export function Header() {
         packageName: app.packageName,
       });
       setCurrentGame({ gameName: app.name });
-      toast.success(`Launched ${app.name}${launchOnClients ? " on clients" : ""}`);
       setShowLaunchDialog(false);
     } catch (error) {
-      toast.error(`Failed to launch: ${error}`);
     } finally {
       setLoading(false);
     }
@@ -92,7 +89,6 @@ export function Header() {
                 disabled={loading}
                 className="flex items-center gap-2"
               >
-                <Square className="h-4 w-4" />
                 Stop
               </Button>
             ) : (
