@@ -1,19 +1,13 @@
-/// Sled-based Device Name Repository
-///
-/// Persists custom device names to a Sled database.
-
 use crate::domain::models::Serial;
 use crate::domain::repositories::device_name_repository::{DeviceNameRepository, Result};
 use async_trait::async_trait;
 use std::path::Path;
 
-/// Sled-based implementation of DeviceNameRepository
 pub struct SledDeviceNameRepository {
     db: sled::Db,
 }
 
 impl SledDeviceNameRepository {
-    /// Create a new Sled device name repository
     pub fn new<P: AsRef<Path>>(path: P) -> Result<Self> {
         let db = sled::open(path)
             .map_err(|e| crate::domain::repositories::RepositoryError::DatabaseError(e.to_string()))?;
@@ -21,7 +15,6 @@ impl SledDeviceNameRepository {
         Ok(Self { db })
     }
 
-    /// Helper to convert serial to key
     fn serial_to_key(serial: &Serial) -> Vec<u8> {
         format!("device_name:{}", serial.as_str()).into_bytes()
     }
