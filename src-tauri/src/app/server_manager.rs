@@ -42,7 +42,7 @@ impl ServerManager {
             return;
         }
 
-        tracing::info!("Starting background servers (TCP: 8888, HTTP: 8889)...");
+        tracing::info!("Starting background servers (TCP: 43572, HTTP: 43573)...");
 
         let tcp_server = self.tcp_server.clone();
         tauri::async_runtime::spawn(async move {
