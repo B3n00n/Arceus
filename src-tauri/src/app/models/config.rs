@@ -14,8 +14,8 @@ impl Default for ServerConfig {
     fn default() -> Self {
         Self {
             tcp_host: "0.0.0.0".to_string(),
-            tcp_port: 8888,
-            http_port: 8889,
+            tcp_port: 43572,
+            http_port: 43573,
             max_connections: 100,
             battery_update_interval: 60,
             heartbeat_timeout: 30,
