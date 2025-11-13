@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Bell, Rocket, Square } from "lucide-react";
+import { Bell, Rocket } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { useToastHistoryStore } from "@/stores/toastHistoryStore";
 import { useGameStore } from "@/stores/gameStore";
@@ -27,7 +27,7 @@ export function Header() {
 
   const handleLaunch = async (
     app: { name: string; packageName: string },
-    launchOnClients: boolean
+    _launchOnClients: boolean
   ) => {
     try {
       setLoading(true);
