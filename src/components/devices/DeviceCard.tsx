@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Check, X, Pencil } from 'lucide-react';
+import { Pencil } from 'lucide-react';
 import { useDeviceStore } from '@/stores/deviceStore';
 import { DeviceService } from '@/services/deviceService';
 import { cn } from '@/lib/cn';
@@ -20,11 +20,25 @@ export function DeviceCard({ device, isSelected, onToggle }: DeviceCardProps) {
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState(device.info.customName || '');
   const [isSavingName, setIsSavingName] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
   const setDevices = useDeviceStore((state) => state.setDevices);
 
   useEffect(() => {
     setEditedName(device.info.customName || '');
   }, [device.info.customName]);
+
+  useEffect(() => {
+    if (!isEditingName) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (inputRef.current && !inputRef.current.contains(e.target as Node)) {
+        handleSaveName();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isEditingName, editedName]);
 
   const handleSaveName = async () => {
     if (isSavingName) return;
@@ -72,48 +86,27 @@ export function DeviceCard({ device, isSelected, onToggle }: DeviceCardProps) {
 
       {/* Name */}
       <div
-        className="group/name flex-[2] min-w-[8rem] flex justify-between items-center gap-2"
+        className="group/name flex-[2] min-w-[8rem] flex justify-between items-center gap-1 relative"
         onClick={(e) => {
           e.stopPropagation();
           if (!isEditingName) setIsEditingName(true);
         }}
       >
-        <div className="text-white text-sm font-bold flex justify-between items-center gap-2 w-full">
+        <div className="text-white text-sm font-bold flex justify-between items-center gap-1 w-full">
           {isEditingName ? (
-            <>
-              <Input
-                value={editedName}
-                onChange={(e) => setEditedName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleSaveName();
-                  if (e.key === 'Escape') handleCancelEdit();
-                }}
-                placeholder={device.info.model}
-                className="h-7 text-sm"
-                autoFocus
-                disabled={isSavingName}
-              />
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleSaveName();
-                }}
-                disabled={isSavingName}
-                className="text-green-400 hover:text-green-300 transition-colors"
-              >
-                <Check className="h-3.5 w-3.5" />
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleCancelEdit();
-                }}
-                disabled={isSavingName}
-                className="text-gray-400 hover:text-gray-300 transition-colors"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </>
+            <Input
+              ref={inputRef}
+              value={editedName}
+              onChange={(e) => setEditedName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSaveName();
+                if (e.key === 'Escape') handleCancelEdit();
+              }}
+              placeholder={device.info.model}
+              className="h-8 text-sm font-normal px-2 py-2 absolute -left-2 w-[calc(100%+16px)]"
+              autoFocus
+              disabled={isSavingName}
+            />
           ) : (
             <>
               <span className="truncate">{device.info.customName || device.info.model}</span>
