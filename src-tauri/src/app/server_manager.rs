@@ -45,11 +45,12 @@ impl ServerManager {
         tracing::info!("Starting background servers (TCP: 43572, HTTP: 43573)...");
 
         let tcp_server = self.tcp_server.clone();
-        tauri::async_runtime::spawn(async move {
+        let tcp_handle = tauri::async_runtime::spawn(async move {
             if let Err(e) = tcp_server.start().await {
                 tracing::error!("TCP server error: {}", e);
             }
         });
+        app_state.set_tcp_server_handle(tcp_handle);
 
         let apk_port = self.config.server.http_port;
         let apk_dir = self.config.apk_directory.clone();

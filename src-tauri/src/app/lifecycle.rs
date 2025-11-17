@@ -5,6 +5,7 @@ use tokio::process::Child;
 
 pub struct AppState {
     tcp_server: Arc<TcpServer>,
+    tcp_server_handle: RwLock<Option<tauri::async_runtime::JoinHandle<()>>>,
     http_server: RwLock<Option<Child>>,
     battery_monitor_handle: RwLock<Option<tauri::async_runtime::JoinHandle<()>>>,
 }
@@ -13,9 +14,14 @@ impl AppState {
     pub fn new(tcp_server: Arc<TcpServer>) -> Self {
         Self {
             tcp_server,
+            tcp_server_handle: RwLock::new(None),
             http_server: RwLock::new(None),
             battery_monitor_handle: RwLock::new(None),
         }
+    }
+
+    pub fn set_tcp_server_handle(&self, handle: tauri::async_runtime::JoinHandle<()>) {
+        *self.tcp_server_handle.write() = Some(handle);
     }
 
     pub fn set_http_server(&self, child: Child) {
@@ -27,27 +33,22 @@ impl AppState {
     }
 
     pub fn shutdown(&self) {
-        tracing::info!("Initiating graceful shutdown of all services");
+        tracing::info!("Shutting down services");
 
         self.tcp_server.shutdown();
 
-        if let Some(mut child) = self.http_server.write().take() {
-            tracing::info!("Stopping HTTP server");
-            tauri::async_runtime::spawn(async move {
-                if let Err(e) = child.kill().await {
-                    tracing::error!("Failed to kill HTTP server: {}", e);
-                } else {
-                    tracing::info!("HTTP server stopped");
-                }
-            });
-        }
-
         if let Some(handle) = self.battery_monitor_handle.write().take() {
-            tracing::info!("Stopping battery monitor");
             handle.abort();
-            tracing::info!("Battery monitor stopped");
         }
 
-        tracing::info!("All services shutdown complete");
+        if let Some(handle) = self.tcp_server_handle.write().take() {
+            let _ = tauri::async_runtime::block_on(handle);
+        }
+
+        if let Some(mut child) = self.http_server.write().take() {
+            let _ = tauri::async_runtime::block_on(child.kill());
+        }
+
+        tracing::info!("Shutdown complete");
     }
 }
