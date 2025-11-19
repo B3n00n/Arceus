@@ -21,7 +21,8 @@ dist-ssr
 *.sln
 *.sw?
 
-/snorlax/
+/client/
+/setup/
 
 src-tauri/target/
 src-tauri/WixTools/
