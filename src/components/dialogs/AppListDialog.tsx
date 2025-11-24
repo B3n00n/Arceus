@@ -1,9 +1,7 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Search } from 'lucide-react';
-import { cn } from '@/lib/cn';
+import { Dropdown } from '@/components/ui/dropdown';
 import { DialogOverlay } from './DialogOverlay';
 
 interface AppListDialogProps {
@@ -25,7 +23,6 @@ export function AppListDialog({
   onSelectApp,
   loading = false,
 }: AppListDialogProps) {
-  const [dialogSearch, setDialogSearch] = useState('');
   const [selectedApp, setSelectedApp] = useState<string | null>(null);
 
   if (!isOpen) return null;
@@ -38,16 +35,7 @@ export function AppListDialog({
   const getFilteredApps = () => {
     return installedApps.filter((app) => {
       // Only show CombaticaLTD apps in standard mode
-      if (!app.startsWith('com.CombaticaLTD.')) return false;
-
-      if (dialogSearch) {
-        const appName = extractAppName(app);
-        return (
-          appName.toLowerCase().includes(dialogSearch.toLowerCase()) ||
-          app.toLowerCase().includes(dialogSearch.toLowerCase())
-        );
-      }
-      return true;
+      return app.startsWith('com.CombaticaLTD.');
     });
   };
 
@@ -60,56 +48,43 @@ export function AppListDialog({
 
   const handleClose = () => {
     setSelectedApp(null);
-    setDialogSearch('');
     onClose();
   };
 
   const filteredApps = getFilteredApps();
 
+  const appDisplayNames = filteredApps.map(extractAppName);
+  const displayNameToPackage = new Map(
+    filteredApps.map((app) => [extractAppName(app), app])
+  );
+  const selectedDisplayName = selectedApp ? extractAppName(selectedApp) : null;
+
   return (
     <DialogOverlay onClose={handleClose}>
-      <Card className="w-[500px] max-h-[600px] flex flex-col">
-        <CardHeader>
+      <Card className="w-[500px] flex flex-col">
+        <CardHeader className=''>
           <h3 className="text-lg font-semibold text-white">
-            {dialogType === 'launch' ? 'Select App to Launch' : 'Select App to Uninstall'}
+            {dialogType === 'launch' ? 'Launch App' : 'Uninstall App'}
           </h3>
           <p className="text-sm text-gray-400">For {selectedCount} device(s)</p>
-          <div className="relative mt-2">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              value={dialogSearch}
-              onChange={(e) => setDialogSearch(e.target.value)}
-              placeholder="Search apps..."
-              className="pl-10"
-            />
-          </div>
         </CardHeader>
-        <CardContent className="flex-1 overflow-y-auto p-0">
-          <div className="divide-y divide-discord-dark">
-            {filteredApps.map((app) => (
-              <button
-                key={app}
-                className={cn(
-                  'w-full px-6 py-3 text-left hover:bg-discord-dark-3 transition-colors',
-                  selectedApp === app && 'bg-discord-blurple/20 border-l-2 border-discord-blurple'
-                )}
-                onClick={() => setSelectedApp(app)}
-                disabled={loading}
-              >
-                <p className="text-sm text-white font-medium">{extractAppName(app)}</p>
-                <p className="text-xs text-gray-400 mt-0.5 font-mono">{app}</p>
-              </button>
-            ))}
-            {filteredApps.length === 0 && (
-              <div className="px-6 py-8 text-center text-gray-400">
-                {loading
-                  ? 'Loading apps...'
-                  : installedApps.length === 0
-                    ? 'No apps found'
-                    : 'No CombaticaLTD apps found'}
-              </div>
-            )}
-          </div>
+        <CardContent className="flex-1 p-4 pt-0">
+          {filteredApps.length > 0 ? (
+            <Dropdown
+              options={appDisplayNames}
+              value={selectedDisplayName || undefined}
+              onChange={(displayName) => {
+                const packageName = displayNameToPackage.get(displayName);
+                if (packageName) setSelectedApp(packageName);
+              }}
+              placeholder="Choose an app..."
+              disabled={loading}
+            />
+          ) : (
+            <div className="text-center text-gray-400 py-3">
+              {loading ? 'Loading apps...' : 'No CombaticaLTD apps found'}
+            </div>
+          )}
         </CardContent>
         <div className="p-4 flex-row-reverse border-t border-discord-dark flex gap-2 justify-between">
           <Button

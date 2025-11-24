@@ -17,7 +17,7 @@ import { DeviceList } from '@/components/devices/DeviceList';
 import { CommandPanel } from '@/components/devices/CommandPanel';
 import { SimpleInputDialog } from '@/components/dialogs/SimpleInputDialog';
 import { AppListDialog } from '@/components/dialogs/AppListDialog';
-import { ApkListDialog } from '@/components/dialogs/ApkListDialog';
+import { InstallApkDialog } from '@/components/dialogs/InstallApkDialog';
 
 export function DevicesPage() {
   const {
@@ -35,7 +35,7 @@ export function DevicesPage() {
   // Dialog states
   const [showSimpleInputDialog, setShowSimpleInputDialog] = useState(false);
   const [showAppListDialog, setShowAppListDialog] = useState(false);
-  const [showApkListDialog, setShowApkListDialog] = useState(false);
+  const [showInstallApkDialog, setShowInstallApkDialog] = useState(false);
 
   const [dialogType, setDialogType] = useState<string>('');
   const [dialogInput, setDialogInput] = useState('');
@@ -80,8 +80,8 @@ export function DevicesPage() {
   const hasSelection = selectedDeviceIds.size > 0;
   const selectedIds = Array.from(selectedDeviceIds);
   const allSelected =
-  filteredDevices.length > 0 &&
-  selectedDeviceIds.size === filteredDevices.length;
+    filteredDevices.length > 0 &&
+    selectedDeviceIds.size === filteredDevices.length;
 
   const handleCommand = async (
     action: () => Promise<void>,
@@ -126,14 +126,14 @@ export function DevicesPage() {
     }
   };
 
-  const openApkPickerDialog = async () => {
+  const openInstallApkDialog = async () => {
     if (selectedDeviceIds.size === 0) {
       toast.error('Please select at least one device');
       return;
     }
 
     await loadApks();
-    setShowApkListDialog(true);
+    setShowInstallApkDialog(true);
   };
 
   const openSimpleInputDialog = (type: string) => {
@@ -166,9 +166,6 @@ export function DevicesPage() {
         case 'volume':
           await DeviceService.setVolume(selectedIds, inputNumber);
           break;
-        case 'remote-apk':
-          await DeviceService.installRemoteApk(selectedIds, inputString);
-          break;
       }
       setShowSimpleInputDialog(false);
       setDialogInput('');
@@ -195,11 +192,25 @@ export function DevicesPage() {
     }
   };
 
-  const executeApkInstall = async (apk: ApkInfo) => {
+  const executeLocalApkInstall = async (apk: ApkInfo) => {
     setLoading(true);
     try {
       await DeviceService.installLocalApk(selectedIds, apk.filename);
-      setShowApkListDialog(false);
+      setShowInstallApkDialog(false);
+      toast.success(`Installing ${apk.filename} on ${selectedIds.length} device(s)`);
+    } catch (error) {
+      toast.error(`Install failed: ${error}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const executeRemoteApkInstall = async (url: string) => {
+    setLoading(true);
+    try {
+      await DeviceService.installRemoteApk(selectedIds, url);
+      setShowInstallApkDialog(false);
+      toast.success(`Installing APK from URL on ${selectedIds.length} device(s)`);
     } catch (error) {
       toast.error(`Install failed: ${error}`);
     } finally {
@@ -214,7 +225,7 @@ export function DevicesPage() {
         {/* Header */}
         <div className="pl-4">
           <div className="flex items-center justify-between mb-4">
-            <div>             
+            <div>
               <p className="text-sm text-gray-400 mt-1">
                 {filteredDevices.length} device{filteredDevices.length !== 1 ? 's' : ''}
                 {hasSelection && ` • ${selectedDeviceIds.size} selected`}
@@ -233,72 +244,72 @@ export function DevicesPage() {
                 variant="outline"
                 size="sm"
               >
-                <FolderOpen className="h-4 w-4 mr-2" />
+                <FolderOpen className="h-4 w-4" />
                 APK Folder
               </Button>
               <Button onClick={loadDevices} variant="outline" size="sm" disabled={loading}>
-                <RefreshCw className={cn('h-4 w-4 mr-2', loading && 'animate-spin')} />
+                <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
                 Refresh
               </Button>
             </div>
           </div>
 
-        </div> 
+        </div>
 
-            {/* Device Scrollable Area */}
-<div className="flex-1 overflow-y-auto overflow-x-auto space-y-2">
-  {filteredDevices.length > 0 && (
-    <div
-      className="
+        {/* Device Scrollable Area */}
+        <div className="flex-1 overflow-y-auto overflow-x-auto space-y-2">
+          {filteredDevices.length > 0 && (
+            <div
+              className="
         p-4 text-gray-400 text-sm
         min-w-fit flex items-center w-full gap-8 outline-offset-[-1px]
       "
-    >
-      {/* Checkbox for Select All */}
-      <div className="flex-shrink-0 flex items-center justify-start">
-        <Checkbox
-          checked={allSelected}
-          onCheckedChange={() =>
-            allSelected ? clearSelection() : selectAll()
-          }
-          className="border-discord-dark-3"
-        />
-      </div>
+            >
+              {/* Checkbox for Select All */}
+              <div className="flex-shrink-0 flex items-center justify-start">
+                <Checkbox
+                  checked={allSelected}
+                  onCheckedChange={() =>
+                    allSelected ? clearSelection() : selectAll()
+                  }
+                  className="border-discord-dark-3"
+                />
+              </div>
 
-      {/* Device */}
-      <div className="flex-[2] min-w-[8rem] flex justify-start items-center">
-        <span>Device</span>
-      </div>
+              {/* Device */}
+              <div className="flex-[2] min-w-[8rem] flex justify-start items-center">
+                <span>Device</span>
+              </div>
 
       {/* Running App */}
       <div className="flex-[1.5] min-w-[8rem] flex justify-start items-center">
         <span>Running App</span>
       </div>
 
-      {/* IP */}
-      <div className="flex-[1.5] min-w-[8rem] flex justify-start items-center">
-        <span>IP</span>
-      </div>
+              {/* IP */}
+              <div className="flex-[1.5] min-w-[8rem] flex justify-start items-center">
+                <span>IP</span>
+              </div>
 
-      {/* Volume */}
-      <div className="flex-[0.75] min-w-[4rem] flex justify-start items-center">
-        <span>Volume</span>
-      </div>
+              {/* Volume */}
+              <div className="flex-[0.75] min-w-[4rem] flex justify-start items-center">
+                <span>Volume</span>
+              </div>
 
-      {/* Battery */}
-      <div className="flex-[0.75] min-w-[4rem] flex justify-start items-center">
-        <span>Battery</span>
-      </div>
-    </div>
-  )}
+              {/* Battery */}
+              <div className="flex-[0.75] min-w-[4rem] flex justify-start items-center">
+                <span>Battery</span>
+              </div>
+            </div>
+          )}
 
-  {/* Device List */}
-  <DeviceList
-    devices={filteredDevices}
-    selectedDeviceIds={selectedDeviceIds}
-    onToggleDevice={toggleDevice}
-  />
-</div>
+          {/* Device List */}
+          <DeviceList
+            devices={filteredDevices}
+            selectedDeviceIds={selectedDeviceIds}
+            onToggleDevice={toggleDevice}
+          />
+        </div>
 
       </div>
 
@@ -307,7 +318,7 @@ export function DevicesPage() {
         selectedDeviceIds={selectedDeviceIds}
         loading={loading}
         onOpenAppListDialog={openAppListDialog}
-        onOpenApkPickerDialog={openApkPickerDialog}
+        onOpenInstallApkDialog={openInstallApkDialog}
         onOpenSimpleInputDialog={openSimpleInputDialog}
         onHandleCommand={handleCommand}
       />
@@ -333,12 +344,13 @@ export function DevicesPage() {
         loading={loading}
       />
 
-      <ApkListDialog
-        isOpen={showApkListDialog}
-        onClose={() => setShowApkListDialog(false)}
+      <InstallApkDialog
+        isOpen={showInstallApkDialog}
+        onClose={() => setShowInstallApkDialog(false)}
         selectedCount={selectedDeviceIds.size}
         availableApks={availableApks}
-        onSelectApk={executeApkInstall}
+        onInstallLocal={executeLocalApkInstall}
+        onInstallRemote={executeRemoteApkInstall}
         loading={loading}
       />
     </div>
