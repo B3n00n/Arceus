@@ -11,7 +11,6 @@ import {
   Rocket,
   Terminal,
   Download,
-  Upload,
   Package,
   List,
   XCircle,
@@ -25,7 +24,7 @@ interface CommandPanelProps {
   selectedDeviceIds: Set<string>;
   loading: boolean;
   onOpenAppListDialog: (type: 'launch' | 'uninstall') => void;
-  onOpenApkPickerDialog: () => void;
+  onOpenInstallApkDialog: () => void;
   onOpenSimpleInputDialog: (type: string) => void;
   onHandleCommand: (
     action: () => Promise<void>,
@@ -38,7 +37,7 @@ export function CommandPanel({
   selectedDeviceIds,
   loading,
   onOpenAppListDialog,
-  onOpenApkPickerDialog,
+  onOpenInstallApkDialog,
   onOpenSimpleInputDialog,
   onHandleCommand,
 }: CommandPanelProps) {
@@ -159,21 +158,11 @@ export function CommandPanel({
                       variant="outline"
                       size="sm"
                       className="w-full justify-start"
-                      onClick={() => onOpenSimpleInputDialog('remote-apk')}
+                      onClick={onOpenInstallApkDialog}
                       disabled={loading}
                     >
                       <Download className="h-4 w-4 mr-2" />
-                      Install from URL
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full justify-start"
-                      onClick={onOpenApkPickerDialog}
-                      disabled={loading}
-                    >
-                      <Upload className="h-4 w-4 mr-2" />
-                      Install local APK
+                      Install APK
                     </Button>
                   </div>
                 </div>
