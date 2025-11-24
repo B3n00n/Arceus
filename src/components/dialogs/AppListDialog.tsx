@@ -53,6 +53,12 @@ export function AppListDialog({
 
   const filteredApps = getFilteredApps();
 
+  const appDisplayNames = filteredApps.map(extractAppName);
+  const displayNameToPackage = new Map(
+    filteredApps.map((app) => [extractAppName(app), app])
+  );
+  const selectedDisplayName = selectedApp ? extractAppName(selectedApp) : null;
+
   return (
     <DialogOverlay onClose={handleClose}>
       <Card className="w-[500px] flex flex-col">
@@ -65,9 +71,12 @@ export function AppListDialog({
         <CardContent className="flex-1 p-4 pt-0">
           {filteredApps.length > 0 ? (
             <Dropdown
-              options={filteredApps}
-              value={selectedApp || undefined}
-              onChange={setSelectedApp}
+              options={appDisplayNames}
+              value={selectedDisplayName || undefined}
+              onChange={(displayName) => {
+                const packageName = displayNameToPackage.get(displayName);
+                if (packageName) setSelectedApp(packageName);
+              }}
               placeholder="Choose an app..."
               disabled={loading}
             />
