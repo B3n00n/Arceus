@@ -69,7 +69,7 @@ export function DeviceCard({ device, isSelected, onToggle }: DeviceCardProps) {
       className={cn(
         'group p-4 rounded-lg cursor-pointer transition-all text-gray-300',
         'outline outline-1 outline-offset-[-1px] outline-discord-dark-3 hover:outline-white',
-        'min-w-fit flex items-center w-full gap-8',
+        'min-w-[720px] flex items-center w-full gap-8',
         isSelected && 'outline-white outline-2 outline-offset-[-2px]'
       )}
     >
@@ -110,7 +110,7 @@ export function DeviceCard({ device, isSelected, onToggle }: DeviceCardProps) {
           ) : (
             <>
               <span className="truncate">{device.info.customName || device.info.model}</span>
-              <Pencil className="h-3 w-3 text-gray-400 group-hover/name:text-white transition-all" />
+              <Pencil className="h-3 w-3 flex-shrink-0 text-gray-400 group-hover/name:text-white transition-all" />
             </>
           )}
         </div>

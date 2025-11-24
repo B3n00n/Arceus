@@ -38,7 +38,7 @@ export function LaunchAppDialog({
           <h3 className="text-lg font-semibold text-white">Launch App</h3>
         </CardHeader>
 
-        <CardContent className="space-y-5">
+        <CardContent className="space-y-5 p-4">
           {/* Dropdown */}
           <div>
             <label className="text-sm text-gray-300 mb-2 block">
@@ -64,9 +64,9 @@ export function LaunchAppDialog({
               Also launch on connected devices
             </span>
           </div>
-
+</CardContent>
           {/* Actions */}
-          <div className="flex flex-row-reverse justify-between gap-2 pt-1">
+          <div className="p-4 border-t border-discord-dark flex flex-row-reverse justify-between gap-2">
             <Button
               variant="default"
               onClick={handleLaunch}
@@ -82,7 +82,7 @@ export function LaunchAppDialog({
               Cancel
             </Button>
           </div>
-        </CardContent>
+        
       </Card>
     </DialogOverlay>
   )
