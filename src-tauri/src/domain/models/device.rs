@@ -25,6 +25,8 @@ pub struct Device {
     battery: Option<Battery>,
     /// Volume information (if available)
     volume: Option<Volume>,
+    /// Currently running foreground application
+    running_app: Option<String>,
 }
 
 impl Device {
@@ -40,6 +42,7 @@ impl Device {
             custom_name: None,
             battery: None,
             volume: None,
+            running_app: None,
         }
     }
 
@@ -75,6 +78,10 @@ impl Device {
         self.volume.as_ref()
     }
 
+    pub fn running_app(&self) -> Option<&str> {
+        self.running_app.as_deref()
+    }
+
     /// Update the last seen timestamp (called on heartbeat)
     pub fn update_last_seen(mut self) -> Self {
         self.last_seen = Utc::now();
@@ -97,6 +104,13 @@ impl Device {
     /// Update volume information
     pub fn with_volume(mut self, volume: Volume) -> Self {
         self.volume = Some(volume);
+        self.last_seen = Utc::now();
+        self
+    }
+
+    /// Update running application
+    pub fn with_running_app(mut self, app_name: String) -> Self {
+        self.running_app = Some(app_name);
         self.last_seen = Utc::now();
         self
     }

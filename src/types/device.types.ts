@@ -6,6 +6,7 @@ export interface DeviceInfo {
   customName: string | null;
   connectedAt: string;
   lastSeen: string;
+  runningApp: string | null;
 }
 
 export interface BatteryInfo {

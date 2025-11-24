@@ -19,7 +19,7 @@ export type ArceusEvent =
     }
   | {
       type: 'deviceUpdated';
-      deviceId: string;
+      device: DeviceState;
     }
   | {
       type: 'batteryUpdated';

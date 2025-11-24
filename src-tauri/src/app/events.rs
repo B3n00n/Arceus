@@ -19,7 +19,7 @@ pub enum ArceusEvent {
 
     #[serde(rename_all = "camelCase")]
     DeviceUpdated {
-        device_id: Uuid,
+        device: DeviceStateDto,
     },
 
     #[serde(rename_all = "camelCase")]
@@ -111,6 +111,10 @@ impl EventBus {
 
     pub fn device_connected(&self, device: DeviceStateDto) {
         self.emit(ArceusEvent::DeviceConnected { device });
+    }
+
+    pub fn device_updated(&self, device: DeviceStateDto) {
+        self.emit(ArceusEvent::DeviceUpdated { device });
     }
 
     pub fn battery_updated(&self, device_id: Uuid, battery_info: BatteryInfoDto) {

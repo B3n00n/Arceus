@@ -270,9 +270,9 @@ export function DevicesPage() {
         <span>Device</span>
       </div>
 
-      {/* MAC */}
+      {/* Running App */}
       <div className="flex-[1.5] min-w-[8rem] flex justify-start items-center">
-        <span>MAC</span>
+        <span>Running App</span>
       </div>
 
       {/* IP */}

@@ -17,6 +17,7 @@ pub struct DeviceInfoDto {
     pub ip: String,
     pub connected_at: DateTime<Utc>,
     pub custom_name: Option<String>,
+    pub running_app: Option<String>,
 }
 
 /// Complete device state DTO for frontend
@@ -38,6 +39,7 @@ impl From<&Arc<Device>> for DeviceStateDto {
             ip: device.ip().as_str().to_string(),
             connected_at: device.connected_at(),
             custom_name: device.custom_name().map(|s| s.to_string()),
+            running_app: device.running_app().map(|s| s.to_string()),
         };
 
         let battery = device.battery().map(|b| BatteryInfoDto {

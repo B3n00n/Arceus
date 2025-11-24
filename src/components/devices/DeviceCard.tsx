@@ -116,10 +116,10 @@ export function DeviceCard({ device, isSelected, onToggle }: DeviceCardProps) {
         </div>
       </div>
 
-      {/* MAC / Serial */}
+      {/* Running App */}
       <div className="flex-[1.5] min-w-[8rem] flex justify-start items-center">
         <div className="text-sm truncate">
-          {device.info.serial}
+          {device.info.runningApp || '--'}
         </div>
       </div>
 

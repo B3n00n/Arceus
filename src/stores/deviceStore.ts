@@ -107,6 +107,10 @@ eventService.subscribe((event) => {
       store.removeDevice(event.deviceId);
       break;
 
+    case 'deviceUpdated':
+      store.updateDevice(event.device);
+      break;
+
     case 'deviceNameChanged':
       const device = store.devices.find(d => d.info.id === event.deviceId);
       if (device) {
