@@ -82,7 +82,7 @@ export function Sidebar() {
             sidebarCollapsed && 'flex-col gap-1'
           )}>
             {!sidebarCollapsed && (
-              <span className="text-sm font-medium text-white whitespace-nowrap overflow-hidden">Arceus v0.2.1</span>
+              <span className="text-sm font-medium text-white whitespace-nowrap overflow-hidden">Arceus v0.2.3</span>
             ) }
           </div>
         </div>
