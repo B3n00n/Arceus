@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Dropdown } from '@/components/ui/dropdown';
 import { DialogOverlay } from './DialogOverlay';
+import { DialogWindow, DialogHeader, DialogContent, DialogFooter } from './DialogWindow';
 
 interface AppListDialogProps {
   isOpen: boolean;
@@ -61,14 +60,12 @@ export function AppListDialog({
 
   return (
     <DialogOverlay onClose={handleClose}>
-      <Card className="w-[500px] flex flex-col">
-        <CardHeader className=''>
-          <h3 className="text-lg font-semibold text-white">
-            {dialogType === 'launch' ? 'Launch App' : 'Uninstall App'}
-          </h3>
-          <p className="text-sm text-gray-400">For {selectedCount} device(s)</p>
-        </CardHeader>
-        <CardContent className="flex-1 p-4 pt-0">
+      <DialogWindow className="w-[500px]">
+        <DialogHeader
+          title={dialogType === 'launch' ? 'Launch App' : 'Uninstall App'}
+          subtitle={`For ${selectedCount} device(s)`}
+        />
+        <DialogContent>
           {filteredApps.length > 0 ? (
             <Dropdown
               options={appDisplayNames}
@@ -85,20 +82,16 @@ export function AppListDialog({
               {loading ? 'Loading apps...' : 'No CombaticaLTD apps found'}
             </div>
           )}
-        </CardContent>
-        <div className="p-4 flex-row-reverse border-t border-discord-dark flex gap-2 justify-between">
-          <Button
-            variant={dialogType === 'launch' ? 'default' : 'danger'}
-            onClick={handleSelectAndExecute}
-            disabled={loading || !selectedApp}
-          >
-            {dialogType === 'launch' ? 'Launch' : 'Uninstall'}
-          </Button>
-          <Button variant="outline" onClick={handleClose} disabled={loading}>
-            Cancel
-          </Button>
-        </div>
-      </Card>
+        </DialogContent>
+        <DialogFooter
+          confirmText={dialogType === 'launch' ? 'Launch' : 'Uninstall'}
+          onConfirm={handleSelectAndExecute}
+          confirmVariant={dialogType === 'launch' ? 'default' : 'danger'}
+          confirmDisabled={loading || !selectedApp}
+          onCancel={handleClose}
+          cancelDisabled={loading}
+        />
+      </DialogWindow>
     </DialogOverlay>
   );
 }

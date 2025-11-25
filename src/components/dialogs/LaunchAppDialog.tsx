@@ -1,8 +1,7 @@
 import { useState } from "react"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { DialogOverlay } from "./DialogOverlay"
+import { DialogWindow, DialogHeader, DialogContent, DialogFooter } from "./DialogWindow"
 import { Dropdown } from "@/components/ui/dropdown"
 
 export interface LaunchAppDialogProps {
@@ -33,12 +32,9 @@ export function LaunchAppDialog({
 
   return (
     <DialogOverlay onClose={onClose}>
-      <Card className="w-120">
-        <CardHeader className="pb-3">
-          <h3 className="text-lg font-semibold text-white">Launch App</h3>
-        </CardHeader>
-
-        <CardContent className="space-y-5 p-4">
+      <DialogWindow className="w-120">
+        <DialogHeader title="Launch App" />
+        <DialogContent className="space-y-5">
           {/* Dropdown */}
           <div>
             <label className="text-sm text-gray-300 mb-2 block">
@@ -64,26 +60,15 @@ export function LaunchAppDialog({
               Also launch on connected devices
             </span>
           </div>
-</CardContent>
-          {/* Actions */}
-          <div className="p-4 border-t border-discord-dark flex flex-row-reverse justify-between gap-2">
-            <Button
-              variant="default"
-              onClick={handleLaunch}
-              disabled={loading || !selectedApp}
-            >             
-              Launch
-            </Button>
-            <Button
-              variant="outline"
-              onClick={onClose}
-              disabled={loading}
-            >
-              Cancel
-            </Button>
-          </div>
-        
-      </Card>
+        </DialogContent>
+        <DialogFooter
+          confirmText="Launch"
+          onConfirm={handleLaunch}
+          confirmDisabled={loading || !selectedApp}
+          onCancel={onClose}
+          cancelDisabled={loading}
+        />
+      </DialogWindow>
     </DialogOverlay>
   )
 }

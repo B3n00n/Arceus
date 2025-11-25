@@ -18,8 +18,7 @@ import { CommandPanel } from '@/components/devices/CommandPanel';
 import { SimpleInputDialog } from '@/components/dialogs/SimpleInputDialog';
 import { AppListDialog } from '@/components/dialogs/AppListDialog';
 import { InstallApkDialog } from '@/components/dialogs/InstallApkDialog';
-import { RestartDeviceDialog } from '@/components/dialogs/RestartDeviceDialog';
-import { CloseAllAppsDialog } from '@/components/dialogs/CloseAllAppsDialog';
+import { ConfirmationDialog } from '@/components/dialogs/ConfirmationDialog';
 
 export function DevicesPage() {
   const {
@@ -393,19 +392,39 @@ export function DevicesPage() {
         loading={loading}
       />
 
-      <RestartDeviceDialog
+      <ConfirmationDialog
         isOpen={showRestartDeviceDialog}
         onClose={() => setShowRestartDeviceDialog(false)}
-        deviceCount={selectedDeviceIds.size}
         onConfirm={executeRestartDevice}
+        title="Restart Device"
+        message={
+          <>
+            Restart{" "}
+            <span className="text-white font-medium">
+              {selectedDeviceIds.size} device{selectedDeviceIds.size > 1 ? "s" : ""}
+            </span>
+            ?
+          </>
+        }
+        confirmText="Restart"
         loading={loading}
       />
 
-      <CloseAllAppsDialog
+      <ConfirmationDialog
         isOpen={showCloseAllAppsDialog}
         onClose={() => setShowCloseAllAppsDialog(false)}
-        deviceCount={selectedDeviceIds.size}
         onConfirm={executeCloseAllApps}
+        title="Close All Apps"
+        message={
+          <>
+            Close all running apps on{" "}
+            <span className="text-white font-medium">
+              {selectedDeviceIds.size} device{selectedDeviceIds.size > 1 ? "s" : ""}
+            </span>
+            ?
+          </>
+        }
+        confirmText="Close"
         loading={loading}
       />
     </div>
