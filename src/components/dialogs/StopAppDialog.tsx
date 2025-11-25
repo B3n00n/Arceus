@@ -30,7 +30,7 @@ export function StopAppDialog({ isOpen, onClose }: StopAppDialogProps) {
           <h3 className="text-lg font-semibold text-white">Stop Running App</h3>
         </CardHeader>
 
-        <CardContent className="space-y-8">
+        <CardContent className="space-y-8 p-4 pt-0">
           <div className="text-md text-gray-300">
             Are you sure you want to stop{" "}
             <span className="text-white font-medium">
@@ -38,9 +38,9 @@ export function StopAppDialog({ isOpen, onClose }: StopAppDialogProps) {
             </span>
             ?
           </div>
-
+</CardContent>
           {/* Actions */}
-          <div className="flex flex-row-reverse justify-between gap-2 pt-1">
+          <div className="p-4 border-t border-discord-dark flex flex-row-reverse justify-between gap-2">
             <Button variant="danger" onClick={handleStop}>
               Stop App
             </Button>
@@ -48,7 +48,7 @@ export function StopAppDialog({ isOpen, onClose }: StopAppDialogProps) {
               Cancel
             </Button>
           </div>
-        </CardContent>
+        
       </Card>
     </DialogOverlay>
   );

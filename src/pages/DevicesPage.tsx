@@ -18,6 +18,8 @@ import { CommandPanel } from '@/components/devices/CommandPanel';
 import { SimpleInputDialog } from '@/components/dialogs/SimpleInputDialog';
 import { AppListDialog } from '@/components/dialogs/AppListDialog';
 import { InstallApkDialog } from '@/components/dialogs/InstallApkDialog';
+import { RestartDeviceDialog } from '@/components/dialogs/RestartDeviceDialog';
+import { CloseAllAppsDialog } from '@/components/dialogs/CloseAllAppsDialog';
 
 export function DevicesPage() {
   const {
@@ -36,6 +38,8 @@ export function DevicesPage() {
   const [showSimpleInputDialog, setShowSimpleInputDialog] = useState(false);
   const [showAppListDialog, setShowAppListDialog] = useState(false);
   const [showInstallApkDialog, setShowInstallApkDialog] = useState(false);
+  const [showRestartDeviceDialog, setShowRestartDeviceDialog] = useState(false);
+  const [showCloseAllAppsDialog, setShowCloseAllAppsDialog] = useState(false);
 
   const [dialogType, setDialogType] = useState<string>('');
   const [dialogInput, setDialogInput] = useState('');
@@ -144,6 +148,39 @@ export function DevicesPage() {
     setDialogType(type);
     setDialogInput('');
     setShowSimpleInputDialog(true);
+  };
+
+  const openRestartDeviceDialog = () => {
+    if (selectedDeviceIds.size === 0) {
+      toast.error('Please select at least one device');
+      return;
+    }
+    setShowRestartDeviceDialog(true);
+  };
+
+  const openCloseAllAppsDialog = () => {
+    if (selectedDeviceIds.size === 0) {
+      toast.error('Please select at least one device');
+      return;
+    }
+    setShowCloseAllAppsDialog(true);
+  };
+
+  const executeRestartDevice = async () => {
+    await handleCommand(
+      () => DeviceService.restartDevices(selectedIds),
+      'Restart',
+      false
+    );
+    setShowRestartDeviceDialog(false);
+  };
+
+  const executeCloseAllApps = async () => {
+    await handleCommand(
+      () => DeviceService.closeAllApps(selectedIds),
+      'Close All Apps'
+    );
+    setShowCloseAllAppsDialog(false);
   };
 
   const executeSimpleCommand = async (input: string | number) => {
@@ -320,6 +357,8 @@ export function DevicesPage() {
         onOpenAppListDialog={openAppListDialog}
         onOpenInstallApkDialog={openInstallApkDialog}
         onOpenSimpleInputDialog={openSimpleInputDialog}
+        onOpenRestartDeviceDialog={openRestartDeviceDialog}
+        onOpenCloseAllAppsDialog={openCloseAllAppsDialog}
         onHandleCommand={handleCommand}
       />
 
@@ -351,6 +390,22 @@ export function DevicesPage() {
         availableApks={availableApks}
         onInstallLocal={executeLocalApkInstall}
         onInstallRemote={executeRemoteApkInstall}
+        loading={loading}
+      />
+
+      <RestartDeviceDialog
+        isOpen={showRestartDeviceDialog}
+        onClose={() => setShowRestartDeviceDialog(false)}
+        deviceCount={selectedDeviceIds.size}
+        onConfirm={executeRestartDevice}
+        loading={loading}
+      />
+
+      <CloseAllAppsDialog
+        isOpen={showCloseAllAppsDialog}
+        onClose={() => setShowCloseAllAppsDialog(false)}
+        deviceCount={selectedDeviceIds.size}
+        onConfirm={executeCloseAllApps}
         loading={loading}
       />
     </div>
