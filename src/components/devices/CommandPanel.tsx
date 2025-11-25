@@ -26,6 +26,8 @@ interface CommandPanelProps {
   onOpenAppListDialog: (type: 'launch' | 'uninstall') => void;
   onOpenInstallApkDialog: () => void;
   onOpenSimpleInputDialog: (type: string) => void;
+  onOpenRestartDeviceDialog: () => void;
+  onOpenCloseAllAppsDialog: () => void;
   onHandleCommand: (
     action: () => Promise<void>,
     actionName: string,
@@ -39,6 +41,8 @@ export function CommandPanel({
   onOpenAppListDialog,
   onOpenInstallApkDialog,
   onOpenSimpleInputDialog,
+  onOpenRestartDeviceDialog,
+  onOpenCloseAllAppsDialog,
   onHandleCommand,
 }: CommandPanelProps) {
   const [commandTab, setCommandTab] = useState<CommandTab>('standard');
@@ -135,11 +139,7 @@ export function CommandPanel({
                       variant="outline"
                       size="sm"
                       className="w-full justify-start"
-                      onClick={() => {
-                        if (confirm(`Close all running apps on ${selectedDeviceIds.size} device(s)?`)) {
-                          onHandleCommand(() => DeviceService.closeAllApps(selectedIds), 'Close All Apps');
-                        }
-                      }}
+                      onClick={onOpenCloseAllAppsDialog}
                       disabled={loading}>
                       <XCircle className="h-4 w-4 mr-2" />
                       Close all apps
@@ -246,15 +246,7 @@ export function CommandPanel({
                       variant="outline"
                       size="sm"
                       className="w-full justify-start"
-                      onClick={() => {
-                        if (confirm(`Restart ${selectedDeviceIds.size} device(s)?`)) {
-                          onHandleCommand(
-                            () => DeviceService.restartDevices(selectedIds),
-                            'Restart',
-                            false
-                          );
-                        }
-                      }}
+                      onClick={onOpenRestartDeviceDialog}
                       disabled={loading}
                     >
                       <Power className="h-4 w-4 mr-2" />

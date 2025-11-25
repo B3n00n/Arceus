@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { DialogOverlay } from './DialogOverlay';
+import { DialogWindow, DialogHeader, DialogContent, DialogFooter } from './DialogWindow';
 
 interface SimpleInputDialogProps {
   isOpen: boolean;
@@ -73,13 +72,9 @@ export function SimpleInputDialog({
 
   return (
     <DialogOverlay onClose={onClose}>
-      <Card className="w-96">
-        <CardHeader>
-          <h3 className="text-lg font-semibold text-white">{getTitle()}</h3>
-          <p className="text-sm text-gray-400">For {selectedCount} device(s)</p>
-        </CardHeader>
-
-        <CardContent className="space-y-4">
+      <DialogWindow className="w-96">
+        <DialogHeader title={getTitle()} subtitle={`For ${selectedCount} device(s)`} />
+        <DialogContent className="space-y-4">
           <div>
             <label className="text-sm text-gray-300 mb-2 block">{getLabel()}</label>
             <Input
@@ -94,21 +89,15 @@ export function SimpleInputDialog({
               disabled={loading}
             />
           </div>
-
-          <div className="flex gap-2 flex-row-reverse justify-between">
-            <Button
-              variant="default"
-              onClick={handleExecute}
-              disabled={loading || !dialogInput.trim()}
-            >
-              Execute
-            </Button>
-            <Button variant="outline" onClick={onClose} disabled={loading}>
-              Cancel
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+        </DialogContent>
+        <DialogFooter
+          confirmText="Execute"
+          onConfirm={handleExecute}
+          confirmDisabled={loading || !dialogInput.trim()}
+          onCancel={onClose}
+          cancelDisabled={loading}
+        />
+      </DialogWindow>
     </DialogOverlay>
   );
 }

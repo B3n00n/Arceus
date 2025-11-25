@@ -1,5 +1,4 @@
 import { Settings as SettingsIcon } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
 
 export function SettingsPage() {
   return (
@@ -9,17 +8,15 @@ export function SettingsPage() {
         <p className="text-gray-400 mt-1">Configure application preferences</p>
       </div>
 
-      <Card className="bg-discord-dark-2 border-discord-dark">
-        <CardContent className="p-12 text-center">
-          <SettingsIcon className="h-12 w-12 mx-auto text-gray-600 mb-4" />
-          <h3 className="text-lg font-semibold text-white mb-2">
-            Settings - Coming Soon
-          </h3>
-          <p className="text-gray-400">
-            This feature is under development
-          </p>
-        </CardContent>
-      </Card>
+      <div className="rounded-lg border bg-discord-dark-2 border-discord-dark shadow p-12 text-center">
+        <SettingsIcon className="h-12 w-12 mx-auto text-gray-600 mb-4" />
+        <h3 className="text-lg font-semibold text-white mb-2">
+          Settings - Coming Soon
+        </h3>
+        <p className="text-gray-400">
+          This feature is under development
+        </p>
+      </div>
     </div>
   );
 }

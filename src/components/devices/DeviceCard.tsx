@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react';
-import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Pencil } from 'lucide-react';
@@ -64,10 +63,11 @@ export function DeviceCard({ device, isSelected, onToggle }: DeviceCardProps) {
   };
 
   return (
-    <Card
+    <div
       onClick={onToggle}
       className={cn(
         'group p-4 rounded-lg cursor-pointer transition-all text-gray-300',
+        'bg-discord-dark-4 shadow',
         'outline outline-1 outline-offset-[-1px] outline-discord-dark-3 hover:outline-white',
         'min-w-[720px] flex items-center w-full gap-8',
         isSelected && 'outline-white outline-2 outline-offset-[-2px]'
@@ -81,8 +81,6 @@ export function DeviceCard({ device, isSelected, onToggle }: DeviceCardProps) {
     className="border-discord-dark-3"
   />
 </div>
-
-
 
       {/* Name */}
       <div
@@ -148,6 +146,6 @@ export function DeviceCard({ device, isSelected, onToggle }: DeviceCardProps) {
           <div className="text-sm font-medium text-gray-300">N/A</div>
         )}
       </div>
-    </Card>
+    </div>
   );
 }

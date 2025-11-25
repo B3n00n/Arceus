@@ -7,7 +7,7 @@ import { GameService } from "@/services/gameService";
 import { Button } from "@/components/ui/button";
 import { ToastHistory } from "@/components/ToastHistory";
 import { LaunchAppDialog } from "@/components/dialogs/LaunchAppDialog";
-import { StopAppDialog } from "@/components/dialogs/StopAppDialog";
+import { ConfirmationDialog } from "@/components/dialogs/ConfirmationDialog";
 
 export function Header() {
   const { togglePanel, unreadCount } = useToastHistoryStore();
@@ -42,6 +42,15 @@ export function Header() {
     } catch (error) {
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleStop = async () => {
+    try {
+      await GameService.stopGame();
+      setCurrentGame(null);
+      setShowStopDialog(false);
+    } catch (error) {
     }
   };
 
@@ -130,9 +139,22 @@ export function Header() {
         onLaunch={handleLaunch}
       />
 
-      <StopAppDialog
+      <ConfirmationDialog
         isOpen={showStopDialog}
         onClose={() => setShowStopDialog(false)}
+        onConfirm={handleStop}
+        title="Stop Running App"
+        message={
+          <>
+            Are you sure you want to stop{" "}
+            <span className="text-white font-medium">
+              {currentGame?.gameName || "the current app"}
+            </span>
+            ?
+          </>
+        }
+        confirmText="Stop App"
+        loading={loading}
       />
 
       <ToastHistory />
