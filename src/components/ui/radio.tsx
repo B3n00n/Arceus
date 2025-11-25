@@ -101,7 +101,6 @@ interface RadioItemProps {
 }
 
 export function RadioItem({
-  value,
   checked = false,
   onChange,
   disabled = false,
