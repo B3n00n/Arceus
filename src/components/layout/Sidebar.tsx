@@ -32,7 +32,7 @@ export function Sidebar() {
         {/* Header */}
         <div className="flex h-16 items-center justify-between px-4 border-discord-dark-2">
           {!sidebarCollapsed && (
-            <span className="text-white font-semibold text-lg">Arceus</span>
+            <span className="text-white font-semibold text-lg">Arkeus</span>
           )}
           <button
             onClick={toggleSidebar}
@@ -82,7 +82,7 @@ export function Sidebar() {
             sidebarCollapsed && 'flex-col gap-1'
           )}>
             {!sidebarCollapsed && (
-              <span className="text-sm font-medium text-white whitespace-nowrap overflow-hidden">Arceus v0.2.4</span>
+              <span className="text-sm font-medium text-white whitespace-nowrap overflow-hidden">Arkeus v0.2.4</span>
             ) }
           </div>
         </div>

@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "arceus",
+  "productName": "arkeus",
   "version": "0.2.4",
-  "identifier": "com.b3n00n.arceus",
+  "identifier": "com.b3n00n.Arkeus",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Arceus",
+        "title": "Arkeus",
         "width": 1280,
         "height": 720,
         "minWidth": 1075,
@@ -22,7 +22,7 @@
       },
       {
         "label": "updater",
-        "title": "Arceus Updater",
+        "title": "Arkeus Updater",
         "width": 300,
         "height": 350,
         "center": true,
