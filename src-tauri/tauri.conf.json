@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "arkeus",
-  "version": "0.2.5",
+  "productName": "arceus",
+  "version": "0.2.6",
   "identifier": "com.b3n00n.Arkeus",
   "build": {
     "beforeDevCommand": "npm run dev",

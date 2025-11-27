@@ -14,8 +14,8 @@ interface MessageDialogProps {
 const MESSAGE_PRESETS = [
   'GO TO INSTRUCTOR IMMEDIATELY!',
   'STAY AWAY FROM THE GUARDIAN!',
-  'RAISE YOUR HAND AND SCREAM!',
-  'STOP CHEATING RETARD!',
+  'RAISE YOUR HAND!',
+  'STOP CHEATING!',
 ];
 
 export function MessageDialog({
