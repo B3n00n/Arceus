@@ -301,3 +301,38 @@ impl Command for CloseAllAppsCommand {
         Ok(Vec::new())
     }
 }
+
+/// Display a message notification on a device
+#[derive(Debug, Clone)]
+pub struct DisplayMessageCommand {
+    pub message: String,
+}
+
+impl DisplayMessageCommand {
+    pub fn new(message: String) -> Self {
+        Self { message }
+    }
+}
+
+impl Command for DisplayMessageCommand {
+    fn opcode(&self) -> u8 {
+        DISPLAY_MESSAGE
+    }
+
+    fn name(&self) -> &'static str {
+        "display_message"
+    }
+
+    fn serialize(&self) -> Result<Vec<u8>, std::io::Error> {
+        let mut buffer = Vec::new();
+        buffer.write_string(&self.message)?;
+        Ok(buffer)
+    }
+
+    fn validate(&self) -> Result<(), String> {
+        if self.message.is_empty() {
+            return Err("Message cannot be empty".to_string());
+        }
+        Ok(())
+    }
+}

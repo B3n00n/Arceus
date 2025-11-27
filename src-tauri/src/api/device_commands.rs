@@ -2,8 +2,8 @@ use crate::api::helpers::execute_batch_command;
 use crate::application::dto::{BatchResultDto, DeviceStateDto};
 use crate::application::services::DeviceApplicationService;
 use crate::domain::commands::{
-    CloseAllAppsCommand, ExecuteShellCommand, GetInstalledAppsCommand, GetVolumeCommand,
-    InstallApkCommand, LaunchAppCommand, PingCommand, RequestBatteryCommand,
+    CloseAllAppsCommand, DisplayMessageCommand, ExecuteShellCommand, GetInstalledAppsCommand,
+    GetVolumeCommand, InstallApkCommand, LaunchAppCommand, PingCommand, RequestBatteryCommand,
     RestartDeviceCommand, SetVolumeCommand, UninstallAppCommand,
 };
 use crate::domain::models::{DeviceId, PackageName, Serial};
@@ -225,4 +225,19 @@ pub async fn close_all_apps(
     device_service: State<'_, Arc<DeviceApplicationService>>,
 ) -> Result<BatchResultDto, String> {
     execute_batch_command(device_ids, &device_service, CloseAllAppsCommand).await
+}
+
+/// Display a message notification on multiple devices
+#[tauri::command]
+pub async fn display_message(
+    device_ids: Vec<String>,
+    message: String,
+    device_service: State<'_, Arc<DeviceApplicationService>>,
+) -> Result<BatchResultDto, String> {
+    execute_batch_command(
+        device_ids,
+        &device_service,
+        DisplayMessageCommand::new(message),
+    )
+    .await
 }

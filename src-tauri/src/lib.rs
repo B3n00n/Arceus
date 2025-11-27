@@ -153,6 +153,7 @@ pub fn run() {
             install_local_apk,
             restart_devices,
             close_all_apps,
+            display_message,
             list_apks,
             add_apk,
             remove_apk,

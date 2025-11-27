@@ -14,6 +14,7 @@ import {
   Package,
   List,
   XCircle,
+  MessageSquare,
 } from 'lucide-react';
 import { DeviceService } from '@/services/deviceService';
 import { cn } from '@/lib/cn';
@@ -28,6 +29,7 @@ interface CommandPanelProps {
   onOpenSimpleInputDialog: (type: string) => void;
   onOpenRestartDeviceDialog: () => void;
   onOpenCloseAllAppsDialog: () => void;
+  onOpenMessageDialog: () => void;
   onHandleCommand: (
     action: () => Promise<void>,
     actionName: string,
@@ -43,6 +45,7 @@ export function CommandPanel({
   onOpenSimpleInputDialog,
   onOpenRestartDeviceDialog,
   onOpenCloseAllAppsDialog,
+  onOpenMessageDialog,
   onHandleCommand,
 }: CommandPanelProps) {
   const [commandTab, setCommandTab] = useState<CommandTab>('standard');
@@ -117,6 +120,16 @@ export function CommandPanel({
                     >
                       <BellRing className="h-4 w-4 mr-2" />
                       Ping device
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full justify-start"
+                      onClick={onOpenMessageDialog}
+                      disabled={loading}
+                    >
+                      <MessageSquare className="h-4 w-4 mr-2" />
+                      Send message
                     </Button>
                   </div>
                 </div>

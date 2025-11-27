@@ -19,6 +19,7 @@ import { SimpleInputDialog } from '@/components/dialogs/SimpleInputDialog';
 import { AppListDialog } from '@/components/dialogs/AppListDialog';
 import { InstallApkDialog } from '@/components/dialogs/InstallApkDialog';
 import { ConfirmationDialog } from '@/components/dialogs/ConfirmationDialog';
+import { MessageDialog } from '@/components/dialogs/MessageDialog';
 
 export function DevicesPage() {
   const {
@@ -39,6 +40,7 @@ export function DevicesPage() {
   const [showInstallApkDialog, setShowInstallApkDialog] = useState(false);
   const [showRestartDeviceDialog, setShowRestartDeviceDialog] = useState(false);
   const [showCloseAllAppsDialog, setShowCloseAllAppsDialog] = useState(false);
+  const [showMessageDialog, setShowMessageDialog] = useState(false);
 
   const [dialogType, setDialogType] = useState<string>('');
   const [dialogInput, setDialogInput] = useState('');
@@ -165,6 +167,14 @@ export function DevicesPage() {
     setShowCloseAllAppsDialog(true);
   };
 
+  const openMessageDialog = () => {
+    if (selectedDeviceIds.size === 0) {
+      toast.error('Please select at least one device');
+      return;
+    }
+    setShowMessageDialog(true);
+  };
+
   const executeRestartDevice = async () => {
     await handleCommand(
       () => DeviceService.restartDevices(selectedIds),
@@ -252,6 +262,14 @@ export function DevicesPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const executeSendMessage = async (message: string) => {
+    await handleCommand(
+      () => DeviceService.displayMessage(selectedIds, message),
+      'Send Message'
+    );
+    setShowMessageDialog(false);
   };
 
   return (
@@ -358,6 +376,7 @@ export function DevicesPage() {
         onOpenSimpleInputDialog={openSimpleInputDialog}
         onOpenRestartDeviceDialog={openRestartDeviceDialog}
         onOpenCloseAllAppsDialog={openCloseAllAppsDialog}
+        onOpenMessageDialog={openMessageDialog}
         onHandleCommand={handleCommand}
       />
 
@@ -425,6 +444,14 @@ export function DevicesPage() {
           </>
         }
         confirmText="Close"
+        loading={loading}
+      />
+
+      <MessageDialog
+        isOpen={showMessageDialog}
+        onClose={() => setShowMessageDialog(false)}
+        selectedCount={selectedDeviceIds.size}
+        onExecute={executeSendMessage}
         loading={loading}
       />
     </div>

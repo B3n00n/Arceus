@@ -114,4 +114,14 @@ export class DeviceService {
       deviceIds
     });
   }
+
+  static async displayMessage(
+    deviceIds: string[],
+    message: string
+  ): Promise<void> {
+    await invoke("display_message", {
+      deviceIds,
+      message
+    });
+  }
 }
