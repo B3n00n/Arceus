@@ -8,6 +8,7 @@ import { cn } from '@/lib/cn';
 import { toast } from '@/lib/toast';
 import type { DeviceState } from '@/types/device.types';
 import { DeviceBattery } from '@/components/devices/DeviceBattery';
+import { DeviceOperationProgressComponent } from '@/components/devices/DeviceOperationProgress';
 
 interface DeviceCardProps {
   device: DeviceState;
@@ -69,10 +70,11 @@ export function DeviceCard({ device, isSelected, onToggle }: DeviceCardProps) {
         'group p-4 rounded-lg cursor-pointer transition-all text-gray-300',
         'bg-discord-dark-4 shadow',
         'outline outline-1 outline-offset-[-1px] outline-discord-dark-3 hover:outline-white',
-        'min-w-[720px] flex items-center w-full gap-8',
+        'min-w-[720px] flex flex-col w-full gap-2',
         isSelected && 'outline-white outline-2 outline-offset-[-2px]'
       )}
     >
+      <div className="flex items-center w-full gap-8">
 {/* Checkbox */}
 <div className="flex-shrink-0 flex items-center justify-start">
   <Checkbox
@@ -146,6 +148,14 @@ export function DeviceCard({ device, isSelected, onToggle }: DeviceCardProps) {
           <div className="text-sm font-medium text-gray-300">N/A</div>
         )}
       </div>
+      </div>
+
+      {/* Operation Progress */}
+      {device.operationProgress && (
+        <div className="w-full pl-12 pr-4">
+          <DeviceOperationProgressComponent progress={device.operationProgress} />
+        </div>
+      )}
     </div>
   );
 }

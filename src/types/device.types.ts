@@ -27,9 +27,17 @@ export interface CommandResult {
   timestamp: string;
 }
 
+export interface DeviceOperationProgress {
+  operationType: 'download' | 'install';
+  operationId: string;
+  stage: 'started' | 'inprogress' | 'completed' | 'failed';
+  percentage: number;
+}
+
 export interface DeviceState {
   info: DeviceInfo;
   battery: BatteryInfo | null;
   volume: VolumeInfo | null;
   commandHistory: CommandResult[];
+  operationProgress: DeviceOperationProgress | null;
 }

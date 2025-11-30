@@ -1,4 +1,4 @@
-use crate::application::dto::{BatteryInfoDto, CommandResultDto, DeviceStateDto, VolumeInfoDto};
+use crate::application::dto::{BatteryInfoDto, CommandResultDto, DeviceStateDto, OperationProgressDto, VolumeInfoDto};
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter};
 use uuid::Uuid;
@@ -89,6 +89,13 @@ pub enum ArceusEvent {
     GameStopped {
         game_name: String,
     },
+
+    #[serde(rename_all = "camelCase")]
+    OperationProgress {
+        device_id: Uuid,
+        device_name: String,
+        progress: OperationProgressDto,
+    },
 }
 
 #[derive(Clone)]
@@ -164,6 +171,14 @@ impl EventBus {
 
     pub fn game_stopped(&self, game_name: String) {
         self.emit(ArceusEvent::GameStopped { game_name });
+    }
+
+    pub fn operation_progress(&self, device_id: Uuid, device_name: String, progress: OperationProgressDto) {
+        self.emit(ArceusEvent::OperationProgress {
+            device_id,
+            device_name,
+            progress,
+        });
     }
 }
 

@@ -85,4 +85,17 @@ export type ArceusEvent =
   | {
       type: 'gameStopped';
       gameName: string;
+    }
+  | {
+      type: 'operationProgress';
+      deviceId: string;
+      deviceName: string;
+      progress: OperationProgress;
     };
+
+export interface OperationProgress {
+  operationType: 'download' | 'install';
+  operationId: string;
+  stage: 'started' | 'inprogress' | 'completed' | 'failed';
+  percentage: number;
+}

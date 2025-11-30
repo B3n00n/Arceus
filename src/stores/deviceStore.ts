@@ -143,5 +143,36 @@ eventService.subscribe((event) => {
         });
       }
       break;
+
+    case 'operationProgress':
+      const deviceForProgress = store.devices.find(d => d.info.id === event.deviceId);
+      if (deviceForProgress) {
+        const shouldAutoHide =
+          event.progress.operationType === 'install' &&
+          (event.progress.stage === 'completed' || event.progress.stage === 'failed');
+
+        if (shouldAutoHide) {
+          store.updateDevice({
+            ...deviceForProgress,
+            operationProgress: event.progress,
+          });
+
+          setTimeout(() => {
+            const currentDevice = store.devices.find(d => d.info.id === event.deviceId);
+            if (currentDevice?.operationProgress?.operationId === event.progress.operationId) {
+              store.updateDevice({
+                ...currentDevice,
+                operationProgress: null,
+              });
+            }
+          }, 2000);
+        } else {
+          store.updateDevice({
+            ...deviceForProgress,
+            operationProgress: event.progress,
+          });
+        }
+      }
+      break;
   }
 });

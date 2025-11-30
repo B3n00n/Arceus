@@ -2,9 +2,11 @@
 mod battery;
 mod command;
 mod device;
+mod operation_progress;
 mod volume;
 
 pub use battery::*;
 pub use command::*;
 pub use device::*;
+pub use operation_progress::*;
 pub use volume::*;

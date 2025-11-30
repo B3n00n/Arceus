@@ -75,6 +75,28 @@ class EventService {
       case 'gameStopped':
         toast.info(`Stopped ${event.gameName}`);
         break;
+
+      case 'operationProgress':
+        this.handleProgressNotification(event.deviceName, event.progress);
+        break;
+    }
+  }
+
+  private handleProgressNotification(deviceName: string, progress: Extract<ArceusEvent, { type: 'operationProgress' }>['progress']) {
+    const operationLabel = progress.operationType === 'download' ? 'Download' : 'Installation';
+
+    switch (progress.stage) {
+      case 'started':
+        toast.info(`${deviceName}: ${operationLabel} started`);
+        break;
+
+      case 'completed':
+        toast.success(`${deviceName}: ${operationLabel} completed`);
+        break;
+
+      case 'failed':
+        toast.error(`${deviceName}: ${operationLabel} failed`);
+        break;
     }
   }
 

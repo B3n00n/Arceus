@@ -11,6 +11,8 @@ pub use simple::{
     UninstallAppResponseHandler,
     PingResponseHandler,
     ApkDownloadStartedHandler,
+    ApkDownloadProgressHandler,
+    ApkInstallProgressHandler,
 };
 pub use shell::ShellExecutionResponseHandler;
 pub use apps::{InstalledAppsResponseHandler, CloseAllAppsResponseHandler};

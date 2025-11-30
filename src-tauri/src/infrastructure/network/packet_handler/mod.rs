@@ -64,6 +64,8 @@ impl PacketHandlerRegistry {
             event_bus.clone(),
         )));
         registry.register(Arc::new(ApkDownloadStartedHandler::new(event_bus.clone())));
+        registry.register(Arc::new(ApkDownloadProgressHandler::new(event_bus.clone(), device_repo.clone())));
+        registry.register(Arc::new(ApkInstallProgressHandler::new(event_bus.clone(), device_repo.clone())));
         registry.register(Arc::new(CloseAllAppsResponseHandler::new(event_bus.clone())));
 
         registry

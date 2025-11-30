@@ -25,6 +25,8 @@ pub const UNINSTALL_APP_RESPONSE: u8 = 0x15;
 pub const VOLUME_SET_RESPONSE: u8 = 0x16;
 pub const APK_DOWNLOAD_STARTED: u8 = 0x17;
 pub const CLOSE_ALL_APPS_RESPONSE: u8 = 0x18;
+pub const APK_DOWNLOAD_PROGRESS: u8 = 0x19;
+pub const APK_INSTALL_PROGRESS: u8 = 0x1A;
 
 // =============================================================================
 // SERVER → CLIENT (Commands from server) - 0x40-0x4C

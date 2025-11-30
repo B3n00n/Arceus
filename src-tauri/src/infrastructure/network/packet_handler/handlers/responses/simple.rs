@@ -2,11 +2,12 @@
 /// These handlers follow a common pattern: read success byte, emit event
 
 use crate::app::EventBus;
-use crate::application::dto::CommandResultDto;
+use crate::application::dto::{CommandResultDto, OperationProgressDto};
 use crate::domain::models::DeviceId;
+use crate::domain::repositories::DeviceRepository;
 use crate::infrastructure::protocol::opcodes;
 use async_trait::async_trait;
-use byteorder::ReadBytesExt;
+use byteorder::{BigEndian, ReadBytesExt};
 use std::io::Cursor;
 use std::sync::Arc;
 
@@ -128,5 +129,119 @@ impl PacketHandler for ApkDownloadStartedHandler {
         self.event_bus.command_executed(device_id.as_uuid().clone(), result);
 
         Ok(())
+    }
+}
+
+async fn handle_progress_packet(
+    device_id: DeviceId,
+    payload: Vec<u8>,
+    operation_type: crate::application::dto::OperationType,
+    operation_label: &str,
+    event_bus: &Arc<EventBus>,
+    device_repository: &Arc<dyn DeviceRepository>,
+) -> Result<()> {
+    let mut cursor = Cursor::new(payload);
+
+    // Read operation ID (16 bytes UUID)
+    let mut uuid_bytes = [0u8; 16];
+    std::io::Read::read_exact(&mut cursor, &mut uuid_bytes)?;
+    let operation_id = uuid::Uuid::from_bytes(uuid_bytes).to_string();
+
+    // Read stage (0=Started, 1=InProgress, 2=Completed, 3=Failed)
+    let stage_byte = cursor.read_u8()?;
+    let stage = match stage_byte {
+        0 => crate::application::dto::OperationStage::Started,
+        1 => crate::application::dto::OperationStage::InProgress,
+        2 => crate::application::dto::OperationStage::Completed,
+        3 => crate::application::dto::OperationStage::Failed,
+        _ => crate::application::dto::OperationStage::InProgress,
+    };
+
+    // Read percentage
+    let percentage = cursor.read_f32::<BigEndian>()?;
+
+    tracing::debug!(
+        device_id = %device_id,
+        operation_id = %operation_id,
+        stage = ?stage,
+        percentage,
+        "APK {} progress",
+        operation_label
+    );
+
+    // Get device name
+    let device_name = match device_repository.find_by_id(device_id).await? {
+        Some(device) => device.custom_name()
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| device.model().to_string()),
+        None => format!("Device {}", device_id.as_uuid()),
+    };
+
+    // Create and emit progress event
+    let progress = OperationProgressDto::new(operation_type, operation_id, stage, percentage);
+    event_bus.operation_progress(device_id.as_uuid().clone(), device_name, progress);
+
+    Ok(())
+}
+
+/// Handles APK_DOWNLOAD_PROGRESS (0x19) packets
+/// Payload format: [operation_id: 16 bytes UUID][stage: u8][percentage: f32 BE]
+pub struct ApkDownloadProgressHandler {
+    event_bus: Arc<EventBus>,
+    device_repository: Arc<dyn DeviceRepository>,
+}
+
+impl ApkDownloadProgressHandler {
+    pub fn new(event_bus: Arc<EventBus>, device_repository: Arc<dyn DeviceRepository>) -> Self {
+        Self { event_bus, device_repository }
+    }
+}
+
+#[async_trait]
+impl PacketHandler for ApkDownloadProgressHandler {
+    fn opcode(&self) -> u8 {
+        opcodes::APK_DOWNLOAD_PROGRESS
+    }
+
+    async fn handle(&self, device_id: DeviceId, payload: Vec<u8>) -> Result<()> {
+        handle_progress_packet(
+            device_id,
+            payload,
+            crate::application::dto::OperationType::Download,
+            "download",
+            &self.event_bus,
+            &self.device_repository,
+        ).await
+    }
+}
+
+/// Handles APK_INSTALL_PROGRESS (0x1A) packets
+/// Payload format: [operation_id: 16 bytes UUID][stage: u8][percentage: f32 BE]
+pub struct ApkInstallProgressHandler {
+    event_bus: Arc<EventBus>,
+    device_repository: Arc<dyn DeviceRepository>,
+}
+
+impl ApkInstallProgressHandler {
+    pub fn new(event_bus: Arc<EventBus>, device_repository: Arc<dyn DeviceRepository>) -> Self {
+        Self { event_bus, device_repository }
+    }
+}
+
+#[async_trait]
+impl PacketHandler for ApkInstallProgressHandler {
+    fn opcode(&self) -> u8 {
+        opcodes::APK_INSTALL_PROGRESS
+    }
+
+    async fn handle(&self, device_id: DeviceId, payload: Vec<u8>) -> Result<()> {
+        handle_progress_packet(
+            device_id,
+            payload,
+            crate::application::dto::OperationType::Install,
+            "install",
+            &self.event_bus,
+            &self.device_repository,
+        ).await
     }
 }
