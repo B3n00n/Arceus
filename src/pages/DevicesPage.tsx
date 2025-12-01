@@ -1,9 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   RefreshCw,
   FolderOpen,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from 'lucide-react';
 import { useDeviceStore } from '@/stores/deviceStore';
 import { DeviceService } from '@/services/deviceService';
@@ -33,6 +36,12 @@ export function DevicesPage() {
   const setDevices = useDeviceStore((state) => state.setDevices);
 
   const [loading, setLoading] = useState(false);
+
+  // Sort states
+  type SortField = 'name' | 'volume' | 'battery' | 'ip' | 'runningApp';
+  type SortDirection = 'asc' | 'desc' | null;
+  const [sortField, setSortField] = useState<SortField | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>(null);
 
   // Dialog states
   const [showSimpleInputDialog, setShowSimpleInputDialog] = useState(false);
@@ -82,11 +91,58 @@ export function DevicesPage() {
   });
 
   const filteredDevices = getFilteredDevices();
+
+  // Sort devices
+  const sortedDevices = useMemo(() => {
+    if (!sortField || !sortDirection) return filteredDevices;
+
+    return [...filteredDevices].sort((a, b) => {
+      let aValue: string | number | null = null;
+      let bValue: string | number | null = null;
+
+      switch (sortField) {
+        case 'name':
+          aValue = (a.info.customName || a.info.model || '').toLowerCase();
+          bValue = (b.info.customName || b.info.model || '').toLowerCase();
+          break;
+        case 'volume':
+          aValue = a.volume?.volumePercentage ?? -1;
+          bValue = b.volume?.volumePercentage ?? -1;
+          break;
+        case 'battery':
+          aValue = a.battery?.headsetLevel ?? -1;
+          bValue = b.battery?.headsetLevel ?? -1;
+          break;
+        case 'ip':
+          aValue = a.info.ip;
+          bValue = b.info.ip;
+          break;
+        case 'runningApp':
+          aValue = (a.info.runningApp || '').toLowerCase();
+          bValue = (b.info.runningApp || '').toLowerCase();
+          break;
+      }
+
+      if (aValue === null || aValue === -1) return 1;
+      if (bValue === null || bValue === -1) return -1;
+
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return sortDirection === 'asc'
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
+      }
+
+      return sortDirection === 'asc'
+        ? (aValue as number) - (bValue as number)
+        : (bValue as number) - (aValue as number);
+    });
+  }, [filteredDevices, sortField, sortDirection]);
+
   const hasSelection = selectedDeviceIds.size > 0;
   const selectedIds = Array.from(selectedDeviceIds);
   const allSelected =
-    filteredDevices.length > 0 &&
-    selectedDeviceIds.size === filteredDevices.length;
+    sortedDevices.length > 0 &&
+    selectedDeviceIds.size === sortedDevices.length;
 
   const handleCommand = async (
     action: () => Promise<void>,
@@ -272,6 +328,30 @@ export function DevicesPage() {
     setShowMessageDialog(false);
   };
 
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      // Cycle through: asc -> desc -> null
+      if (sortDirection === 'asc') {
+        setSortDirection('desc');
+      } else if (sortDirection === 'desc') {
+        setSortField(null);
+        setSortDirection(null);
+      }
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const getSortIcon = (field: SortField) => {
+    if (sortField !== field) {
+      return <ArrowUpDown className="h-3.5 w-3.5 text-gray-500" />;
+    }
+    return sortDirection === 'asc'
+      ? <ArrowUp className="h-3.5 w-3.5 text-blue-400" />
+      : <ArrowDown className="h-3.5 w-3.5 text-blue-400" />;
+  };
+
   return (
     <div className="h-[calc(100vh-4rem)] flex">
       {/* Left: Device List */}
@@ -281,7 +361,7 @@ export function DevicesPage() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <p className="text-sm text-gray-400 mt-1">
-                {filteredDevices.length} device{filteredDevices.length !== 1 ? 's' : ''}
+                {sortedDevices.length} device{sortedDevices.length !== 1 ? 's' : ''}
                 {hasSelection && ` • ${selectedDeviceIds.size} selected`}
               </p>
             </div>
@@ -312,7 +392,7 @@ export function DevicesPage() {
 
         {/* Device Scrollable Area */}
         <div className="flex-1 overflow-y-auto overflow-x-auto space-y-2">
-          {filteredDevices.length > 0 && (
+          {sortedDevices.length > 0 && (
             <div
               className="
         p-4 text-gray-400 text-sm
@@ -331,35 +411,55 @@ export function DevicesPage() {
               </div>
 
               {/* Device */}
-              <div className="flex-[2] min-w-[8rem] flex justify-start items-center">
+              <button
+                onClick={() => handleSort('name')}
+                className="flex-[2] min-w-[8rem] flex justify-start items-center gap-2 hover:text-gray-300 transition-colors"
+              >
                 <span>Device</span>
-              </div>
+                {getSortIcon('name')}
+              </button>
 
       {/* Running App */}
-      <div className="flex-[1.5] min-w-[8rem] flex justify-start items-center">
+      <button
+        onClick={() => handleSort('runningApp')}
+        className="flex-[1.5] min-w-[8rem] flex justify-start items-center gap-2 hover:text-gray-300 transition-colors"
+      >
         <span>Running App</span>
-      </div>
+        {getSortIcon('runningApp')}
+      </button>
 
               {/* IP */}
-              <div className="flex-[1.5] min-w-[8rem] flex justify-start items-center">
+              <button
+                onClick={() => handleSort('ip')}
+                className="flex-[1.5] min-w-[8rem] flex justify-start items-center gap-2 hover:text-gray-300 transition-colors"
+              >
                 <span>IP</span>
-              </div>
+                {getSortIcon('ip')}
+              </button>
 
               {/* Volume */}
-              <div className="flex-[0.75] min-w-[4rem] flex justify-start items-center">
+              <button
+                onClick={() => handleSort('volume')}
+                className="flex-[0.75] min-w-[4rem] flex justify-start items-center gap-2 hover:text-gray-300 transition-colors"
+              >
                 <span>Volume</span>
-              </div>
+                {getSortIcon('volume')}
+              </button>
 
               {/* Battery */}
-              <div className="flex-[0.75] min-w-[4rem] flex justify-start items-center">
+              <button
+                onClick={() => handleSort('battery')}
+                className="flex-[0.75] min-w-[4rem] flex justify-start items-center gap-2 hover:text-gray-300 transition-colors"
+              >
                 <span>Battery</span>
-              </div>
+                {getSortIcon('battery')}
+              </button>
             </div>
           )}
 
           {/* Device List */}
           <DeviceList
-            devices={filteredDevices}
+            devices={sortedDevices}
             selectedDeviceIds={selectedDeviceIds}
             onToggleDevice={toggleDevice}
           />
