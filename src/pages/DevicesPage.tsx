@@ -4,7 +4,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import {
   RefreshCw,
   FolderOpen,
-  ArrowUpDown,
+  ChevronsUpDown,
   ArrowUp,
   ArrowDown,
 } from 'lucide-react';
@@ -387,11 +387,11 @@ export function DevicesPage() {
 
   const getSortIcon = (field: SortField) => {
     if (sortField !== field) {
-      return <ArrowUpDown className="h-3.5 w-3.5 text-gray-500" />;
+      return <ChevronsUpDown className="h-3.5 w-3.5 text-gray-500 group-hover:text-gray-400 -mb-0.5" />;
     }
     return sortDirection === 'asc'
-      ? <ArrowUp className="h-3.5 w-3.5 text-blue-400" />
-      : <ArrowDown className="h-3.5 w-3.5 text-blue-400" />;
+      ? <ArrowUp className="h-3.5 w-3.5 text-white -mb-0.5" />
+      : <ArrowDown className="h-3.5 w-3.5 text-white -mb-0.5" />;
   };
 
   return (
@@ -437,8 +437,8 @@ export function DevicesPage() {
           {sortedDevices.length > 0 && (
             <div
               className="
-        p-4 text-gray-400 text-sm
-        min-w-fit flex items-center w-full gap-8 outline-offset-[-1px]
+        px-4 py-2 text-gray-400 text-sm
+        min-w-[720px] flex items-center w-full gap-6 outline-offset-[-1px]
       "
             >
               {/* Checkbox for Select All */}
@@ -455,7 +455,10 @@ export function DevicesPage() {
               {/* Device */}
               <button
                 onClick={() => handleSort('name')}
-                className="flex-[2] min-w-[8rem] flex justify-start items-center gap-2 hover:text-gray-300 transition-colors"
+                className={cn(
+                  "group flex-[2] min-w-[8rem] cursor-pointer flex justify-start items-center gap-2 px-2 py-1.5 rounded-md hover:text-gray-300 hover:bg-gray-300/10 transition-colors",
+                  sortField === 'name' && "text-white"
+                )}
               >
                 <span>Device</span>
                 {getSortIcon('name')}
@@ -464,7 +467,10 @@ export function DevicesPage() {
       {/* Running App */}
       <button
         onClick={() => handleSort('runningApp')}
-        className="flex-[1.5] min-w-[8rem] flex justify-start items-center gap-2 hover:text-gray-300 transition-colors"
+        className={cn(
+          "group flex-[1.5] min-w-[8rem] cursor-pointer flex justify-start items-center gap-2 px-2 py-1.5 rounded-md hover:text-gray-300 hover:bg-gray-300/10 transition-colors",
+          sortField === 'runningApp' && "text-white"
+        )}
       >
         <span>Running App</span>
         {getSortIcon('runningApp')}
@@ -473,7 +479,10 @@ export function DevicesPage() {
               {/* IP */}
               <button
                 onClick={() => handleSort('ip')}
-                className="flex-[1.5] min-w-[8rem] flex justify-start items-center gap-2 hover:text-gray-300 transition-colors"
+                className={cn(
+                  "group flex-[1.5] min-w-[7rem] cursor-pointer flex justify-start items-center gap-2 px-2 py-1.5 rounded-md hover:text-gray-300 hover:bg-gray-300/10 transition-colors",
+                  sortField === 'ip' && "text-white"
+                )}
               >
                 <span>IP</span>
                 {getSortIcon('ip')}
@@ -482,7 +491,10 @@ export function DevicesPage() {
               {/* Volume */}
               <button
                 onClick={() => handleSort('volume')}
-                className="flex-[0.75] min-w-[4rem] flex justify-start items-center gap-2 hover:text-gray-300 transition-colors"
+                className={cn(
+                  "group flex-[0.75] min-w-[6rem] cursor-pointer flex justify-start items-center gap-2 px-2 py-1.5 rounded-md hover:text-gray-300 hover:bg-gray-300/10 transition-colors",
+                  sortField === 'volume' && "text-white"
+                )}
               >
                 <span>Volume</span>
                 {getSortIcon('volume')}
@@ -491,7 +503,10 @@ export function DevicesPage() {
               {/* Battery */}
               <button
                 onClick={() => handleSort('battery')}
-                className="flex-[0.75] min-w-[4rem] flex justify-start items-center gap-2 hover:text-gray-300 transition-colors"
+                className={cn(
+                  "group flex-[0.75] min-w-[5rem] cursor-pointer flex justify-start items-center gap-2 px-2 py-1.5 rounded-md hover:text-gray-300 hover:bg-gray-300/10 transition-colors",
+                  sortField === 'battery' && "text-white"
+                )}
               >
                 <span>Battery</span>
                 {getSortIcon('battery')}

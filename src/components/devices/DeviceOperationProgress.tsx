@@ -9,13 +9,13 @@ export function DeviceOperationProgressComponent({ progress }: DeviceOperationPr
   const getStatusColor = () => {
     switch (progress.stage) {
       case 'completed':
-        return 'text-green-400';
+        return 'text-system-success';
       case 'failed':
-        return 'text-red-400';
+        return 'text-system-error';
       case 'inprogress':
-        return 'text-blue-400';
+        return 'text-discord-blurple';
       default:
-        return 'text-gray-400';
+        return 'text-system-gray';
     }
   };
 

@@ -74,7 +74,7 @@ export function DeviceCard({ device, isSelected, onToggle }: DeviceCardProps) {
         isSelected && 'outline-white outline-2 outline-offset-[-2px]'
       )}
     >
-      <div className="flex items-center w-full gap-8">
+      <div className="flex items-center w-full gap-6">
 {/* Checkbox */}
 <div className="flex-shrink-0 flex items-center justify-start">
   <Checkbox
@@ -86,7 +86,7 @@ export function DeviceCard({ device, isSelected, onToggle }: DeviceCardProps) {
 
       {/* Name */}
       <div
-        className="group/name flex-[2] min-w-[8rem] flex justify-between items-center gap-1 relative"
+        className="group/name flex-[2] min-w-[8rem] flex justify-between items-center gap-1 relative px-2"
         onClick={(e) => {
           e.stopPropagation();
           if (!isEditingName) setIsEditingName(true);
@@ -103,7 +103,7 @@ export function DeviceCard({ device, isSelected, onToggle }: DeviceCardProps) {
                 if (e.key === 'Escape') handleCancelEdit();
               }}
               placeholder={device.info.model}
-              className="h-8 text-sm font-normal px-2 py-2 absolute -left-2 w-[calc(100%+16px)]"
+              className="h-8 text-sm font-normal px-2 py-2 absolute -left-0.5 w-[calc(100%+4px)]"
               autoFocus
               disabled={isSavingName}
             />
@@ -117,28 +117,28 @@ export function DeviceCard({ device, isSelected, onToggle }: DeviceCardProps) {
       </div>
 
       {/* Running App */}
-      <div className="flex-[1.5] min-w-[8rem] flex justify-start items-center">
+      <div className="flex-[1.5] min-w-[8rem] flex justify-start items-center px-2">
         <div className="text-sm truncate">
           {device.info.runningApp || '--'}
         </div>
       </div>
 
       {/* IP */}
-      <div className="flex-[1.5] min-w-[8rem] flex justify-start items-center">
+      <div className="flex-[1.5] min-w-[7rem] flex justify-start items-center px-2">
         <div className="text-sm truncate">
           {device.info.ip}
         </div>
       </div>
 
       {/* Volume */}
-      <div className="flex-[0.75] min-w-[4rem] flex justify-start items-center">
+      <div className="flex-[0.75] min-w-[6rem] flex justify-start items-center px-2">
         <div className="text-sm text-gray-300">
           {device.volume ? `${device.volume.volumePercentage}%` : '--'}
         </div>
       </div>
 
       {/* Battery */}
-      <div className="flex-[0.75] min-w-[4rem] flex justify-start items-center">
+      <div className="flex-[0.75] min-w-[5rem] flex justify-start items-center px-2">
         {device.battery ? (
           <DeviceBattery
             level={device.battery.headsetLevel}
