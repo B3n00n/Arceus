@@ -16,7 +16,7 @@ const Progress = React.forwardRef<HTMLDivElement, ProgressProps>(
       {...props}
     >
       <div
-        className="h-full bg-blue-500 transition-all"
+        className="h-full bg-discord-blurple transition-all ease-in-out"
         style={{ width: `${Math.min(100, Math.max(0, value))}%` }}
       />
     </div>

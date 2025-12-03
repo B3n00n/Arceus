@@ -35,7 +35,7 @@ export const Checkbox = React.forwardRef<HTMLButtonElement, CheckboxProps>(
           }
         }}
         className={cn(
-          'h-4 w-4 rounded-sm flex items-center justify-center transition-all',
+          'h-4 w-4 rounded-sm cursor-pointer flex items-center justify-center transition-all',
           'outline outline-1 outline-offset-[-1px]',
           checked
             ? 'bg-discord-blurple outline-discord-blurple'
