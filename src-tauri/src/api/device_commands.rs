@@ -2,8 +2,9 @@ use crate::api::helpers::execute_batch_command;
 use crate::application::dto::{BatchResultDto, DeviceStateDto};
 use crate::application::services::DeviceApplicationService;
 use crate::domain::commands::{
-    CloseAllAppsCommand, DisplayMessageCommand, ExecuteShellCommand, GetInstalledAppsCommand,
-    GetVolumeCommand, InstallApkCommand, LaunchAppCommand, PingCommand, RequestBatteryCommand,
+    ClearWifiCredentialsCommand, CloseAllAppsCommand, ConfigureDeviceCommand,
+    DisplayMessageCommand, ExecuteShellCommand, GetInstalledAppsCommand, GetVolumeCommand,
+    InstallApkCommand, LaunchAppCommand, PingCommand, RequestBatteryCommand,
     RestartDeviceCommand, SetVolumeCommand, UninstallAppCommand,
 };
 use crate::domain::models::{DeviceId, PackageName, Serial};
@@ -225,6 +226,31 @@ pub async fn close_all_apps(
     device_service: State<'_, Arc<DeviceApplicationService>>,
 ) -> Result<BatchResultDto, String> {
     execute_batch_command(device_ids, &device_service, CloseAllAppsCommand).await
+}
+
+/// Configure device WiFi and server connection settings
+#[tauri::command]
+pub async fn configure_device(
+    device_ids: Vec<String>,
+    wifi_ssid: Option<String>,
+    wifi_password: Option<String>,
+    server_ip: String,
+    server_port: u16,
+    device_service: State<'_, Arc<DeviceApplicationService>>,
+) -> Result<BatchResultDto, String> {
+    let command = ConfigureDeviceCommand::new(wifi_ssid, wifi_password, server_ip, server_port)
+        .map_err(|e| format!("Invalid configuration: {}", e))?;
+
+    execute_batch_command(device_ids, &device_service, command).await
+}
+
+/// Clear WiFi credentials on multiple devices
+#[tauri::command]
+pub async fn clear_wifi_credentials(
+    device_ids: Vec<String>,
+    device_service: State<'_, Arc<DeviceApplicationService>>,
+) -> Result<BatchResultDto, String> {
+    execute_batch_command(device_ids, &device_service, ClearWifiCredentialsCommand).await
 }
 
 /// Display a message notification on multiple devices

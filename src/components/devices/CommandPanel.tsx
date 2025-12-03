@@ -15,6 +15,8 @@ import {
   List,
   XCircle,
   MessageSquare,
+  Settings,
+  WifiOff,
 } from 'lucide-react';
 import { DeviceService } from '@/services/deviceService';
 import { cn } from '@/lib/cn';
@@ -30,6 +32,8 @@ interface CommandPanelProps {
   onOpenRestartDeviceDialog: () => void;
   onOpenCloseAllAppsDialog: () => void;
   onOpenMessageDialog: () => void;
+  onOpenConfigureDeviceDialog: () => void;
+  onOpenClearWifiDialog: () => void;
   onHandleCommand: (
     action: () => Promise<void>,
     actionName: string,
@@ -46,6 +50,8 @@ export function CommandPanel({
   onOpenRestartDeviceDialog,
   onOpenCloseAllAppsDialog,
   onOpenMessageDialog,
+  onOpenConfigureDeviceDialog,
+  onOpenClearWifiDialog,
   onHandleCommand,
 }: CommandPanelProps) {
   const [commandTab, setCommandTab] = useState<CommandTab>('standard');
@@ -311,6 +317,26 @@ export function CommandPanel({
                 <div>
                   <p className="text-xs text-gray-400 mb-2 font-semibold">B3n00n tools</p>
                   <div className="space-y-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full justify-start"
+                      onClick={onOpenConfigureDeviceDialog}
+                      disabled={loading}
+                    >
+                      <Settings className="h-4 w-4 mr-2" />
+                      Configure device
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full justify-start"
+                      onClick={onOpenClearWifiDialog}
+                      disabled={loading}
+                    >
+                      <WifiOff className="h-4 w-4 mr-2" />
+                      Clear WiFi credentials
+                    </Button>
                     <Button
                       variant="outline"
                       size="sm"

@@ -23,6 +23,7 @@ import { AppListDialog } from '@/components/dialogs/AppListDialog';
 import { InstallApkDialog } from '@/components/dialogs/InstallApkDialog';
 import { ConfirmationDialog } from '@/components/dialogs/ConfirmationDialog';
 import { MessageDialog } from '@/components/dialogs/MessageDialog';
+import { ConfigureDeviceDialog } from '@/components/dialogs/ConfigureDeviceDialog';
 
 export function DevicesPage() {
   const {
@@ -50,6 +51,8 @@ export function DevicesPage() {
   const [showRestartDeviceDialog, setShowRestartDeviceDialog] = useState(false);
   const [showCloseAllAppsDialog, setShowCloseAllAppsDialog] = useState(false);
   const [showMessageDialog, setShowMessageDialog] = useState(false);
+  const [showConfigureDeviceDialog, setShowConfigureDeviceDialog] = useState(false);
+  const [showClearWifiDialog, setShowClearWifiDialog] = useState(false);
 
   const [dialogType, setDialogType] = useState<string>('');
   const [dialogInput, setDialogInput] = useState('');
@@ -231,6 +234,22 @@ export function DevicesPage() {
     setShowMessageDialog(true);
   };
 
+  const openConfigureDeviceDialog = () => {
+    if (selectedDeviceIds.size === 0) {
+      toast.error('Please select at least one device');
+      return;
+    }
+    setShowConfigureDeviceDialog(true);
+  };
+
+  const openClearWifiDialog = () => {
+    if (selectedDeviceIds.size === 0) {
+      toast.error('Please select at least one device');
+      return;
+    }
+    setShowClearWifiDialog(true);
+  };
+
   const executeRestartDevice = async () => {
     await handleCommand(
       () => DeviceService.restartDevices(selectedIds),
@@ -326,6 +345,29 @@ export function DevicesPage() {
       'Send Message'
     );
     setShowMessageDialog(false);
+  };
+
+  const executeConfigureDevice = async (
+    serverIp: string,
+    serverPort: number,
+    wifiSsid?: string,
+    wifiPassword?: string
+  ) => {
+    await handleCommand(
+      () => DeviceService.configureDevice(selectedIds, serverIp, serverPort, wifiSsid, wifiPassword),
+      'Configure Device',
+      false
+    );
+    setShowConfigureDeviceDialog(false);
+  };
+
+  const executeClearWifi = async () => {
+    await handleCommand(
+      () => DeviceService.clearWifiCredentials(selectedIds),
+      'Clear WiFi Credentials',
+      false
+    );
+    setShowClearWifiDialog(false);
   };
 
   const handleSort = (field: SortField) => {
@@ -477,6 +519,8 @@ export function DevicesPage() {
         onOpenRestartDeviceDialog={openRestartDeviceDialog}
         onOpenCloseAllAppsDialog={openCloseAllAppsDialog}
         onOpenMessageDialog={openMessageDialog}
+        onOpenConfigureDeviceDialog={openConfigureDeviceDialog}
+        onOpenClearWifiDialog={openClearWifiDialog}
         onHandleCommand={handleCommand}
       />
 
@@ -552,6 +596,32 @@ export function DevicesPage() {
         onClose={() => setShowMessageDialog(false)}
         selectedCount={selectedDeviceIds.size}
         onExecute={executeSendMessage}
+        loading={loading}
+      />
+
+      <ConfigureDeviceDialog
+        isOpen={showConfigureDeviceDialog}
+        onClose={() => setShowConfigureDeviceDialog(false)}
+        selectedCount={selectedDeviceIds.size}
+        onExecute={executeConfigureDevice}
+        loading={loading}
+      />
+
+      <ConfirmationDialog
+        isOpen={showClearWifiDialog}
+        onClose={() => setShowClearWifiDialog(false)}
+        onConfirm={executeClearWifi}
+        title="Clear WiFi Credentials"
+        message={
+          <>
+            Clear WiFi credentials on{" "}
+            <span className="text-white font-medium">
+              {selectedDeviceIds.size} device{selectedDeviceIds.size > 1 ? "s" : ""}
+            </span>
+            ?
+          </>
+        }
+        confirmText="Clear"
         loading={loading}
       />
     </div>

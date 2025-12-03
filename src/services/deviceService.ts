@@ -115,6 +115,28 @@ export class DeviceService {
     });
   }
 
+  static async configureDevice(
+    deviceIds: string[],
+    serverIp: string,
+    serverPort: number,
+    wifiSsid?: string,
+    wifiPassword?: string
+  ): Promise<void> {
+    await invoke("configure_device", {
+      deviceIds,
+      wifiSsid: wifiSsid || null,
+      wifiPassword: wifiPassword || null,
+      serverIp,
+      serverPort
+    });
+  }
+
+  static async clearWifiCredentials(deviceIds: string[]): Promise<void> {
+    await invoke("clear_wifi_credentials", {
+      deviceIds
+    });
+  }
+
   static async displayMessage(
     deviceIds: string[],
     message: string

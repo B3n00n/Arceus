@@ -43,4 +43,6 @@ pub const UNINSTALL_APP: u8 = 0x49;
 pub const SET_VOLUME: u8 = 0x4A;
 pub const GET_VOLUME: u8 = 0x4B;
 pub const CLOSE_ALL_APPS: u8 = 0x4C;
+pub const CONFIGURE_DEVICE: u8 = 0x4D;
+pub const CLEAR_WIFI_CREDENTIALS: u8 = 0x4E;
 pub const DISPLAY_MESSAGE: u8 = 0x50;

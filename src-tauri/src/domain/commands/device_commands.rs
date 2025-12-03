@@ -302,6 +302,126 @@ impl Command for CloseAllAppsCommand {
     }
 }
 
+/// Configure device WiFi and server connection settings
+#[derive(Debug, Clone)]
+pub struct ConfigureDeviceCommand {
+    pub wifi_ssid: Option<String>,
+    pub wifi_password: Option<String>,
+    pub server_ip: String,
+    pub server_port: u16,
+}
+
+impl ConfigureDeviceCommand {
+    pub fn new(
+        wifi_ssid: Option<String>,
+        wifi_password: Option<String>,
+        server_ip: String,
+        server_port: u16,
+    ) -> Result<Self, String> {
+        let command = Self {
+            wifi_ssid,
+            wifi_password,
+            server_ip,
+            server_port,
+        };
+        command.validate()?;
+        Ok(command)
+    }
+
+    fn is_valid_ssid(ssid: &str) -> bool {
+        !ssid.is_empty() && ssid.len() <= 32
+    }
+
+    fn is_valid_password(password: &str) -> bool {
+        password.is_empty() || (password.len() >= 8 && password.len() <= 63)
+    }
+
+    fn is_valid_ip_address(ip: &str) -> bool {
+        use std::net::Ipv4Addr;
+        ip.parse::<Ipv4Addr>().is_ok()
+    }
+}
+
+impl Command for ConfigureDeviceCommand {
+    fn opcode(&self) -> u8 {
+        CONFIGURE_DEVICE
+    }
+
+    fn name(&self) -> &'static str {
+        "configure_device"
+    }
+
+    fn serialize(&self) -> Result<Vec<u8>, std::io::Error> {
+        use byteorder::{BigEndian, WriteBytesExt};
+
+        let mut buffer = Vec::new();
+
+        let has_wifi_config = self.wifi_ssid.is_some() && self.wifi_password.is_some();
+        buffer.write_u8(if has_wifi_config { 1 } else { 0 })?;
+
+        if let (Some(ssid), Some(password)) = (&self.wifi_ssid, &self.wifi_password) {
+            buffer.write_string(ssid)?;
+            buffer.write_string(password)?;
+        }
+
+        buffer.write_string(&self.server_ip)?;
+        buffer.write_u16::<BigEndian>(self.server_port)?;
+
+        Ok(buffer)
+    }
+
+    fn validate(&self) -> Result<(), String> {
+        if let Some(ssid) = &self.wifi_ssid {
+            if !Self::is_valid_ssid(ssid) {
+                return Err(format!("WiFi SSID must be 1-32 characters, got {}", ssid.len()));
+            }
+        }
+
+        if let Some(password) = &self.wifi_password {
+            if !Self::is_valid_password(password) {
+                return Err(format!(
+                    "WiFi password must be empty or 8-63 characters, got {}",
+                    password.len()
+                ));
+            }
+        }
+
+        if (self.wifi_ssid.is_some() && self.wifi_password.is_none())
+            || (self.wifi_ssid.is_none() && self.wifi_password.is_some())
+        {
+            return Err("Both WiFi SSID and password must be provided together, or both omitted".to_string());
+        }
+
+        if !Self::is_valid_ip_address(&self.server_ip) {
+            return Err(format!("Invalid IP address: {}", self.server_ip));
+        }
+
+        if self.server_port == 0 {
+            return Err("Server port must be between 1 and 65535".to_string());
+        }
+
+        Ok(())
+    }
+}
+
+/// Clear WiFi credentials on a device
+#[derive(Debug, Clone)]
+pub struct ClearWifiCredentialsCommand;
+
+impl Command for ClearWifiCredentialsCommand {
+    fn opcode(&self) -> u8 {
+        CLEAR_WIFI_CREDENTIALS
+    }
+
+    fn name(&self) -> &'static str {
+        "clear_wifi_credentials"
+    }
+
+    fn serialize(&self) -> Result<Vec<u8>, std::io::Error> {
+        Ok(Vec::new())
+    }
+}
+
 /// Display a message notification on a device
 #[derive(Debug, Clone)]
 pub struct DisplayMessageCommand {
