@@ -1,7 +1,7 @@
 /// Connection Handler
 /// Manages device lifecycle for a single connection.
 use crate::app::{error::NetworkError, EventBus, Result};
-use crate::domain::models::{Device, DeviceId, IpAddress, Serial};
+use crate::domain::models::{Device, DeviceId, Serial};
 use crate::domain::repositories::{DeviceNameRepository, DeviceRepository};
 use crate::infrastructure::network::device_session::DeviceSession;
 use crate::infrastructure::network::device_session_manager::DeviceSessionManager;
@@ -80,8 +80,6 @@ impl ConnectionHandler {
         addr: SocketAddr,
     ) -> Result<(Device, Arc<DeviceSession>)> {
         let serial = self.generate_serial_from_addr(&addr)?;
-        let ip = IpAddress::new(addr.ip().to_string())
-            .map_err(|e| NetworkError::ConnectionFailed(format!("Invalid IP: {}", e)))?;
 
         let session = Arc::new(DeviceSession::new(stream, device_id, addr));
 
@@ -91,7 +89,7 @@ impl ConnectionHandler {
             device_id,
             serial.clone(),
             "Unknown".to_string(),
-            ip,
+            "Unknown".to_string(),
         );
 
         let custom_name = self.device_name_repo.get_name(&serial).await.ok().flatten();

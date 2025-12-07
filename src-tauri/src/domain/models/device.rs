@@ -1,5 +1,5 @@
 /// This is an immutable aggregate - all mutations return new instances.
-use super::{Battery, DeviceId, IpAddress, Serial, Volume};
+use super::{Battery, DeviceId, Serial, Volume};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
@@ -13,8 +13,8 @@ pub struct Device {
     serial: Serial,
     /// Device model name (e.g., "Meta Quest 3")
     model: String,
-    /// IP address of the device
-    ip: IpAddress,
+    /// Snorlax client version
+    version: String,
     /// When the device first connected
     connected_at: DateTime<Utc>,
     /// When the device was last seen (heartbeat)
@@ -30,13 +30,13 @@ pub struct Device {
 }
 
 impl Device {
-    pub fn new(id: DeviceId, serial: Serial, model: String, ip: IpAddress) -> Self {
+    pub fn new(id: DeviceId, serial: Serial, model: String, version: String) -> Self {
         let now = Utc::now();
         Self {
             id,
             serial,
             model,
-            ip,
+            version,
             connected_at: now,
             last_seen: now,
             custom_name: None,
@@ -58,10 +58,6 @@ impl Device {
         &self.model
     }
 
-    pub fn ip(&self) -> &IpAddress {
-        &self.ip
-    }
-
     pub fn connected_at(&self) -> DateTime<Utc> {
         self.connected_at
     }
@@ -80,6 +76,10 @@ impl Device {
 
     pub fn running_app(&self) -> Option<&str> {
         self.running_app.as_deref()
+    }
+
+    pub fn version(&self) -> &str {
+        &self.version
     }
 
     /// Update the last seen timestamp (called on heartbeat)

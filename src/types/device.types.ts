@@ -2,7 +2,7 @@ export interface DeviceInfo {
   id: string;
   model: string;
   serial: string;
-  ip: string;
+  version: string;
   customName: string | null;
   connectedAt: string;
   lastSeen: string;

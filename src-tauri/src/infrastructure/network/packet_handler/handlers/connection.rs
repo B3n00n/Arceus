@@ -14,7 +14,7 @@ use std::sync::Arc;
 use super::super::{PacketHandler, Result};
 
 /// Handles DEVICE_CONNECTED (0x01) packets
-/// Payload: [model: String][serial: String]
+/// Payload: [model: String][serial: String][version: String]
 pub struct DeviceConnectedHandler {
     device_repo: Arc<dyn DeviceRepository>,
     device_name_repo: Arc<dyn DeviceNameRepository>,
@@ -73,30 +73,27 @@ impl PacketHandler for DeviceConnectedHandler {
 
         let model = cursor.read_string()?;
         let serial_str = cursor.read_string()?;
+        let version = cursor.read_string()?;
 
         tracing::info!(
             device_id = %device_id,
             model = %model,
             serial = %serial_str,
+            version = %version,
             "Device connected packet received"
         );
 
         let serial = Serial::new(serial_str)
             .map_err(|e| crate::app::error::ArceusError::DomainValidation(format!("Invalid serial: {}", e)))?;
 
-        // Get the temporary device that was created on TCP connection
-        let temp_device = self.device_repo.find_by_id(device_id).await.ok().flatten();
-
-        let temp_device = match temp_device {
-            Some(device) => device,
-            None => {
-                tracing::warn!("Device connected packet without prior TCP connection");
-                return Ok(());
-            }
-        };
+        // Verify device exists (was created on TCP connection)
+        if self.device_repo.find_by_id(device_id).await.ok().flatten().is_none() {
+            tracing::warn!("Device connected packet without prior TCP connection");
+            return Ok(());
+        }
 
         // Create device with real info from the packet
-        let device = Device::new(device_id, serial.clone(), model.clone(), temp_device.ip().clone());
+        let device = Device::new(device_id, serial.clone(), model.clone(), version);
 
         // Load custom name from database if exists
         let custom_name = self.device_name_repo.get_name(&serial).await.ok().flatten();

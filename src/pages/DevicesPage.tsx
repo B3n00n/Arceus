@@ -39,7 +39,7 @@ export function DevicesPage() {
   const [loading, setLoading] = useState(false);
 
   // Sort states
-  type SortField = 'name' | 'volume' | 'battery' | 'ip' | 'runningApp';
+  type SortField = 'name' | 'volume' | 'battery' | 'runningApp' | 'version';
   type SortDirection = 'asc' | 'desc' | null;
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
@@ -116,13 +116,13 @@ export function DevicesPage() {
           aValue = a.battery?.headsetLevel ?? -1;
           bValue = b.battery?.headsetLevel ?? -1;
           break;
-        case 'ip':
-          aValue = a.info.ip;
-          bValue = b.info.ip;
-          break;
         case 'runningApp':
           aValue = (a.info.runningApp || '').toLowerCase();
           bValue = (b.info.runningApp || '').toLowerCase();
+          break;
+        case 'version':
+          aValue = a.info.version.toLowerCase();
+          bValue = b.info.version.toLowerCase();
           break;
       }
 
@@ -476,17 +476,17 @@ export function DevicesPage() {
         {getSortIcon('runningApp')}
       </button>
 
-              {/* IP */}
-              <button
-                onClick={() => handleSort('ip')}
-                className={cn(
-                  "group flex-[1.5] min-w-[7rem] cursor-pointer flex justify-start items-center gap-2 px-2 py-1.5 rounded-md hover:text-gray-300 hover:bg-gray-300/10 transition-colors",
-                  sortField === 'ip' && "text-white"
-                )}
-              >
-                <span>IP</span>
-                {getSortIcon('ip')}
-              </button>
+      {/* Version */}
+      <button
+        onClick={() => handleSort('version')}
+        className={cn(
+          "group flex-[1.5] min-w-[7rem] cursor-pointer flex justify-start items-center gap-2 px-2 py-1.5 rounded-md hover:text-gray-300 hover:bg-gray-300/10 transition-colors",
+          sortField === 'version' && "text-white"
+        )}
+      >
+        <span>Version</span>
+        {getSortIcon('version')}
+      </button>
 
               {/* Volume */}
               <button

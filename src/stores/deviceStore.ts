@@ -82,7 +82,6 @@ export const useDeviceStore = create<DeviceStoreState>((set, get) => ({
         searchQuery === '' ||
         device.info.model.toLowerCase().includes(searchQuery.toLowerCase()) ||
         device.info.serial.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        device.info.ip.includes(searchQuery) ||
         (device.info.customName?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
 
       return matchesSearch;

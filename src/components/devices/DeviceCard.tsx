@@ -123,10 +123,10 @@ export function DeviceCard({ device, isSelected, onToggle }: DeviceCardProps) {
         </div>
       </div>
 
-      {/* IP */}
+      {/* Version */}
       <div className="flex-[1.5] min-w-[7rem] flex justify-start items-center px-2">
         <div className="text-sm truncate">
-          {device.info.ip}
+          {device.info.version}
         </div>
       </div>
 
