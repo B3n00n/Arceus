@@ -163,26 +163,6 @@ export function CommandPanel({
                       <XCircle className="h-4 w-4 mr-2" />
                       Close all apps
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full justify-start"
-                      onClick={() => onOpenAppListDialog('uninstall')}
-                      disabled={loading}
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Uninstall app
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full justify-start"
-                      onClick={onOpenInstallApkDialog}
-                      disabled={loading}
-                    >
-                      <Download className="h-4 w-4 mr-2" />
-                      Install APK
-                    </Button>
                   </div>
                 </div>
 
@@ -276,9 +256,9 @@ export function CommandPanel({
               </>
             ) : (
               <>
-                {/* Developer Commands */}
+                {/* Debug Tools */}
                 <div>
-                  <p className="text-xs text-gray-400 mb-2 font-semibold">Developer tools</p>
+                  <p className="text-xs text-gray-400 mb-2 font-semibold">Debug tools</p>
                   <div className="space-y-2">
                     <Button
                       variant="outline"
@@ -310,12 +290,27 @@ export function CommandPanel({
                       <Volume2 className="h-4 w-4 mr-2" />
                       Get volume
                     </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full justify-start"
+                      onClick={() =>
+                        onHandleCommand(
+                          () => DeviceService.getInstalledApps(selectedIds),
+                          'Get Apps'
+                        )
+                      }
+                      disabled={loading}
+                    >
+                      <List className="h-4 w-4 mr-2" />
+                      Get installed apps
+                    </Button>
                   </div>
                 </div>
 
-                {/* B3n00n Tools */}
+                {/* Combatica Tools */}
                 <div>
-                  <p className="text-xs text-gray-400 mb-2 font-semibold">B3n00n tools</p>
+                  <p className="text-xs text-gray-400 mb-2 font-semibold">Combatica tools</p>
                   <div className="space-y-2">
                     <Button
                       variant="outline"
@@ -341,16 +336,21 @@ export function CommandPanel({
                       variant="outline"
                       size="sm"
                       className="w-full justify-start"
-                      onClick={() =>
-                        onHandleCommand(
-                          () => DeviceService.getInstalledApps(selectedIds),
-                          'Get Apps'
-                        )
-                      }
+                      onClick={() => onOpenAppListDialog('uninstall')}
                       disabled={loading}
                     >
-                      <List className="h-4 w-4 mr-2" />
-                      Get installed apps
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Uninstall app
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full justify-start"
+                      onClick={onOpenInstallApkDialog}
+                      disabled={loading}
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Install APK
                     </Button>
                     <Button
                       variant="outline"
