@@ -1,4 +1,5 @@
 mod config;
+mod db;
 mod models;
 mod routes;
 mod services;
@@ -19,6 +20,8 @@ async fn main() -> anyhow::Result<()> {
         .init();
 
     let config = Config::from_env()?;
+
+    let _pool = db::create_pool(&config.database.url).await?;
 
     let app = routes::create_router()
         .layer(CorsLayer::permissive())
