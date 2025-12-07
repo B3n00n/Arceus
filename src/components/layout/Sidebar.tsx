@@ -9,6 +9,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { useUIStore } from '@/stores/uiStore';
+import { useEffect, useState } from 'react';
+import { getVersion } from '@tauri-apps/api/app';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -20,6 +22,11 @@ const navigation = [
 export function Sidebar() {
   const location = useLocation();
   const { sidebarCollapsed, toggleSidebar } = useUIStore();
+  const [version, setVersion] = useState<string>('');
+
+  useEffect(() => {
+    getVersion().then(setVersion);
+  }, []);
 
   return (
     <aside
@@ -81,9 +88,9 @@ export function Sidebar() {
             'flex items-center justify-center',
             sidebarCollapsed && 'flex-col gap-1'
           )}>
-            {!sidebarCollapsed && (
-              <span className="text-sm font-medium text-white whitespace-nowrap overflow-hidden">Arkeus v0.2.8</span>
-            ) }
+            {!sidebarCollapsed && version && (
+              <span className="text-sm font-medium text-white whitespace-nowrap overflow-hidden">Arkeus v{version}</span>
+            )}
           </div>
         </div>
       </div>
