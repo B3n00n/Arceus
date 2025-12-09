@@ -57,3 +57,13 @@ impl Default for AppConfig {
     }
 }
 
+// TODO: later move to server for authorization
+pub const CLIENT_APK_METADATA_URL: &str =
+    "https://storage.googleapis.com/combatica_test_bucket/Snorlax.json";
+
+pub const CLIENT_APK_DOWNLOAD_URL: &str =
+    "https://storage.googleapis.com/combatica_test_bucket/Snorlax.apk";
+
+pub const CLIENT_APK_FILENAME: &str = "Snorlax.apk";
+pub const CLIENT_METADATA_FILENAME: &str = "client_metadata.json";
+
