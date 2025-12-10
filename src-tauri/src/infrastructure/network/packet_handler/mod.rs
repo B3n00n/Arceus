@@ -33,12 +33,16 @@ impl PacketHandlerRegistry {
             handlers: std::collections::HashMap::new(),
         };
 
+        registry.register(Arc::new(VersionCheckHandler::new(
+            session_manager.clone(),
+            client_apk_service,
+        )));
+
         registry.register(Arc::new(DeviceConnectedHandler::new(
             device_repo.clone(),
             device_name_repo.clone(),
             event_bus.clone(),
             session_manager.clone(),
-            client_apk_service,
         )));
         registry.register(Arc::new(HeartbeatHandler::new()));
         registry.register(Arc::new(BatteryStatusHandler::new(

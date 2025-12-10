@@ -7,7 +7,6 @@ export interface DeviceInfo {
   connectedAt: string;
   lastSeen: string;
   runningApp: string | null;
-  updateAvailable: boolean;
 }
 
 export interface BatteryInfo {

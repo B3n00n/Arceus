@@ -3,13 +3,14 @@
 /// Wire format: [Opcode: u8][Length: u16 BE][Payload]
 
 // =============================================================================
-// CLIENT → SERVER (Client-initiated) - 0x01-0x05
+// CLIENT → SERVER (Client-initiated) - 0x01-0x07
 // =============================================================================
 
 pub const DEVICE_CONNECTED: u8 = 0x01;
 pub const HEARTBEAT: u8 = 0x02;
 pub const BATTERY_STATUS: u8 = 0x03;
 pub const VOLUME_STATUS: u8 = 0x04;
+pub const VERSION_CHECK: u8 = 0x05;
 pub const FOREGROUND_APP_CHANGED: u8 = 0x06;
 
 // =============================================================================
@@ -29,13 +30,14 @@ pub const APK_DOWNLOAD_PROGRESS: u8 = 0x19;
 pub const APK_INSTALL_PROGRESS: u8 = 0x1A;
 
 // =============================================================================
-// SERVER → CLIENT (Commands from server) - 0x40-0x4C
+// SERVER → CLIENT (Commands from server) - 0x40-0x50
 // =============================================================================
 
 pub const LAUNCH_APP: u8 = 0x40;
 pub const EXECUTE_SHELL: u8 = 0x41;
 pub const REQUEST_BATTERY: u8 = 0x42;
 pub const REQUEST_INSTALLED_APPS: u8 = 0x43;
+pub const VERSION_OK: u8 = 0x44;
 pub const PING: u8 = 0x45;
 pub const INSTALL_APK: u8 = 0x46;
 pub const SHUTDOWN: u8 = 0x48;

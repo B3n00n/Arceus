@@ -1,8 +1,8 @@
 /// Connection Handler
 /// Manages device lifecycle for a single connection.
-use crate::app::{error::NetworkError, EventBus, Result};
-use crate::domain::models::{Device, DeviceId, Serial};
-use crate::domain::repositories::{DeviceNameRepository, DeviceRepository};
+use crate::app::{EventBus, Result};
+use crate::domain::models::DeviceId;
+use crate::domain::repositories::DeviceRepository;
 use crate::infrastructure::network::device_session::DeviceSession;
 use crate::infrastructure::network::device_session_manager::DeviceSessionManager;
 use crate::infrastructure::network::packet_handler::PacketHandlerRegistry;
@@ -15,7 +15,6 @@ use tokio::time::timeout;
 /// Handles the lifecycle of a device connection
 pub struct ConnectionHandler {
     device_repo: Arc<dyn DeviceRepository>,
-    device_name_repo: Arc<dyn DeviceNameRepository>,
     event_bus: Arc<EventBus>,
     packet_handler: Arc<PacketHandlerRegistry>,
     session_manager: Arc<DeviceSessionManager>,
@@ -25,7 +24,6 @@ pub struct ConnectionHandler {
 impl ConnectionHandler {
     pub fn new(
         device_repo: Arc<dyn DeviceRepository>,
-        device_name_repo: Arc<dyn DeviceNameRepository>,
         event_bus: Arc<EventBus>,
         packet_handler: Arc<PacketHandlerRegistry>,
         session_manager: Arc<DeviceSessionManager>,
@@ -33,7 +31,6 @@ impl ConnectionHandler {
     ) -> Self {
         Self {
             device_repo,
-            device_name_repo,
             event_bus,
             packet_handler,
             session_manager,
@@ -52,14 +49,14 @@ impl ConnectionHandler {
 
         tracing::info!("New connection established");
 
-        // Create device ID and register
+        // Create device ID and session only (no device yet)
+        // Device will be created when DEVICE_CONNECTED packet is received
         let device_id = DeviceId::new();
-        let (device, session) = self.register_device(device_id, stream, addr).await?;
+        let session = self.register_session(device_id, stream, addr).await?;
 
         tracing::debug!(
             device_id = %device_id,
-            serial = %device.serial().as_str(),
-            "Device registered"
+            "Session registered - awaiting VERSION_CHECK"
         );
 
         // Run message loop
@@ -73,35 +70,17 @@ impl ConnectionHandler {
         result
     }
 
-    async fn register_device(
+    /// Register a session without creating a device
+    /// Device will be created when DEVICE_CONNECTED packet is received
+    async fn register_session(
         &self,
         device_id: DeviceId,
         stream: tokio::net::TcpStream,
         addr: SocketAddr,
-    ) -> Result<(Device, Arc<DeviceSession>)> {
-        let serial = self.generate_serial_from_addr(&addr)?;
-
+    ) -> Result<Arc<DeviceSession>> {
         let session = Arc::new(DeviceSession::new(stream, device_id, addr));
-
         self.session_manager.add_session(device_id, session.clone());
-
-        let device = Device::new(
-            device_id,
-            serial.clone(),
-            "Unknown".to_string(),
-            "Unknown".to_string(),
-        );
-
-        let custom_name = self.device_name_repo.get_name(&serial).await.ok().flatten();
-        let device = if let Some(name) = custom_name {
-            device.with_custom_name(Some(name))
-        } else {
-            device
-        };
-
-        self.device_repo.save(device.clone()).await?;
-
-        Ok((device, session))
+        Ok(session)
     }
 
     async fn message_loop(
@@ -198,22 +177,5 @@ impl ConnectionHandler {
         }
 
         tracing::debug!(device_id = %device_id, "Device removed");
-    }
-
-    /// Generate a temporary serial number from socket address
-    /// This will be replaced when the device sends its actual info
-    fn generate_serial_from_addr(&self, addr: &SocketAddr) -> Result<Serial> {
-        let serial_str = format!(
-            "{:02X}:{:02X}:{:02X}:{:02X}:{:02X}:{:02X}",
-            addr.ip().to_string().bytes().nth(0).unwrap_or(0),
-            addr.ip().to_string().bytes().nth(1).unwrap_or(0),
-            addr.ip().to_string().bytes().nth(2).unwrap_or(0),
-            addr.ip().to_string().bytes().nth(3).unwrap_or(0),
-            (addr.port() >> 8) as u8,
-            (addr.port() & 0xFF) as u8,
-        );
-
-        Serial::new(serial_str)
-            .map_err(|e| NetworkError::ConnectionFailed(format!("Invalid serial: {}", e)).into())
     }
 }

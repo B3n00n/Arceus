@@ -43,7 +43,6 @@ impl TcpServer {
 
         let connection_handler = Arc::new(ConnectionHandler::new(
             device_repo.clone(),
-            device_name_repo.clone(),
             event_bus.clone(),
             packet_handler,
             session_manager.clone(),

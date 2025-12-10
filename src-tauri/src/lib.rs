@@ -170,7 +170,6 @@ pub fn run() {
             configure_device,
             clear_wifi_credentials,
             display_message,
-            update_client_app,
             check_and_update_client_apk,
             list_apks,
             add_apk,
