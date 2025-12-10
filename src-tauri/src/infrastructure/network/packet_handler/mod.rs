@@ -27,6 +27,7 @@ impl PacketHandlerRegistry {
         device_name_repo: Arc<dyn crate::domain::repositories::DeviceNameRepository>,
         event_bus: Arc<crate::app::EventBus>,
         session_manager: Arc<crate::infrastructure::network::device_session_manager::DeviceSessionManager>,
+        client_apk_service: Arc<crate::application::services::ClientApkService>,
     ) -> Self {
         let mut registry = Self {
             handlers: std::collections::HashMap::new(),
@@ -37,6 +38,7 @@ impl PacketHandlerRegistry {
             device_name_repo.clone(),
             event_bus.clone(),
             session_manager.clone(),
+            client_apk_service,
         )));
         registry.register(Arc::new(HeartbeatHandler::new()));
         registry.register(Arc::new(BatteryStatusHandler::new(

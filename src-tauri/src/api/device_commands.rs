@@ -1,6 +1,6 @@
 use crate::api::helpers::execute_batch_command;
 use crate::application::dto::{BatchResultDto, DeviceStateDto};
-use crate::application::services::DeviceApplicationService;
+use crate::application::services::{ClientApkService, DeviceApplicationService};
 use crate::domain::commands::{
     ClearWifiCredentialsCommand, CloseAllAppsCommand, ConfigureDeviceCommand,
     DisplayMessageCommand, ExecuteShellCommand, GetInstalledAppsCommand, GetVolumeCommand,
@@ -266,4 +266,40 @@ pub async fn display_message(
         DisplayMessageCommand::new(message),
     )
     .await
+}
+
+/// Update the client app on a specific device
+#[tauri::command]
+pub async fn update_client_app(
+    device_id: String,
+    device_service: State<'_, Arc<DeviceApplicationService>>,
+    client_apk_service: State<'_, Arc<ClientApkService>>,
+) -> Result<BatchResultDto, String> {
+    let uuid = Uuid::parse_str(&device_id)
+        .map_err(|e| format!("Invalid device ID: {}", e))?;
+    let device_id = DeviceId::from_uuid(uuid);
+
+    // Get the APK download URL
+    let apk_url = client_apk_service.get_download_url();
+
+    // Send the install command
+    let command = InstallApkCommand::new(apk_url);
+
+    let result = device_service
+        .execute_command_batch(vec![device_id], Arc::new(command))
+        .await;
+
+    Ok(result.into())
+}
+
+/// Check for client APK updates and download if available
+/// Returns true if an update was downloaded, false if already up to date
+#[tauri::command]
+pub async fn check_and_update_client_apk(
+    client_apk_service: State<'_, Arc<ClientApkService>>,
+) -> Result<bool, String> {
+    client_apk_service
+        .check_and_download_if_needed()
+        .await
+        .map_err(|e| format!("Failed to check/update client APK: {}", e))
 }

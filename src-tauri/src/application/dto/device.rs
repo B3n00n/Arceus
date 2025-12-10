@@ -18,6 +18,7 @@ pub struct DeviceInfoDto {
     pub connected_at: DateTime<Utc>,
     pub custom_name: Option<String>,
     pub running_app: Option<String>,
+    pub update_available: bool,
 }
 
 /// Complete device state DTO for frontend
@@ -40,6 +41,7 @@ impl From<&Arc<Device>> for DeviceStateDto {
             connected_at: device.connected_at(),
             custom_name: device.custom_name().map(|s| s.to_string()),
             running_app: device.running_app().map(|s| s.to_string()),
+            update_available: device.update_available(),
         };
 
         let battery = device.battery().map(|b| BatteryInfoDto {

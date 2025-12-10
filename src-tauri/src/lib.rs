@@ -8,11 +8,13 @@ mod net;
 use api::*;
 use app::{AppConfig, AppState, EventBus, ServerManager, setup_signal_handlers};
 use application::services::{
-    ApkApplicationService, BatteryMonitor, DeviceApplicationService,
-    GameApplicationService, update_service::create_update_service
+    ApkApplicationService, BatteryMonitor, ClientApkService,
+    DeviceApplicationService, GameApplicationService,
+    update_service::create_update_service,
 };
 use infrastructure::repositories::{
-    FsApkRepository, InMemoryDeviceRepository, SledDeviceNameRepository
+    FsApkRepository, FsClientApkRepository, InMemoryDeviceRepository,
+    SledDeviceNameRepository,
 };
 use infrastructure::network::TcpServer;
 use std::sync::Arc;
@@ -75,11 +77,22 @@ pub fn run() {
                 base_url,
             ));
 
+            // Initialize client APK repository and service
+            let client_apk_repo = Arc::new(FsClientApkRepository::new(
+                config.apk_directory.clone(),
+            ));
+            let client_apk_service = Arc::new(ClientApkService::new(
+                client_apk_repo.clone() as Arc<dyn crate::domain::repositories::ClientApkRepository>,
+                http_host.clone(),
+                config.server.http_port,
+            ));
+
             let (tcp_server, _, session_manager) = TcpServer::new(
                 config.server.clone(),
                 device_repo.clone(),
                 device_name_repo.clone(),
                 event_bus.clone(),
+                client_apk_service.clone(),
             );
             let tcp_server = Arc::new(tcp_server);
 
@@ -115,6 +128,7 @@ pub fn run() {
             app.manage(device_service);
             app.manage(apk_service);
             app.manage(game_service);
+            app.manage(client_apk_service.clone());
             app.manage(app_state.clone());
             app.manage(server_manager);
 
@@ -156,6 +170,8 @@ pub fn run() {
             configure_device,
             clear_wifi_credentials,
             display_message,
+            update_client_app,
+            check_and_update_client_apk,
             list_apks,
             add_apk,
             remove_apk,

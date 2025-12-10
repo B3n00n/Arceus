@@ -2,6 +2,7 @@
 
 use crate::app::EventBus;
 use crate::application::dto::DeviceStateDto;
+use crate::application::services::ClientApkService;
 use crate::domain::models::{Device, DeviceId, Serial};
 use crate::domain::repositories::{DeviceNameRepository, DeviceRepository};
 use crate::infrastructure::network::device_session_manager::DeviceSessionManager;
@@ -20,6 +21,7 @@ pub struct DeviceConnectedHandler {
     device_name_repo: Arc<dyn DeviceNameRepository>,
     event_bus: Arc<EventBus>,
     session_manager: Arc<DeviceSessionManager>,
+    client_apk_service: Arc<ClientApkService>,
 }
 
 impl DeviceConnectedHandler {
@@ -28,12 +30,14 @@ impl DeviceConnectedHandler {
         device_name_repo: Arc<dyn DeviceNameRepository>,
         event_bus: Arc<EventBus>,
         session_manager: Arc<DeviceSessionManager>,
+        client_apk_service: Arc<ClientApkService>,
     ) -> Self {
         Self {
             device_repo,
             device_name_repo,
             event_bus,
             session_manager,
+            client_apk_service,
         }
     }
 
@@ -106,6 +110,21 @@ impl PacketHandler for DeviceConnectedHandler {
             serial = %serial.as_str(),
             "Device connected"
         );
+
+        // Check if client needs update and mark device accordingly
+        let version_str = device.version();
+        let update_available = self.client_apk_service.should_update_client(version_str).await;
+
+        if update_available {
+            tracing::info!(
+                device_id = %device_id,
+                current_version = %version_str,
+                "Client update available (manual update required)"
+            );
+        }
+
+        let device = device.with_update_available(update_available);
+        self.device_repo.save(device.clone()).await?;
 
         // Emit DeviceConnected event to frontend
         let device_state = DeviceStateDto::from(&Arc::new(device.clone()));

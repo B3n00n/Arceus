@@ -146,4 +146,10 @@ export class DeviceService {
       message
     });
   }
+
+  static async updateClientApp(deviceId: string): Promise<void> {
+    await invoke("update_client_app", {
+      deviceId
+    });
+  }
 }

@@ -27,6 +27,8 @@ pub struct Device {
     volume: Option<Volume>,
     /// Currently running foreground application
     running_app: Option<String>,
+    /// Whether a client app update is available
+    update_available: bool,
 }
 
 impl Device {
@@ -43,6 +45,7 @@ impl Device {
             battery: None,
             volume: None,
             running_app: None,
+            update_available: false,
         }
     }
 
@@ -82,9 +85,19 @@ impl Device {
         &self.version
     }
 
+    pub fn update_available(&self) -> bool {
+        self.update_available
+    }
+
     /// Update the last seen timestamp (called on heartbeat)
     pub fn update_last_seen(mut self) -> Self {
         self.last_seen = Utc::now();
+        self
+    }
+
+    /// Mark whether an update is available for this device
+    pub fn with_update_available(mut self, update_available: bool) -> Self {
+        self.update_available = update_available;
         self
     }
 

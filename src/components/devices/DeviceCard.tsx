@@ -20,12 +20,20 @@ export function DeviceCard({ device, isSelected, onToggle }: DeviceCardProps) {
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState(device.info.customName || '');
   const [isSavingName, setIsSavingName] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const setDevices = useDeviceStore((state) => state.setDevices);
 
   useEffect(() => {
     setEditedName(device.info.customName || '');
   }, [device.info.customName]);
+
+  useEffect(() => {
+    // Reset updating state when update is no longer available
+    if (!device.info.updateAvailable) {
+      setIsUpdating(false);
+    }
+  }, [device.info.updateAvailable]);
 
   useEffect(() => {
     if (!isEditingName) return;
@@ -61,6 +69,19 @@ export function DeviceCard({ device, isSelected, onToggle }: DeviceCardProps) {
   const handleCancelEdit = () => {
     setEditedName(device.info.customName || '');
     setIsEditingName(false);
+  };
+
+  const handleUpdateClient = async () => {
+    if (isUpdating) return;
+
+    setIsUpdating(true);
+    try {
+      await DeviceService.updateClientApp(device.info.id);
+      toast.success('Client update initiated - device will install the new version');
+    } catch (error) {
+      toast.error(`Failed to update client: ${error}`);
+      setIsUpdating(false);
+    }
   };
 
   return (
@@ -124,10 +145,21 @@ export function DeviceCard({ device, isSelected, onToggle }: DeviceCardProps) {
       </div>
 
       {/* Version */}
-      <div className="flex-[1.5] min-w-[7rem] flex justify-start items-center px-2">
+      <div className="flex-[1.5] min-w-[7rem] flex flex-col justify-center items-start px-2 gap-1">
         <div className="text-sm truncate">
-          {device.info.version}
+          {isUpdating ? 'Updating...' : device.info.version}
         </div>
+        {device.info.updateAvailable && !isUpdating && (
+          <div
+            onClick={(e) => {
+              e.stopPropagation();
+              handleUpdateClient();
+            }}
+            className="cursor-pointer border-2 border-gray-600/50 bg-transparent text-gray-300 hover:bg-[#7289da]/20 hover:border-[#7289da] hover:text-white rounded-md px-2 py-0.5 text-xs font-medium transition-colors"
+          >
+            Update
+          </div>
+        )}
       </div>
 
       {/* Volume */}

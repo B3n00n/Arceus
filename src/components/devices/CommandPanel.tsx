@@ -172,11 +172,11 @@ export function CommandPanel({
                   <div className="space-y-2">
                     {/* Set Volume */}
                     <div className="transition-all duration-300 ease-in-out">
-                      <button
-                        onClick={() => setIsVolumeExpanded((prev) => !prev)}
-                        disabled={loading}
+                      <div
+                        onClick={() => !loading && setIsVolumeExpanded((prev) => !prev)}
                         className={cn(
-                          'w-full border-2 bg-transparent cursor-pointer',
+                          'w-full border-2 bg-transparent',
+                          loading ? 'cursor-not-allowed opacity-50' : 'cursor-pointer',
                           'rounded-md px-3 py-2 text-xs',
                           'hover:bg-[#7289da]/20 hover:border-[#7289da] hover:text-white',
                           isVolumeExpanded
@@ -237,7 +237,7 @@ export function CommandPanel({
                             </Button>
                           </div>
                         </div>
-                      </button>
+                      </div>
                     </div>
 
                     {/* Restart device */}

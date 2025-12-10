@@ -27,6 +27,7 @@ impl TcpServer {
         device_repo: Arc<dyn DeviceRepository>,
         device_name_repo: Arc<dyn DeviceNameRepository>,
         event_bus: Arc<EventBus>,
+        client_apk_service: Arc<crate::application::services::ClientApkService>,
     ) -> (Self, broadcast::Receiver<()>, Arc<DeviceSessionManager>) {
         let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
 
@@ -37,6 +38,7 @@ impl TcpServer {
             device_name_repo.clone(),
             event_bus.clone(),
             session_manager.clone(),
+            client_apk_service,
         ));
 
         let connection_handler = Arc::new(ConnectionHandler::new(

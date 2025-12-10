@@ -21,25 +21,40 @@ export function UpdateWindow() {
         if (status.type === 'UpdateAvailable' && status.data) {
           setStatus(`Update available: ${status.data.version}`);
           await downloadAndInstall();
-        } else if (status.type === 'NoUpdate') {
-          setStatus('No updates available');
-          setTimeout(() => {
-            invoke('close_updater_and_show_main');
-          }, 1000);
         } else {
-          setStatus('No updates available');
-          setTimeout(() => {
-            invoke('close_updater_and_show_main');
-          }, 1000);
+          setStatus('No server updates available');
+          await checkClientApk();
         }
       } else {
-        setStatus('No updates available');
-        setTimeout(() => {
-          invoke('close_updater_and_show_main');
-        }, 1000);
+        setStatus('No server updates available');
+        await checkClientApk();
       }
     } catch (err) {
       setError('Can not check for updates');
+      setTimeout(() => {
+        invoke('close_updater_and_show_main');
+      }, 2000);
+    }
+  };
+
+  const checkClientApk = async () => {
+    try {
+      setStatus('Checking for client APK updates...');
+      setProgress(0);
+
+      const updated = await invoke<boolean>('check_and_update_client_apk');
+
+      if (updated) {
+        setStatus('Client APK updated successfully');
+      } else {
+        setStatus('Client APK is up to date');
+      }
+
+      setTimeout(() => {
+        invoke('close_updater_and_show_main');
+      }, 1000);
+    } catch (err) {
+      setError('Failed to check client APK updates');
       setTimeout(() => {
         invoke('close_updater_and_show_main');
       }, 2000);
@@ -59,7 +74,7 @@ export function UpdateWindow() {
       setStatus('Restarting application...');
       await relaunch();
     } catch (err) {
-      setError('Can not check for updates');
+      setError('Failed to download/install update');
       setTimeout(() => {
         invoke('close_updater_and_show_main');
       }, 2000);
