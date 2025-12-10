@@ -47,6 +47,9 @@ impl ClientApkRepository for FsClientApkRepository {
         let response = self
             .http_client
             .get(CLIENT_APK_METADATA_URL)
+            .header("Cache-Control", "no-cache, no-store, must-revalidate")
+            .header("Pragma", "no-cache")
+            .header("Expires", "0")
             .send()
             .await
             .map_err(|e| ClientApkError::Network(e.to_string()))?;
