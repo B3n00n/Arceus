@@ -1,0 +1,31 @@
+use serde::{Deserialize, Serialize};
+use sqlx::types::chrono::{DateTime, Utc};
+
+/// Arcade entity from database
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct Arcade {
+    pub id: i32,
+    pub name: String,
+    pub api_key: String,
+    pub status: String,
+    pub last_seen_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
+}
+
+/// Response DTO for arcade configuration
+#[derive(Debug, Serialize)]
+pub struct ArcadeConfigResponse {
+    pub id: i32,
+    pub name: String,
+    pub status: String,
+}
+
+impl From<Arcade> for ArcadeConfigResponse {
+    fn from(arcade: Arcade) -> Self {
+        Self {
+            id: arcade.id,
+            name: arcade.name,
+            status: arcade.status,
+        }
+    }
+}
