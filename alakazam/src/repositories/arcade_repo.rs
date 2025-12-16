@@ -10,14 +10,14 @@ impl ArcadeRepository {
         Self { pool }
     }
 
-    /// Find arcade by API key
-    pub async fn find_by_api_key(&self, api_key: &str) -> Result<Option<Arcade>> {
+    /// Find arcade by MAC address
+    pub async fn find_by_mac_address(&self, mac_address: &str) -> Result<Option<Arcade>> {
         let arcade = sqlx::query_as::<_, Arcade>(
-            "SELECT id, name, api_key, status, last_seen_at, created_at
+            "SELECT id, name, mac_address, status, last_seen_at, created_at
              FROM arcades
-             WHERE api_key = $1"
+             WHERE mac_address = $1"
         )
-        .bind(api_key)
+        .bind(mac_address)
         .fetch_optional(&self.pool)
         .await?;
 

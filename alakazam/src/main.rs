@@ -9,7 +9,7 @@ mod services;
 
 use config::Config;
 use repositories::{ArcadeRepository, GameRepository};
-use services::ArcadeService;
+use services::{ArcadeService, GcsService};
 use std::sync::Arc;
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use tracing::info;
@@ -38,11 +38,22 @@ async fn main() -> anyhow::Result<()> {
 
     // Initialize services
     let arcade_service = Arc::new(ArcadeService::new(arcade_repo, game_repo));
+    let gcs_service = Arc::new(
+        GcsService::new(
+            config.gcs.bucket_name.clone(),
+            config.gcs.service_account_path.clone(),
+            config.gcs.signed_url_duration_secs,
+            config.gcs.snorlax_version.clone(),
+        )
+        .await?,
+    );
+
+    info!("GCS service initialized for bucket: {}", config.gcs.bucket_name);
 
     // Build application router
     let app = axum::Router::new()
         .merge(routes::create_router())
-        .nest("/api", api::create_api_router(arcade_service))
+        .nest("/api", api::create_api_router(arcade_service, gcs_service))
         .layer(CorsLayer::permissive())
         .layer(TraceLayer::new_for_http());
 

@@ -1,6 +1,6 @@
 use crate::{
     error::{AppError, Result},
-    models::{ArcadeConfigResponse, GameAssignmentResponse, VersionInfo},
+    models::{ArcadeConfigResponse, GameAssignmentResponse},
     repositories::{ArcadeRepository, GameRepository},
 };
 
@@ -18,13 +18,13 @@ impl ArcadeService {
     }
 
     /// Authenticate and get arcade configuration
-    pub async fn get_arcade_config(&self, api_key: &str) -> Result<ArcadeConfigResponse> {
-        // Find arcade by API key
+    pub async fn get_arcade_config(&self, mac_address: &str) -> Result<ArcadeConfigResponse> {
+        // Find arcade by MAC address
         let arcade = self
             .arcade_repo
-            .find_by_api_key(api_key)
+            .find_by_mac_address(mac_address)
             .await?
-            .ok_or(AppError::InvalidApiKey)?;
+            .ok_or(AppError::InvalidMacAddress)?;
 
         // Update last seen
         self.arcade_repo.update_last_seen(arcade.id).await?;
@@ -33,13 +33,13 @@ impl ArcadeService {
     }
 
     /// Get all game assignments for an arcade
-    pub async fn get_arcade_games(&self, api_key: &str) -> Result<Vec<GameAssignmentResponse>> {
+    pub async fn get_arcade_games(&self, mac_address: &str) -> Result<Vec<GameAssignmentResponse>> {
         // Authenticate arcade
         let arcade = self
             .arcade_repo
-            .find_by_api_key(api_key)
+            .find_by_mac_address(mac_address)
             .await?
-            .ok_or(AppError::InvalidApiKey)?;
+            .ok_or(AppError::InvalidMacAddress)?;
 
         // Update last seen
         self.arcade_repo.update_last_seen(arcade.id).await?;
@@ -89,16 +89,16 @@ impl ArcadeService {
     /// Update current version status for a game
     pub async fn update_game_status(
         &self,
-        api_key: &str,
+        mac_address: &str,
         game_id: i32,
         current_version_id: Option<i32>,
     ) -> Result<()> {
         // Authenticate arcade
         let arcade = self
             .arcade_repo
-            .find_by_api_key(api_key)
+            .find_by_mac_address(mac_address)
             .await?
-            .ok_or(AppError::InvalidApiKey)?;
+            .ok_or(AppError::InvalidMacAddress)?;
 
         // Verify the version exists if provided
         if let Some(version_id) = current_version_id {

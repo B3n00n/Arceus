@@ -13,8 +13,8 @@ pub enum AppError {
     #[error("Arcade not found")]
     ArcadeNotFound,
 
-    #[error("Invalid API key")]
-    InvalidApiKey,
+    #[error("Invalid MAC address")]
+    InvalidMacAddress,
 
     #[error("Game not found")]
     GameNotFound,
@@ -37,7 +37,7 @@ impl IntoResponse for AppError {
                 (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error")
             }
             AppError::ArcadeNotFound => (StatusCode::NOT_FOUND, "Arcade not found"),
-            AppError::InvalidApiKey => (StatusCode::UNAUTHORIZED, "Invalid API key"),
+            AppError::InvalidMacAddress => (StatusCode::UNAUTHORIZED, "Invalid MAC address"),
             AppError::GameNotFound => (StatusCode::NOT_FOUND, "Game not found"),
             AppError::GameVersionNotFound => (StatusCode::NOT_FOUND, "Game version not found"),
             AppError::NoAssignment => (StatusCode::NOT_FOUND, "No assignment found"),

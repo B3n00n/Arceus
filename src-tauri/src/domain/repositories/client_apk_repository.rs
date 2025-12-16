@@ -11,9 +11,9 @@ pub trait ClientApkRepository: Send + Sync {
     /// Returns the version information of the latest available APK.
     async fn fetch_remote_metadata(&self) -> Result<RemoteApkMetadata, ClientApkError>;
 
-    /// Download APK from remote source
+    /// Download APK from a signed URL
     /// Returns the raw bytes of the APK file.
-    async fn download_apk(&self) -> Result<Vec<u8>, ClientApkError>;
+    async fn download_apk(&self, download_url: &str) -> Result<Vec<u8>, ClientApkError>;
 
     /// Save APK to local storage
     /// Persists the APK data to disk.

@@ -4,7 +4,7 @@
 CREATE TABLE arcades (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
-    api_key VARCHAR(255) UNIQUE NOT NULL,
+    mac_address VARCHAR(17) UNIQUE NOT NULL,
     status VARCHAR(50) DEFAULT 'active',
     last_seen_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT NOW()
@@ -44,6 +44,6 @@ CREATE TABLE arcade_game_assignments (
 );
 
 -- Indexes
-CREATE INDEX idx_arcades_api_key ON arcades(api_key);
+CREATE INDEX idx_arcades_mac_address ON arcades(mac_address);
 CREATE INDEX idx_game_versions_game_id ON game_versions(game_id);
 CREATE INDEX idx_assignments_arcade ON arcade_game_assignments(arcade_id);

@@ -4,29 +4,28 @@ use axum::{
     http::request::Parts,
 };
 
-/// Extractor for API key from X-API-Key header
-pub struct ApiKey(pub String);
+pub struct MacKey(pub String);
 
-impl<S> FromRequestParts<S> for ApiKey
+impl<S> FromRequestParts<S> for MacKey
 where
     S: Send + Sync,
 {
     type Rejection = AppError;
 
     async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
-        let api_key = parts
+        let mac_address = parts
             .headers
-            .get("X-API-Key")
+            .get("X-MAC-Address")
             .and_then(|value| value.to_str().ok())
-            .ok_or(AppError::InvalidApiKey)?;
+            .ok_or(AppError::InvalidMacAddress)?;
 
-        Ok(ApiKey(api_key.to_string()))
+        Ok(MacKey(mac_address.to_string()))
     }
 }
 
 // Allow extracting the inner String directly
-impl From<ApiKey> for String {
-    fn from(key: ApiKey) -> Self {
+impl From<MacKey> for String {
+    fn from(key: MacKey) -> Self {
         key.0
     }
 }

@@ -25,12 +25,16 @@ impl ClientApkMetadata {
     }
 }
 
-/// Metadata fetched from remote storage (e.g., GCS)
+/// Response from Alakazam server for Snorlax APK download
 ///
-/// This represents the version information of the latest
-/// available client APK stored in cloud storage.
+/// This represents the signed download URL, version, and expiration
+/// received from the Alakazam central server.
 #[derive(Debug, Deserialize)]
 pub struct RemoteApkMetadata {
-    /// Semantic version of the latest available 
+    /// Signed download URL for the APK (from GCS via Alakazam)
+    pub download_url: String,
+    /// Expiration time of the signed URL
+    pub expires_at: DateTime<Utc>,
+    /// Current version of the Snorlax APK
     pub version: String,
 }

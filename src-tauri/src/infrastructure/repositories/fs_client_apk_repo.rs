@@ -9,8 +9,8 @@ use reqwest::Client;
 use std::path::PathBuf;
 
 use crate::app::config::{
-    CLIENT_APK_DOWNLOAD_URL, CLIENT_APK_FILENAME, CLIENT_APK_METADATA_URL,
-    CLIENT_METADATA_FILENAME,
+    get_mac_address, ALAKAZAM_BASE_URL, CLIENT_APK_FILENAME, CLIENT_METADATA_FILENAME,
+    SNORLAX_APK_ENDPOINT,
 };
 use crate::application::dto::{ClientApkMetadata, RemoteApkMetadata};
 use crate::domain::repositories::{ClientApkError, ClientApkRepository};
@@ -42,11 +42,19 @@ impl FsClientApkRepository {
 #[async_trait]
 impl ClientApkRepository for FsClientApkRepository {
     async fn fetch_remote_metadata(&self) -> Result<RemoteApkMetadata, ClientApkError> {
-        tracing::debug!("Fetching remote APK metadata from {}", CLIENT_APK_METADATA_URL);
+        let url = format!("{}{}", ALAKAZAM_BASE_URL, SNORLAX_APK_ENDPOINT);
+        tracing::debug!("Fetching Snorlax APK info from Alakazam: {}", url);
+
+        // Get MAC address for authentication
+        let mac_address = get_mac_address()
+            .map_err(|e| ClientApkError::Network(format!("Failed to get MAC address: {}", e)))?;
+
+        tracing::info!("Authenticating with MAC address: {}", mac_address);
 
         let response = self
             .http_client
-            .get(CLIENT_APK_METADATA_URL)
+            .get(&url)
+            .header("X-MAC-Address", mac_address)
             .header("Cache-Control", "no-cache, no-store, must-revalidate")
             .header("Pragma", "no-cache")
             .header("Expires", "0")
@@ -56,7 +64,7 @@ impl ClientApkRepository for FsClientApkRepository {
 
         if !response.status().is_success() {
             return Err(ClientApkError::Network(format!(
-                "HTTP {}: Failed to fetch metadata",
+                "HTTP {}: Failed to fetch Snorlax APK info from Alakazam",
                 response.status()
             )));
         }
@@ -66,23 +74,27 @@ impl ClientApkRepository for FsClientApkRepository {
             .await
             .map_err(|e| ClientApkError::InvalidMetadata(e.to_string()))?;
 
-        tracing::debug!("Remote APK version: {}", metadata.version);
+        tracing::debug!(
+            "Snorlax APK version from Alakazam: {}, expires at: {}",
+            metadata.version,
+            metadata.expires_at
+        );
         Ok(metadata)
     }
 
-    async fn download_apk(&self) -> Result<Vec<u8>, ClientApkError> {
-        tracing::info!("Downloading APK from {}", CLIENT_APK_DOWNLOAD_URL);
+    async fn download_apk(&self, download_url: &str) -> Result<Vec<u8>, ClientApkError> {
+        tracing::info!("Downloading APK from signed URL");
 
         let response = self
             .http_client
-            .get(CLIENT_APK_DOWNLOAD_URL)
+            .get(download_url)
             .send()
             .await
             .map_err(|e| ClientApkError::Network(e.to_string()))?;
 
         if !response.status().is_success() {
             return Err(ClientApkError::Network(format!(
-                "HTTP {}: Failed to download APK",
+                "HTTP {}: Failed to download APK from signed URL",
                 response.status()
             )));
         }

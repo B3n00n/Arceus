@@ -57,12 +57,24 @@ impl Default for AppConfig {
     }
 }
 
-// TODO: later move to server for authorization
-pub const CLIENT_APK_METADATA_URL: &str =
-    "https://storage.googleapis.com/combatica_test_bucket/Snorlax.json";
+// Alakazam server configuration
+// TODO: Make these configurable via environment variables or settings file
+pub const ALAKAZAM_BASE_URL: &str = "http://localhost:43571";
 
-pub const CLIENT_APK_DOWNLOAD_URL: &str =
-    "https://storage.googleapis.com/combatica_test_bucket/Snorlax.apk";
+// Alakazam API endpoint for fetching Snorlax APK
+pub const SNORLAX_APK_ENDPOINT: &str = "/api/arcade/snorlax/latest";
+
+/// Get the system's MAC address for authentication with Alakazam
+/// Returns the first valid non-loopback MAC address found
+pub fn get_mac_address() -> Result<String> {
+    use mac_address::get_mac_address;
+
+    let mac = get_mac_address()
+        .map_err(|e| crate::app::error::ArceusError::Config(format!("Failed to get MAC address: {}", e)))?
+        .ok_or_else(|| crate::app::error::ArceusError::Config("No MAC address found".to_string()))?;
+
+    Ok(mac.to_string())
+}
 
 pub const CLIENT_APK_FILENAME: &str = "Snorlax.apk";
 pub const CLIENT_METADATA_FILENAME: &str = "client_metadata.json";
