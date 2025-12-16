@@ -50,11 +50,7 @@ async fn main() -> anyhow::Result<()> {
     let addr = format!("{}:{}", config.server.host, config.server.port);
     let listener = tokio::net::TcpListener::bind(&addr).await?;
 
-    info!("🚀 Alakazam server listening on {}", addr);
-    info!("📡 API endpoints:");
-    info!("   GET  /api/arcade/config");
-    info!("   GET  /api/arcade/games");
-    info!("   POST /api/arcade/games/:game_id/status");
+    info!("Alakazam server listening on {}", addr);
 
     axum::serve(listener, app).await?;
 
