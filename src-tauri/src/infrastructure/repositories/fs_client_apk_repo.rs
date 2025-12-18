@@ -18,7 +18,7 @@ use crate::domain::repositories::{ClientApkError, ClientApkRepository};
 pub struct FsClientApkRepository {
     /// Directory where APK files and metadata are stored
     apk_directory: PathBuf,
-    /// HTTP client for downloading APKs (configured with 5-minute timeout)
+    /// HTTP client for downloading APKs (configured with 1h timeout)
     http_client: Client,
     /// Alakazam server configuration
     alakazam_config: AlakazamConfig,
@@ -29,7 +29,7 @@ impl FsClientApkRepository {
         Self {
             apk_directory,
             http_client: Client::builder()
-                .timeout(std::time::Duration::from_secs(300)) // 5 min timeout for large APK downloads
+                .timeout(std::time::Duration::from_secs(3600)) // 1h timeout for large APK downloads
                 .build()
                 .expect("Failed to create HTTP client"),
             alakazam_config,
