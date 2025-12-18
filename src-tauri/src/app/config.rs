@@ -8,15 +8,17 @@ pub struct AppConfig {
     pub alakazam: AlakazamConfig,
     pub apk_directory: PathBuf,
     pub database_path: PathBuf,
+    pub games_directory: PathBuf,
 }
 
 impl AppConfig {
-    pub fn with_paths(apk_directory: PathBuf, database_path: PathBuf) -> Self {
+    pub fn with_paths(apk_directory: PathBuf, database_path: PathBuf, games_directory: PathBuf) -> Self {
         Self {
             server: ServerConfig::default(),
             alakazam: AlakazamConfig::default(),
             apk_directory,
             database_path,
+            games_directory,
         }
     }
 
@@ -56,6 +58,7 @@ impl Default for AppConfig {
             alakazam: AlakazamConfig::default(),
             apk_directory: PathBuf::from("apks"),
             database_path: PathBuf::from("arceus.db"),
+            games_directory: PathBuf::from("C:/Combatica"),
         }
     }
 }

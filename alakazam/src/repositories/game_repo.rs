@@ -44,7 +44,7 @@ impl GameRepository {
     /// Get game version by ID
     pub async fn get_version_by_id(&self, version_id: i32) -> Result<Option<GameVersion>> {
         let version = sqlx::query_as::<_, GameVersion>(
-            "SELECT id, game_id, version, pc_build_path, quest_apk_path, data_content_path, release_date
+            "SELECT id, game_id, version, gcs_path, release_date
              FROM game_versions
              WHERE id = $1"
         )

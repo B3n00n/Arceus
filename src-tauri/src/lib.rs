@@ -5,6 +5,8 @@ mod domain;
 mod infrastructure;
 mod net;
 
+use std::path::PathBuf;
+
 use api::*;
 use app::{AppConfig, AppState, EventBus, ServerManager, setup_signal_handlers};
 use application::services::{
@@ -49,10 +51,13 @@ pub fn run() {
             let config = AppConfig::with_paths(
                 app_data_dir.join("apks"),
                 app_data_dir.join("arceus.db"),
+                PathBuf::from("C:/Combatica"),
             );
             config.validate().expect("Invalid configuration");
             std::fs::create_dir_all(&config.apk_directory)
                 .expect("Failed to create APK directory");
+            std::fs::create_dir_all(&config.games_directory)
+                .expect("Failed to create games directory");
 
             let event_bus = Arc::new(EventBus::new(app.handle().clone()));
             let device_repo = Arc::new(InMemoryDeviceRepository::new());

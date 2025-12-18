@@ -31,6 +31,16 @@ struct ServiceAccountKey {
     private_key: String,
 }
 
+#[derive(Debug, Deserialize)]
+struct GcsListResponse {
+    items: Option<Vec<GcsObject>>,
+}
+
+#[derive(Debug, Deserialize)]
+struct GcsObject {
+    name: String,
+}
+
 pub struct GcsService {
     bucket_name: String,
     client_email: String,
@@ -123,6 +133,122 @@ impl GcsService {
         );
 
         Ok(url)
+    }
+
+    /// List all files in a GCS folder and generate signed URLs for each
+    /// Returns a list of relative paths and their signed download URLs
+    pub async fn list_and_sign_folder(&self, folder_path: &str) -> Result<Vec<crate::api::handlers::GameFile>> {
+        use reqwest::Client;
+
+        // Get OAuth2 token for GCS API access
+        let token = self.get_access_token().await?;
+
+        // List objects with the folder prefix
+        let list_url = format!(
+            "https://storage.googleapis.com/storage/v1/b/{}/o?prefix={}",
+            self.bucket_name,
+            percent_encoding::utf8_percent_encode(folder_path, &percent_encoding::NON_ALPHANUMERIC)
+        );
+
+        let client = Client::new();
+        let response = client
+            .get(&list_url)
+            .header("Authorization", format!("Bearer {}", token))
+            .send()
+            .await
+            .map_err(|e| AppError::Internal(format!("Failed to list GCS objects: {}", e)))?;
+
+        if !response.status().is_success() {
+            return Err(AppError::Internal(format!(
+                "GCS list failed with status {}: {}",
+                response.status(),
+                response.text().await.unwrap_or_default()
+            )));
+        }
+
+        let list_response: GcsListResponse = response
+            .json()
+            .await
+            .map_err(|e| AppError::Internal(format!("Failed to parse GCS list response: {}", e)))?;
+
+        // Generate signed URLs for each file
+        let mut files = Vec::new();
+        for item in list_response.items.unwrap_or_default() {
+            // Skip directories (objects ending with /)
+            if item.name.ends_with('/') {
+                continue;
+            }
+
+            let download_url = self.generate_signed_download_url(&item.name).await?;
+
+            // Get relative path (remove the folder prefix)
+            let relative_path = item.name
+                .strip_prefix(&format!("{}/", folder_path))
+                .unwrap_or(&item.name)
+                .to_string();
+
+            files.push(crate::api::handlers::GameFile {
+                path: relative_path,
+                download_url,
+            });
+        }
+
+        Ok(files)
+    }
+
+    /// Get OAuth2 access token using service account
+    async fn get_access_token(&self) -> Result<String> {
+        use chrono::Utc;
+        use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
+        use serde::{Deserialize, Serialize};
+
+        #[derive(Debug, Serialize)]
+        struct Claims {
+            iss: String,
+            scope: String,
+            aud: String,
+            exp: i64,
+            iat: i64,
+        }
+
+        let now = Utc::now().timestamp();
+        let claims = Claims {
+            iss: self.client_email.clone(),
+            scope: "https://www.googleapis.com/auth/devstorage.read_only".to_string(),
+            aud: "https://oauth2.googleapis.com/token".to_string(),
+            exp: now + 3600,
+            iat: now,
+        };
+
+        let encoding_key = EncodingKey::from_rsa_pem(self.private_key_pem.as_bytes())
+            .map_err(|e| AppError::Internal(format!("Failed to create encoding key: {}", e)))?;
+
+        let jwt = encode(&Header::new(Algorithm::RS256), &claims, &encoding_key)
+            .map_err(|e| AppError::Internal(format!("Failed to encode JWT: {}", e)))?;
+
+        // Exchange JWT for access token
+        let client = reqwest::Client::new();
+        let response = client
+            .post("https://oauth2.googleapis.com/token")
+            .form(&[
+                ("grant_type", "urn:ietf:params:oauth:grant-type:jwt-bearer"),
+                ("assertion", &jwt),
+            ])
+            .send()
+            .await
+            .map_err(|e| AppError::Internal(format!("Failed to get access token: {}", e)))?;
+
+        #[derive(Deserialize)]
+        struct TokenResponse {
+            access_token: String,
+        }
+
+        let token_response: TokenResponse = response
+            .json()
+            .await
+            .map_err(|e| AppError::Internal(format!("Failed to parse token response: {}", e)))?;
+
+        Ok(token_response.access_token)
     }
 
     /// Sign a string using RSA-SHA256 with the private key

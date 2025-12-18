@@ -15,9 +15,7 @@ pub struct GameVersion {
     pub id: i32,
     pub game_id: i32,
     pub version: String,
-    pub pc_build_path: String,
-    pub quest_apk_path: String,
-    pub data_content_path: String,
+    pub gcs_path: String,
     pub release_date: DateTime<Utc>,
 }
 
@@ -46,9 +44,7 @@ pub struct GameAssignmentResponse {
 pub struct VersionInfo {
     pub version_id: i32,
     pub version: String,
-    pub pc_build_path: String,
-    pub quest_apk_path: String,
-    pub data_content_path: String,
+    pub gcs_path: String,
     pub release_date: DateTime<Utc>,
 }
 
@@ -57,9 +53,7 @@ impl From<GameVersion> for VersionInfo {
         Self {
             version_id: gv.id,
             version: gv.version,
-            pc_build_path: gv.pc_build_path,
-            quest_apk_path: gv.quest_apk_path,
-            data_content_path: gv.data_content_path,
+            gcs_path: gv.gcs_path,
             release_date: gv.release_date,
         }
     }
