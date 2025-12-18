@@ -9,9 +9,9 @@ use reqwest::Client;
 use std::path::PathBuf;
 
 use crate::app::config::{
-    get_mac_address, ALAKAZAM_BASE_URL, CLIENT_APK_FILENAME, CLIENT_METADATA_FILENAME,
-    SNORLAX_APK_ENDPOINT,
+    get_mac_address, CLIENT_APK_FILENAME, CLIENT_METADATA_FILENAME,
 };
+use crate::app::models::AlakazamConfig;
 use crate::application::dto::{ClientApkMetadata, RemoteApkMetadata};
 use crate::domain::repositories::{ClientApkError, ClientApkRepository};
 
@@ -20,16 +20,19 @@ pub struct FsClientApkRepository {
     apk_directory: PathBuf,
     /// HTTP client for downloading APKs (configured with 5-minute timeout)
     http_client: Client,
+    /// Alakazam server configuration
+    alakazam_config: AlakazamConfig,
 }
 
 impl FsClientApkRepository {
-    pub fn new(apk_directory: PathBuf) -> Self {
+    pub fn new(apk_directory: PathBuf, alakazam_config: AlakazamConfig) -> Self {
         Self {
             apk_directory,
             http_client: Client::builder()
                 .timeout(std::time::Duration::from_secs(300)) // 5 min timeout for large APK downloads
                 .build()
                 .expect("Failed to create HTTP client"),
+            alakazam_config,
         }
     }
 
@@ -42,7 +45,10 @@ impl FsClientApkRepository {
 #[async_trait]
 impl ClientApkRepository for FsClientApkRepository {
     async fn fetch_remote_metadata(&self) -> Result<RemoteApkMetadata, ClientApkError> {
-        let url = format!("{}{}", ALAKAZAM_BASE_URL, SNORLAX_APK_ENDPOINT);
+        let url = format!(
+            "{}{}",
+            self.alakazam_config.base_url, self.alakazam_config.snorlax_endpoint
+        );
         tracing::debug!("Fetching Snorlax APK info from Alakazam: {}", url);
 
         // Get MAC address for authentication

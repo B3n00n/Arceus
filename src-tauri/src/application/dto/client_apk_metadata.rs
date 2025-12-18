@@ -9,19 +9,11 @@ use serde::{Deserialize, Serialize};
 pub struct ClientApkMetadata {
     /// Semantic version of the cached APK (e.g., "1.2.0")
     pub version: String,
-    /// Timestamp when the APK was downloaded
-    pub downloaded_at: DateTime<Utc>,
-    /// Source URL the APK was downloaded from
-    pub source_url: String,
 }
 
 impl ClientApkMetadata {
-    pub fn new(version: String, source_url: String) -> Self {
-        Self {
-            version,
-            downloaded_at: Utc::now(),
-            source_url,
-        }
+    pub fn new(version: String) -> Self {
+        Self { version }
     }
 }
 

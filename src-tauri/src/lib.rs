@@ -80,6 +80,7 @@ pub fn run() {
             // Initialize client APK repository and service
             let client_apk_repo = Arc::new(FsClientApkRepository::new(
                 config.apk_directory.clone(),
+                config.alakazam.clone(),
             ));
             let client_apk_service = Arc::new(ClientApkService::new(
                 client_apk_repo.clone() as Arc<dyn crate::domain::repositories::ClientApkRepository>,

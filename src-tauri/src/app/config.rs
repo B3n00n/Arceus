@@ -1,10 +1,11 @@
-use crate::app::{error::Result, models::ServerConfig};
+use crate::app::{error::Result, models::{ServerConfig, AlakazamConfig}};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppConfig {
     pub server: ServerConfig,
+    pub alakazam: AlakazamConfig,
     pub apk_directory: PathBuf,
     pub database_path: PathBuf,
 }
@@ -13,6 +14,7 @@ impl AppConfig {
     pub fn with_paths(apk_directory: PathBuf, database_path: PathBuf) -> Self {
         Self {
             server: ServerConfig::default(),
+            alakazam: AlakazamConfig::default(),
             apk_directory,
             database_path,
         }
@@ -51,18 +53,12 @@ impl Default for AppConfig {
     fn default() -> Self {
         Self {
             server: ServerConfig::default(),
+            alakazam: AlakazamConfig::default(),
             apk_directory: PathBuf::from("apks"),
             database_path: PathBuf::from("arceus.db"),
         }
     }
 }
-
-// Alakazam server configuration
-// TODO: Make these configurable via environment variables or settings file
-pub const ALAKAZAM_BASE_URL: &str = "http://localhost:43571";
-
-// Alakazam API endpoint for fetching Snorlax APK
-pub const SNORLAX_APK_ENDPOINT: &str = "/api/arcade/snorlax/latest";
 
 /// Get the system's MAC address for authentication with Alakazam
 /// Returns the first valid non-loopback MAC address found

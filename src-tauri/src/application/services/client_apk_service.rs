@@ -65,8 +65,7 @@ impl ClientApkService {
             self.repository.save_apk(&apk_data).await?;
 
             // Update metadata
-            let new_metadata =
-                ClientApkMetadata::new(remote_metadata.version.clone(), remote_metadata.download_url.clone());
+            let new_metadata = ClientApkMetadata::new(remote_metadata.version.clone());
             self.repository.save_metadata(&new_metadata).await?;
 
             tracing::info!(
