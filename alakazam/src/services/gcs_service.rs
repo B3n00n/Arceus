@@ -92,13 +92,17 @@ impl GcsService {
         let timestamp = now.format("%Y%m%dT%H%M%SZ").to_string();
         let datestamp = now.format("%Y%m%d").to_string();
 
-        // Canonical request components
+        let encoded_path = object_path
+            .split('/')
+            .map(|segment| percent_encode(segment.as_bytes(), QUERY_ENCODE_SET).to_string())
+            .collect::<Vec<_>>()
+            .join("/");
+
         let method = "GET";
-        let canonical_uri = format!("/{}/{}", self.bucket_name, object_path);
+        let canonical_uri = format!("/{}/{}", self.bucket_name, encoded_path);
         let credential_scope = format!("{}/auto/storage/goog4_request", datestamp);
         let credential = format!("{}/{}", self.client_email, credential_scope);
 
-        // Query parameters (must be in this exact order, not sorted)
         let encoded_credential = percent_encode(credential.as_bytes(), QUERY_ENCODE_SET).to_string();
         let canonical_query_string = format!(
             "X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential={}&X-Goog-Date={}&X-Goog-Expires={}&X-Goog-SignedHeaders=host",
@@ -107,17 +111,14 @@ impl GcsService {
             expiration
         );
 
-        // Canonical headers
         let canonical_headers = "host:storage.googleapis.com\n";
         let signed_headers = "host";
 
-        // Create canonical request
         let canonical_request = format!(
             "{}\n{}\n{}\n{}\n{}\nUNSIGNED-PAYLOAD",
             method, canonical_uri, canonical_query_string, canonical_headers, signed_headers
         );
 
-        // Create string to sign
         let canonical_request_hash = format!("{:x}", sha2::Sha256::digest(canonical_request.as_bytes()));
         let string_to_sign = format!(
             "GOOG4-RSA-SHA256\n{}\n{}\n{}",

@@ -1,0 +1,48 @@
+import { invoke } from '@tauri-apps/api/core';
+
+export interface GameStatus {
+  gameId: number;
+  gameName: string;
+  installedVersion: string | null;
+  assignedVersion: string;
+  assignedVersionId: number;
+  updateAvailable: boolean;
+  downloadProgress: DownloadProgress | null;
+}
+
+export interface DownloadProgress {
+  totalFiles: number;
+  downloadedFiles: number;
+  currentFile: string;
+  percentage: number;
+}
+
+export const gameVersionService = {
+  /**
+   * Get list of all games with their version status
+   */
+  async getGameList(): Promise<GameStatus[]> {
+    return await invoke('get_game_list');
+  },
+
+  /**
+   * Download and install a game (or update it)
+   */
+  async downloadGame(gameId: number): Promise<void> {
+    await invoke('download_game', { gameId });
+  },
+
+  /**
+   * Get download progress for a specific game
+   */
+  async getDownloadProgress(gameId: number): Promise<DownloadProgress | null> {
+    return await invoke('get_download_progress', { gameId });
+  },
+
+  /**
+   * Cancel an ongoing download
+   */
+  async cancelDownload(gameId: number): Promise<void> {
+    await invoke('cancel_download', { gameId });
+  },
+};

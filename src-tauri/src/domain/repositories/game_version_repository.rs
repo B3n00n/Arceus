@@ -16,10 +16,12 @@ pub trait GameVersionRepository: Send + Sync {
 
     /// Download all files for a game version
     /// Downloads each file and saves it to the appropriate location
+    /// Calls progress_callback after each file with (downloaded_count, total_count, current_file)
     async fn download_game_files(
         &self,
         game_name: &str,
         files: &[crate::application::dto::GameFile],
+        progress_callback: Box<dyn Fn(usize, usize, String) + Send + Sync>,
     ) -> Result<(), GameVersionError>;
 
     /// Get local metadata for an installed game

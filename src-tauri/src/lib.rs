@@ -11,11 +11,11 @@ use api::*;
 use app::{AppConfig, AppState, EventBus, ServerManager, setup_signal_handlers};
 use application::services::{
     ApkApplicationService, BatteryMonitor, ClientApkService,
-    DeviceApplicationService, GameApplicationService,
+    DeviceApplicationService, GameApplicationService, GameVersionService,
     update_service::create_update_service,
 };
 use infrastructure::repositories::{
-    FsApkRepository, FsClientApkRepository, InMemoryDeviceRepository,
+    FsApkRepository, FsClientApkRepository, FsGameVersionRepository, InMemoryDeviceRepository,
     SledDeviceNameRepository,
 };
 use infrastructure::network::TcpServer;
@@ -115,6 +115,15 @@ pub fn run() {
             let apk_service = Arc::new(ApkApplicationService::new(apk_repo.clone()));
             let game_service = Arc::new(GameApplicationService::new(event_bus.clone()));
 
+            // Initialize game version repository and service
+            let game_version_repo = Arc::new(FsGameVersionRepository::new(
+                config.games_directory.clone(),
+                config.alakazam.clone(),
+            ));
+            let game_version_service = Arc::new(GameVersionService::new(
+                game_version_repo as Arc<dyn crate::domain::repositories::GameVersionRepository>,
+            ));
+
             let battery_interval = std::time::Duration::from_secs(config.server.battery_update_interval);
             let battery_monitor = Arc::new(BatteryMonitor::new(
                 device_repo.clone(),
@@ -135,8 +144,27 @@ pub fn run() {
             app.manage(apk_service);
             app.manage(game_service);
             app.manage(client_apk_service.clone());
+            app.manage(game_version_service.clone());
             app.manage(app_state.clone());
             app.manage(server_manager);
+
+            let game_version_service_startup = game_version_service.clone();
+            tauri::async_runtime::spawn(async move {
+                match game_version_service_startup.check_for_updates().await {
+                    Ok(statuses) => {
+                        let updates: Vec<_> = statuses.iter().filter(|s| s.update_available).collect();
+                        if !updates.is_empty() {
+                            tracing::info!(
+                                "Found {} game(s) with available updates",
+                                updates.len()
+                            );
+                        }
+                    }
+                    Err(e) => {
+                        tracing::error!("Failed to check for game updates: {}", e);
+                    }
+                }
+            });
 
             setup_signal_handlers(app_state.clone());
 
@@ -188,6 +216,10 @@ pub fn run() {
             start_game,
             get_current_game,
             stop_game,
+            get_game_list,
+            download_game,
+            get_download_progress,
+            cancel_download,
         ])
         .build(tauri::generate_context!())
         .expect("Failed to build Tauri application");

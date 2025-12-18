@@ -1,58 +1,13 @@
-import { useState } from "react";
-import { Bell, Rocket } from "lucide-react";
+import { Bell } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { useToastHistoryStore } from "@/stores/toastHistoryStore";
 import { useGameStore } from "@/stores/gameStore";
-import { GameService } from "@/services/gameService";
-import { Button } from "@/components/ui/button";
 import { ToastHistory } from "@/components/ToastHistory";
-import { LaunchAppDialog } from "@/components/dialogs/LaunchAppDialog";
-import { ConfirmationDialog } from "@/components/dialogs/ConfirmationDialog";
 
 export function Header() {
   const { togglePanel, unreadCount } = useToastHistoryStore();
-  const { currentGame, setCurrentGame } = useGameStore();
+  const { currentGame } = useGameStore();
   const location = useLocation();
-
-  const [loading, setLoading] = useState(false);
-  const [showLaunchDialog, setShowLaunchDialog] = useState(false);
-  const [showStopDialog, setShowStopDialog] = useState(false);
-
-  // Example available apps (replace with actual list from backend)
-  const availableApps = [
-    { name: "Combatica Platform", packageName: "com.CombaticaLTD.CombaticaPlatform" },
-    { name: "Sample VR Training", packageName: "com.Example.SampleVR" },
-    { name: "Arena Shooter", packageName: "com.Example.ArenaShooter" },
-  ];
-
-  const handleLaunch = async (
-    app: { name: string; packageName: string },
-    _launchOnClients: boolean
-  ) => {
-    try {
-      setLoading(true);
-      await GameService.startGame({
-        name: app.name,
-        exePath: "C:\\Combatica\\Defense\\Combatica_Defense\\Combatica Platform.exe",
-        contentPath: "C:\\Combatica\\Defense\\ServerData",
-        packageName: app.packageName,
-      });
-      setCurrentGame({ gameName: app.name });
-      setShowLaunchDialog(false);
-    } catch (error) {
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleStop = async () => {
-    try {
-      await GameService.stopGame();
-      setCurrentGame(null);
-      setShowStopDialog(false);
-    } catch (error) {
-    }
-  };
 
   const pathname = location.pathname || "/";
   const title = (() => {
@@ -79,38 +34,14 @@ export function Header() {
           <div className="flex items-center gap-3">
             {/* Game Running Status */}
             {currentGame && (
-              <div className="px-2 py-1.5">
+              <div className="px-3 py-1.5 bg-green-500/20 rounded-lg border border-green-500/30">
                 <span className="text-xs text-gray-300 font-regular">
                   Running:{" "}
-                  <span className="text-xs text-white font-medium">
+                  <span className="text-xs text-green-400 font-medium">
                     {currentGame.gameName}
                   </span>
                 </span>
               </div>
-            )}
-
-            {/* Launch / Stop Buttons */}
-            {currentGame ? (
-              <Button
-                size="sm"
-                variant="danger-outline"
-                onClick={() => setShowStopDialog(true)}
-                disabled={loading}
-                className="flex items-center gap-2"
-              >
-                Stop
-              </Button>
-            ) : (
-              <Button
-                size="sm"
-                variant="default"
-                onClick={() => setShowLaunchDialog(true)}
-                disabled={loading}
-                className="flex items-center gap-2"
-              >
-                <Rocket className="h-4 w-4" />
-                Launch App
-              </Button>
             )}
 
             {/* Notifications */}
@@ -130,32 +61,6 @@ export function Header() {
           </div>
         </div>
       </header>
-
-      {/* Dialogs */}
-      <LaunchAppDialog
-        isOpen={showLaunchDialog}
-        onClose={() => setShowLaunchDialog(false)}
-        availableApps={availableApps}
-        onLaunch={handleLaunch}
-      />
-
-      <ConfirmationDialog
-        isOpen={showStopDialog}
-        onClose={() => setShowStopDialog(false)}
-        onConfirm={handleStop}
-        title="Stop Running App"
-        message={
-          <>
-            Are you sure you want to stop{" "}
-            <span className="text-white font-medium">
-              {currentGame?.gameName || "the current app"}
-            </span>
-            ?
-          </>
-        }
-        confirmText="Stop App"
-        loading={loading}
-      />
 
       <ToastHistory />
     </>
