@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Download, CheckCircle, AlertCircle, Play, Square } from 'lucide-react';
 import { GameStatus } from '../../services/gameVersionService';
 import { Button } from '../ui/button';

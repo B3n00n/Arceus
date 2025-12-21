@@ -103,7 +103,7 @@ const updateDeviceField = (deviceId: string, updater: (device: DeviceState) => D
   }
 };
 
-eventService.subscribe((event) => {
+const unsubscribeDeviceEvents = eventService.subscribe((event) => {
   const store = useDeviceStore.getState();
 
   switch (event.type) {
@@ -161,3 +161,7 @@ eventService.subscribe((event) => {
       break;
   }
 });
+
+export const cleanupDeviceStore = () => {
+  unsubscribeDeviceEvents();
+};

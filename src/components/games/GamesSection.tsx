@@ -99,7 +99,7 @@ export function GamesSection() {
     }
   };
 
-  const handleLaunch = async (gameId: number, gameName: string) => {
+  const handleLaunch = async (_gameId: number, gameName: string) => {
     try {
       await GameService.startGame({
         name: gameName,

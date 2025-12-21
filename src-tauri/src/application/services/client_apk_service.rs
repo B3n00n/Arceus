@@ -41,7 +41,7 @@ impl ClientApkService {
             Some(ref metadata) => Version::parse(&metadata.version)?,
             None => {
                 tracing::info!("No cached APK found");
-                Version::parse("0.0.0").unwrap()
+                Version::new(0, 0, 0)
             }
         };
 

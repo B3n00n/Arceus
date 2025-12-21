@@ -43,27 +43,28 @@ pub fn run() {
             let app_data_dir = app
                 .path()
                 .app_data_dir()
-                .expect("Failed to get app data directory");
+                .map_err(|e| format!("Failed to get app data directory: {}", e))?;
 
             std::fs::create_dir_all(&app_data_dir)
-                .expect("Failed to create app data directory");
+                .map_err(|e| format!("Failed to create app data directory: {}", e))?;
 
             let config = AppConfig::with_paths(
                 app_data_dir.join("apks"),
                 app_data_dir.join("arceus.db"),
                 PathBuf::from("C:/Combatica"),
             );
-            config.validate().expect("Invalid configuration");
+            config.validate()
+                .map_err(|e| format!("Invalid configuration: {}", e))?;
             std::fs::create_dir_all(&config.apk_directory)
-                .expect("Failed to create APK directory");
+                .map_err(|e| format!("Failed to create APK directory at {:?}: {}", config.apk_directory, e))?;
             std::fs::create_dir_all(&config.games_directory)
-                .expect("Failed to create games directory");
+                .map_err(|e| format!("Failed to create games directory at {:?}: {}", config.games_directory, e))?;
 
             let event_bus = Arc::new(EventBus::new(app.handle().clone()));
             let device_repo = Arc::new(InMemoryDeviceRepository::new());
             let device_name_repo = Arc::new(
                 SledDeviceNameRepository::new(&config.database_path)
-                    .expect("Failed to initialize device name repository"),
+                    .map_err(|e| format!("Failed to initialize device name repository at {:?}: {}", config.database_path, e))?,
             );
 
             let http_host = if config.server.tcp_host == "0.0.0.0" {

@@ -27,12 +27,14 @@ pub struct FsGameVersionRepository {
 
 impl FsGameVersionRepository {
     pub fn new(games_directory: PathBuf, alakazam_config: AlakazamConfig) -> Self {
+        let http_client = Client::builder()
+            .timeout(std::time::Duration::from_secs(3600))
+            .build()
+            .expect("Failed to create HTTP client - TLS initialization may have failed");
+
         Self {
             games_directory,
-            http_client: Client::builder()
-                .timeout(std::time::Duration::from_secs(3600))
-                .build()
-                .expect("Failed to create HTTP client"),
+            http_client,
             alakazam_config,
         }
     }

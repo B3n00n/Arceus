@@ -48,9 +48,9 @@ impl GameApplicationService {
     pub async fn start_game(&self, config: GameConfig) -> GameResult<GameState> {
         {
             let current = self.current_game.read();
-            if current.is_some() {
+            if let Some(running) = current.as_ref() {
                 return Err(GameApplicationError::GameAlreadyRunning(
-                    current.as_ref().unwrap().state.config.name.clone(),
+                    running.state.config.name.clone(),
                 ));
             }
         }
@@ -131,12 +131,11 @@ impl GameApplicationService {
 
     pub async fn stop_game(&self) -> GameResult<()> {
         let current = self.current_game.read();
-        if current.is_none() {
-            return Err(GameApplicationError::NoGameRunning);
-        }
+        let running = current.as_ref()
+            .ok_or(GameApplicationError::NoGameRunning)?;
 
-        let game_name = current.as_ref().unwrap().state.config.name.clone();
-        let shutdown_tx = current.as_ref().unwrap().shutdown_tx.clone();
+        let game_name = running.state.config.name.clone();
+        let shutdown_tx = running.shutdown_tx.clone();
 
         tracing::info!(
             game = %game_name,

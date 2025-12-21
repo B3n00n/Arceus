@@ -26,12 +26,14 @@ pub struct FsClientApkRepository {
 
 impl FsClientApkRepository {
     pub fn new(apk_directory: PathBuf, alakazam_config: AlakazamConfig) -> Self {
+        let http_client = Client::builder()
+            .timeout(std::time::Duration::from_secs(3600)) // 1h timeout for large APK downloads
+            .build()
+            .expect("Failed to create HTTP client - TLS initialization may have failed");
+
         Self {
             apk_directory,
-            http_client: Client::builder()
-                .timeout(std::time::Duration::from_secs(3600)) // 1h timeout for large APK downloads
-                .build()
-                .expect("Failed to create HTTP client"),
+            http_client,
             alakazam_config,
         }
     }
