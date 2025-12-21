@@ -74,11 +74,6 @@ impl FsGameVersionRepository {
 
         Ok(files)
     }
-
-    /// Get file size, returns None if file doesn't exist or error occurs
-    async fn get_file_size(&self, path: &PathBuf) -> Option<u64> {
-        fs::metadata(path).await.ok().map(|m| m.len())
-    }
 }
 
 #[async_trait]
