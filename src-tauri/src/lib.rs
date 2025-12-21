@@ -122,6 +122,7 @@ pub fn run() {
             ));
             let game_version_service = Arc::new(GameVersionService::new(
                 game_version_repo as Arc<dyn crate::domain::repositories::GameVersionRepository>,
+                event_bus.clone(),
             ));
 
             let battery_interval = std::time::Duration::from_secs(config.server.battery_update_interval);

@@ -6,6 +6,8 @@ import { useGameStore } from '../../stores/gameStore';
 import { toast } from '../../lib/toast';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { Button } from '../ui/button';
+import { useTauriEvent } from '../../hooks/useTauriEvent';
+import type { ArceusEvent } from '../../types/events.types';
 
 export function GamesSection() {
   const [games, setGames] = useState<GameStatus[]>([]);
@@ -28,33 +30,49 @@ export function GamesSection() {
     }
   };
 
+  // Listen for game download progress events (page-specific state)
+  useTauriEvent<ArceusEvent>('arceus://event', (event) => {
+    if (event.type === 'gameDownloadProgress') {
+      setGames((currentGames) =>
+        currentGames.map((game) =>
+          game.gameId === event.gameId
+            ? {
+                ...game,
+                downloadProgress: {
+                  totalFiles: 0,
+                  downloadedFiles: 0,
+                  currentFile: '',
+                  percentage: event.percentage,
+                },
+              }
+            : game
+        )
+      );
+
+      // When download completes, clear progress and reload to get updated version
+      if (event.percentage >= 100) {
+        setTimeout(() => {
+          setGames((currentGames) =>
+            currentGames.map((game) =>
+              game.gameId === event.gameId
+                ? { ...game, downloadProgress: null }
+                : game
+            )
+          );
+          setUpdatingGameIds((prev) => {
+            const newSet = new Set(prev);
+            newSet.delete(event.gameId);
+            return newSet;
+          });
+          loadGames();
+        }, 2000);
+      }
+    }
+  });
+
   useEffect(() => {
     loadGames();
-
-    // Poll for progress updates every 2 seconds when there are active downloads
-    const interval = setInterval(async () => {
-      if (updatingGameIds.size > 0) {
-        try {
-          const gameList = await gameVersionService.getGameList();
-          setGames(gameList);
-
-          // Check if any downloads completed
-          const newUpdatingIds = new Set(updatingGameIds);
-          for (const gameId of updatingGameIds) {
-            const game = gameList.find((g) => g.gameId === gameId);
-            if (game && !game.downloadProgress) {
-              newUpdatingIds.delete(gameId);
-            }
-          }
-          setUpdatingGameIds(newUpdatingIds);
-        } catch (error) {
-          console.error('Failed to refresh game status:', error);
-        }
-      }
-    }, 2000);
-
-    return () => clearInterval(interval);
-  }, [updatingGameIds]);
+  }, []);
 
   const handleUpdate = async (gameId: number) => {
     try {

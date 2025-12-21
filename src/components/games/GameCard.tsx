@@ -58,19 +58,17 @@ export function GameCard({ game, onUpdate, onLaunch, onStop, isUpdating, isRunni
 
       {/* Download Progress */}
       {isDownloading && game.downloadProgress && (
-        <div className="mb-4">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-sm text-gray-400">
-              {game.downloadProgress.currentFile || 'Downloading...'}
-            </span>
-            <span className="text-sm text-blue-400">
-              {game.downloadProgress.downloadedFiles}/{game.downloadProgress.totalFiles} files
+        <div className="mb-4 bg-gray-900/50 rounded-lg p-4 border border-blue-500/20">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Download className="w-4 h-4 text-blue-400 animate-pulse" />
+              <span className="text-sm font-medium text-blue-400">Downloading</span>
+            </div>
+            <span className="text-lg font-bold text-blue-400">
+              {progress.toFixed(0)}%
             </span>
           </div>
-          <Progress value={progress} className="h-2" />
-          <div className="text-right text-sm text-gray-400 mt-1">
-            {progress.toFixed(0)}%
-          </div>
+          <Progress value={progress} className="h-2.5" />
         </div>
       )}
 

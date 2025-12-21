@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
+use crate::app::EventBus;
 use crate::application::dto::LocalGameMetadata;
 use crate::domain::repositories::{GameVersionError, GameVersionRepository};
 
@@ -31,14 +32,16 @@ pub struct DownloadProgress {
 /// Service for managing game versions
 pub struct GameVersionService {
     repository: Arc<dyn GameVersionRepository>,
+    event_bus: Arc<EventBus>,
     /// Track download progress for each game
     download_progress: Arc<RwLock<std::collections::HashMap<i32, DownloadProgress>>>,
 }
 
 impl GameVersionService {
-    pub fn new(repository: Arc<dyn GameVersionRepository>) -> Self {
+    pub fn new(repository: Arc<dyn GameVersionRepository>, event_bus: Arc<EventBus>) -> Self {
         Self {
             repository,
+            event_bus,
             download_progress: Arc::new(RwLock::new(std::collections::HashMap::new())),
         }
     }
@@ -126,20 +129,36 @@ impl GameVersionService {
 
         // Download files with progress tracking
         let progress_map = Arc::clone(&self.download_progress);
+        let event_bus = Arc::clone(&self.event_bus);
+        let game_name_clone = game_name.clone();
         let progress_callback = Box::new(move |downloaded: usize, total: usize, current_file: String| {
             let progress_map_clone = Arc::clone(&progress_map);
+            let event_bus_clone = Arc::clone(&event_bus);
+            let game_name_clone2 = game_name_clone.clone();
             tauri::async_runtime::spawn(async move {
-                let mut map = progress_map_clone.write().await;
-                if let Some(progress) = map.get_mut(&game_id) {
-                    progress.downloaded_files = downloaded;
-                    progress.total_files = total;
-                    progress.current_file = current_file;
-                    progress.percentage = if total > 0 {
-                        (downloaded as f32 / total as f32) * 100.0
-                    } else {
-                        0.0
-                    };
+                let percentage = if total > 0 {
+                    (downloaded as f32 / total as f32) * 100.0
+                } else {
+                    0.0
+                };
+
+                // Update progress map
+                {
+                    let mut map = progress_map_clone.write().await;
+                    if let Some(progress) = map.get_mut(&game_id) {
+                        progress.downloaded_files = downloaded;
+                        progress.total_files = total;
+                        progress.current_file = current_file.clone();
+                        progress.percentage = percentage;
+                    }
                 }
+
+                // Emit progress event
+                event_bus_clone.game_download_progress(
+                    game_id,
+                    game_name_clone2,
+                    percentage,
+                );
             });
         });
 

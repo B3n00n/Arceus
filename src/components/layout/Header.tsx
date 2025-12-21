@@ -1,12 +1,10 @@
 import { Bell } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { useToastHistoryStore } from "@/stores/toastHistoryStore";
-import { useGameStore } from "@/stores/gameStore";
 import { ToastHistory } from "@/components/ToastHistory";
 
 export function Header() {
   const { togglePanel, unreadCount } = useToastHistoryStore();
-  const { currentGame } = useGameStore();
   const location = useLocation();
 
   const pathname = location.pathname || "/";
@@ -32,18 +30,6 @@ export function Header() {
 
           {/* Right — Controls */}
           <div className="flex items-center gap-3">
-            {/* Game Running Status */}
-            {currentGame && (
-              <div className="px-3 py-1.5 bg-green-500/20 rounded-lg border border-green-500/30">
-                <span className="text-xs text-gray-300 font-regular">
-                  Running:{" "}
-                  <span className="text-xs text-green-400 font-medium">
-                    {currentGame.gameName}
-                  </span>
-                </span>
-              </div>
-            )}
-
             {/* Notifications */}
             <button
               onClick={togglePanel}
