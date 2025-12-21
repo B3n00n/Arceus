@@ -1,4 +1,4 @@
-use crate::application::services::{GameApplicationService, GameVersionService, GameStatus, DownloadProgress};
+use crate::application::services::{GameApplicationService, GameVersionService, GameStatus};
 use crate::domain::models::{GameConfig, PackageName};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -98,15 +98,6 @@ pub async fn download_game(
         .download_and_install_game(game_id)
         .await
         .map_err(|e| format!("Failed to download game: {}", e))
-}
-
-/// Get download progress for a specific game
-#[tauri::command]
-pub async fn get_download_progress(
-    game_id: i32,
-    game_version_service: State<'_, Arc<GameVersionService>>,
-) -> Result<Option<DownloadProgress>, String> {
-    Ok(game_version_service.get_download_progress(game_id).await)
 }
 
 /// Cancel an ongoing download

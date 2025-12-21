@@ -33,15 +33,15 @@ export function GamesSection() {
   // Listen for game download progress events (page-specific state)
   useTauriEvent<ArceusEvent>('arceus://event', (event) => {
     if (event.type === 'gameDownloadProgress') {
-      setGames((currentGames) =>
-        currentGames.map((game) =>
+      setGames((games) =>
+        games.map((game) =>
           game.gameId === event.gameId
             ? {
                 ...game,
                 downloadProgress: {
-                  totalFiles: 0,
-                  downloadedFiles: 0,
-                  currentFile: '',
+                  totalFiles: game.downloadProgress?.totalFiles ?? 0,
+                  downloadedFiles: game.downloadProgress?.downloadedFiles ?? 0,
+                  currentFile: game.downloadProgress?.currentFile ?? '',
                   percentage: event.percentage,
                 },
               }
@@ -52,17 +52,15 @@ export function GamesSection() {
       // When download completes, clear progress and reload to get updated version
       if (event.percentage >= 100) {
         setTimeout(() => {
-          setGames((currentGames) =>
-            currentGames.map((game) =>
-              game.gameId === event.gameId
-                ? { ...game, downloadProgress: null }
-                : game
+          setGames((games) =>
+            games.map((game) =>
+              game.gameId === event.gameId ? { ...game, downloadProgress: null } : game
             )
           );
           setUpdatingGameIds((prev) => {
-            const newSet = new Set(prev);
-            newSet.delete(event.gameId);
-            return newSet;
+            const next = new Set(prev);
+            next.delete(event.gameId);
+            return next;
           });
           loadGames();
         }, 2000);
@@ -75,74 +73,58 @@ export function GamesSection() {
   }, []);
 
   const handleUpdate = async (gameId: number) => {
+    setUpdatingGameIds((prev) => new Set(prev).add(gameId));
+
+    const game = games.find((g) => g.gameId === gameId);
+    if (!game) return;
+
+    toast.info('Download Started', {
+      description: `Downloading ${game.gameName}...`,
+    });
+
     try {
-      setUpdatingGameIds(new Set(updatingGameIds).add(gameId));
-
-      const game = games.find((g) => g.gameId === gameId);
-      toast.info('Download Started', {
-        description: `Downloading ${game?.gameName}...`,
+      await gameVersionService.downloadGame(gameId);
+      toast.success('Installation Complete', {
+        description: `${game.gameName} has been installed successfully`,
       });
-
-      // Start the download (non-blocking)
-      gameVersionService.downloadGame(gameId).then(() => {
-        toast.success('Installation Complete', {
-          description: `${game?.gameName} has been installed successfully`,
-        });
-        loadGames();
-      }).catch((error) => {
-        toast.error('Installation Failed', {
-          description: error.message || 'Failed to install game',
-        });
-        setUpdatingGameIds((prev) => {
-          const newSet = new Set(prev);
-          newSet.delete(gameId);
-          return newSet;
-        });
-      });
+      loadGames();
     } catch (error) {
-      console.error('Failed to start download:', error);
-      toast.error('Error', {
-        description: 'Failed to start game download',
+      const message = error instanceof Error ? error.message : 'Failed to install game';
+      toast.error('Installation Failed', { description: message });
+      setUpdatingGameIds((prev) => {
+        const next = new Set(prev);
+        next.delete(gameId);
+        return next;
       });
     }
   };
 
   const handleLaunch = async (gameId: number, gameName: string) => {
     try {
-      const game = games.find((g) => g.gameId === gameId);
-      if (!game) return;
-
       await GameService.startGame({
         name: gameName,
         exePath: `C:\\Combatica\\${gameName}\\${gameName}\\${gameName}.exe`,
         contentPath: `C:\\Combatica\\${gameName}\\ServerData`,
         packageName: `com.CombaticaLTD.${gameName}`,
       });
-
       setCurrentGame({ gameName });
     } catch (error) {
-      const errorMessage = typeof error === 'string' ? error :
-                          error instanceof Error ? error.message :
-                          'Failed to start the game';
-      toast.error('Launch Failed', {
-        description: errorMessage,
-      });
+      const message = error instanceof Error ? error.message : String(error);
+      toast.error('Launch Failed', { description: message });
     }
   };
 
   const handleStop = async () => {
+    if (!currentGame) return;
+
     try {
       await GameService.stopGame();
-      const gameName = currentGame?.gameName;
+      const { gameName } = currentGame;
       setCurrentGame(null);
-      toast.info('Game Stopped', {
-        description: `${gameName} has been stopped`,
-      });
+      toast.info('Game Stopped', { description: `${gameName} has been stopped` });
     } catch (error) {
-      console.error('Failed to stop game:', error);
-      toast.error('Stop Failed', {
-        description: 'Failed to stop the game',
-      });
+      const message = error instanceof Error ? error.message : 'Failed to stop the game';
+      toast.error('Stop Failed', { description: message });
     }
   };
 

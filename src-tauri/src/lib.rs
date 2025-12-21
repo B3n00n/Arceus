@@ -219,7 +219,6 @@ pub fn run() {
             stop_game,
             get_game_list,
             download_game,
-            get_download_progress,
             cancel_download,
         ])
         .build(tauri::generate_context!())

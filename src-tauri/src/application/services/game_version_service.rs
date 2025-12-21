@@ -130,11 +130,13 @@ impl GameVersionService {
         // Download files with progress tracking
         let progress_map = Arc::clone(&self.download_progress);
         let event_bus = Arc::clone(&self.event_bus);
-        let game_name_clone = game_name.clone();
+        let game_name_for_callback = game_name.clone();
+
         let progress_callback = Box::new(move |downloaded: usize, total: usize, current_file: String| {
-            let progress_map_clone = Arc::clone(&progress_map);
-            let event_bus_clone = Arc::clone(&event_bus);
-            let game_name_clone2 = game_name_clone.clone();
+            let progress_map = Arc::clone(&progress_map);
+            let event_bus = Arc::clone(&event_bus);
+            let game_name = game_name_for_callback.clone();
+
             tauri::async_runtime::spawn(async move {
                 let percentage = if total > 0 {
                     (downloaded as f32 / total as f32) * 100.0
@@ -142,23 +144,19 @@ impl GameVersionService {
                     0.0
                 };
 
-                // Update progress map
+                // Update internal progress tracking
                 {
-                    let mut map = progress_map_clone.write().await;
+                    let mut map = progress_map.write().await;
                     if let Some(progress) = map.get_mut(&game_id) {
                         progress.downloaded_files = downloaded;
                         progress.total_files = total;
-                        progress.current_file = current_file.clone();
+                        progress.current_file = current_file;
                         progress.percentage = percentage;
                     }
                 }
 
-                // Emit progress event
-                event_bus_clone.game_download_progress(
-                    game_id,
-                    game_name_clone2,
-                    percentage,
-                );
+                // Emit progress event to frontend
+                event_bus.game_download_progress(game_id, game_name, percentage);
             });
         });
 
@@ -177,22 +175,14 @@ impl GameVersionService {
             .report_version_status(game_id, Some(version_id))
             .await?;
 
-        // Set progress to complete
-        {
-            let mut progress_map = self.download_progress.write().await;
-            if let Some(progress) = progress_map.get_mut(&game_id) {
-                progress.downloaded_files = total_files;
-                progress.percentage = 100.0;
-                progress.current_file = "Complete".to_string();
-            }
-        }
+        // Emit completion event (100%)
+        self.event_bus.game_download_progress(game_id, game_name.clone(), 100.0);
 
-        // Clear progress after a short delay to let user see completion
-        let progress_map_clear = Arc::clone(&self.download_progress);
+        // Clear progress tracking after delay to allow UI to show completion
+        let progress_map = Arc::clone(&self.download_progress);
         tauri::async_runtime::spawn(async move {
             tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
-            let mut map = progress_map_clear.write().await;
-            map.remove(&game_id);
+            progress_map.write().await.remove(&game_id);
         });
 
         tracing::info!("Successfully installed {} v{}", game_name, metadata.installed_version);
@@ -228,14 +218,7 @@ impl GameVersionService {
 
     /// Cancel an ongoing download
     pub async fn cancel_download(&self, game_id: i32) {
-        let mut progress_map = self.download_progress.write().await;
-        progress_map.remove(&game_id);
+        self.download_progress.write().await.remove(&game_id);
         tracing::info!("Cancelled download for game {}", game_id);
-    }
-
-    /// Get download progress for a specific game
-    pub async fn get_download_progress(&self, game_id: i32) -> Option<DownloadProgress> {
-        let progress_map = self.download_progress.read().await;
-        progress_map.get(&game_id).cloned()
     }
 }
