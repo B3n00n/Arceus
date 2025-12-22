@@ -1,10 +1,16 @@
-import { Bell } from "lucide-react";
+import { Bell, Wifi, WifiOff, RefreshCw } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { useToastHistoryStore } from "@/stores/toastHistoryStore";
+import { useConnectionStore } from "@/stores/connectionStore";
 import { ToastHistory } from "@/components/ToastHistory";
+import { gameVersionService } from "@/services/gameVersionService";
+import { toast } from "@/lib/toast";
+import { useState } from "react";
 
 export function Header() {
   const { togglePanel, unreadCount } = useToastHistoryStore();
+  const { isOnline, setIsOnline } = useConnectionStore();
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const location = useLocation();
 
   const pathname = location.pathname || "/";
@@ -19,6 +25,24 @@ export function Header() {
       : "App";
   })();
 
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      const games = await gameVersionService.forceRefresh();
+      setIsOnline(games.length > 0 ? games[0].online : false);
+      toast.success('Connection Status Update', {
+        description: games[0]?.online ? 'Connected to server' : 'Failed to connect to server',
+      });
+    } catch (error) {
+      setIsOnline(false);
+      toast.error('Connection Failed', {
+        description: 'Unable to reach server',
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   return (
     <>
       <header className="sticky top-0 z-30 h-16 border-b border-discord-dark-2 bg-dark">
@@ -29,7 +53,29 @@ export function Header() {
           </div>
 
           {/* Right — Controls */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            {/* Refresh Connection Button */}
+            <button
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="p-2 rounded-lg hover:bg-discord-dark-2 transition-colors group disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Refresh connection to server"
+            >
+              <RefreshCw className={`h-5 w-5 text-gray-400 group-hover:text-white transition-colors ${isRefreshing ? 'animate-spin' : ''}`} />
+            </button>
+
+            {/* WiFi Status Indicator */}
+            <div
+              className="p-2 rounded-lg"
+              title={isOnline ? 'Connected to server' : 'Offline - Not connected to server'}
+            >
+              {isOnline ? (
+                <Wifi className="h-5 w-5 text-green-400" />
+              ) : (
+                <WifiOff className="h-5 w-5 text-orange-400" />
+              )}
+            </div>
+
             {/* Notifications */}
             <button
               onClick={togglePanel}

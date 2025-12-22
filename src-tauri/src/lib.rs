@@ -16,7 +16,7 @@ use application::services::{
 };
 use infrastructure::repositories::{
     FsApkRepository, FsClientApkRepository, FsGameVersionRepository, InMemoryDeviceRepository,
-    SledDeviceNameRepository,
+    SledDeviceNameRepository, SledGameCacheRepository,
 };
 use infrastructure::network::TcpServer;
 use std::sync::Arc;
@@ -62,10 +62,14 @@ pub fn run() {
 
             let event_bus = Arc::new(EventBus::new(app.handle().clone()));
             let device_repo = Arc::new(InMemoryDeviceRepository::new());
-            let device_name_repo = Arc::new(
-                SledDeviceNameRepository::new(&config.database_path)
-                    .map_err(|e| format!("Failed to initialize device name repository at {:?}: {}", config.database_path, e))?,
-            );
+
+            // Open shared Sled database
+            let sled_db = sled::open(&config.database_path)
+                .map_err(|e| format!("Failed to open database at {:?}: {}", config.database_path, e))?;
+
+            // Create repositories sharing the same database instance
+            let device_name_repo = Arc::new(SledDeviceNameRepository::from_db(sled_db.clone()));
+            let game_cache_repo = Arc::new(SledGameCacheRepository::from_db(sled_db));
 
             let http_host = if config.server.tcp_host == "0.0.0.0" {
                 local_ip_address::local_ip()
@@ -123,8 +127,17 @@ pub fn run() {
             ));
             let game_version_service = Arc::new(GameVersionService::new(
                 game_version_repo as Arc<dyn crate::domain::repositories::GameVersionRepository>,
+                game_cache_repo,
                 event_bus.clone(),
             ));
+
+            // Initialize cache from filesystem on first run
+            let game_version_service_init = game_version_service.clone();
+            tauri::async_runtime::spawn(async move {
+                if let Err(e) = game_version_service_init.initialize_cache_if_empty().await {
+                    tracing::error!("Failed to initialize game cache: {}", e);
+                }
+            });
 
             let battery_interval = std::time::Duration::from_secs(config.server.battery_update_interval);
             let battery_monitor = Arc::new(BatteryMonitor::new(
@@ -221,6 +234,7 @@ pub fn run() {
             get_game_list,
             download_game,
             cancel_download,
+            force_refresh_games,
         ])
         .build(tauri::generate_context!())
         .expect("Failed to build Tauri application");

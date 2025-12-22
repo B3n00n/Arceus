@@ -110,3 +110,15 @@ pub async fn cancel_download(
     game_version_service.cancel_download(game_id).await;
     Ok(())
 }
+
+/// Force refresh games from server (requires internet connection)
+#[tauri::command]
+pub async fn force_refresh_games(
+    game_version_service: State<'_, Arc<GameVersionService>>,
+) -> Result<Vec<GameStatus>, String> {
+    tracing::info!("Force refresh requested");
+    game_version_service
+        .force_refresh()
+        .await
+        .map_err(|e| format!("Failed to refresh games: {}", e))
+}

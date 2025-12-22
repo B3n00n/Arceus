@@ -15,6 +15,11 @@ impl SledDeviceNameRepository {
         Ok(Self { db })
     }
 
+    /// Create repository from an existing Sled database instance
+    pub fn from_db(db: sled::Db) -> Self {
+        Self { db }
+    }
+
     fn serial_to_key(serial: &Serial) -> Vec<u8> {
         format!("device_name:{}", serial.as_str()).into_bytes()
     }

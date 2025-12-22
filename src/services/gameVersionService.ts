@@ -8,6 +8,8 @@ export interface GameStatus {
   assignedVersionId: number;
   updateAvailable: boolean;
   downloadProgress: DownloadProgress | null;
+  online: boolean;
+  lastSynced: string | null;
 }
 
 export interface DownloadProgress {
@@ -44,5 +46,12 @@ export const gameVersionService = {
    */
   async cancelDownload(gameId: number): Promise<void> {
     await invoke('cancel_download', { gameId });
+  },
+
+  /**
+   * Force refresh games from server (requires internet connection)
+   */
+  async forceRefresh(): Promise<GameStatus[]> {
+    return await invoke('force_refresh_games');
   },
 };

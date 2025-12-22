@@ -1,4 +1,4 @@
-import { Download, CheckCircle, AlertCircle, Play, Square } from 'lucide-react';
+import { Download, CheckCircle, AlertCircle, Play, Square, WifiOff } from 'lucide-react';
 import { GameStatus } from '../../services/gameVersionService';
 import { Button } from '../ui/button';
 import { Progress } from '../ui/progress';
@@ -43,10 +43,17 @@ export function GameCard({ game, onUpdate, onLaunch, onStop, isUpdating, isRunni
 
         {/* Status Badge */}
         {game.updateAvailable ? (
-          <div className="flex items-center gap-1 px-3 py-1 bg-yellow-500/20 text-yellow-400 rounded-full text-sm">
-            <AlertCircle className="w-4 h-4" />
-            Update Available
-          </div>
+          game.online ? (
+            <div className="flex items-center gap-1 px-3 py-1 bg-yellow-500/20 text-yellow-400 rounded-full text-sm">
+              <AlertCircle className="w-4 h-4" />
+              Update Available
+            </div>
+          ) : (
+            <div className="flex items-center gap-1 px-3 py-1 bg-orange-500/20 text-orange-400 rounded-full text-sm">
+              <WifiOff className="w-4 h-4" />
+              Update (Offline)
+            </div>
+          )
         ) : game.installedVersion ? (
           <div className="flex items-center gap-1 px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-sm">
             <CheckCircle className="w-4 h-4" />
@@ -54,6 +61,16 @@ export function GameCard({ game, onUpdate, onLaunch, onStop, isUpdating, isRunni
           </div>
         ) : null}
       </div>
+
+      {/* Offline Warning Banner */}
+      {game.updateAvailable && !game.online && (
+        <div className="mb-4 p-3 bg-orange-500/10 border border-orange-500/30 rounded text-sm text-orange-300">
+          <div className="flex items-center gap-2">
+            <WifiOff className="w-4 h-4 flex-shrink-0" />
+            <span>Update available but you're offline. Connect to internet to download.</span>
+          </div>
+        </div>
+      )}
 
       {/* Download Progress */}
       {isDownloading && game.downloadProgress && (
@@ -99,11 +116,16 @@ export function GameCard({ game, onUpdate, onLaunch, onStop, isUpdating, isRunni
         {game.updateAvailable && (
           <Button
             onClick={() => onUpdate(game.gameId)}
-            disabled={isUpdating || isRunning}
+            disabled={isUpdating || isRunning || !game.online}
             className={isInstalled ? 'flex-1' : 'w-full'}
             variant={isDownloading ? 'outline' : 'default'}
           >
-            {isDownloading ? (
+            {!game.online && !isDownloading ? (
+              <>
+                <WifiOff className="w-4 h-4 mr-2" />
+                Offline
+              </>
+            ) : isDownloading ? (
               <>
                 <Download className="w-4 h-4 mr-2 animate-pulse" />
                 Downloading...

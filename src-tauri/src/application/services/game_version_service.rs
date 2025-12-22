@@ -1,10 +1,12 @@
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use crate::app::EventBus;
-use crate::application::dto::LocalGameMetadata;
+use crate::application::dto::{CachedGameEntry, LocalGameMetadata};
 use crate::domain::repositories::{GameVersionError, GameVersionRepository};
+use crate::infrastructure::repositories::SledGameCacheRepository;
 
 /// Game status information for the dashboard
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -17,6 +19,8 @@ pub struct GameStatus {
     pub assigned_version_id: i32,
     pub update_available: bool,
     pub download_progress: Option<DownloadProgress>,
+    pub online: bool,
+    pub last_synced: Option<DateTime<Utc>>,
 }
 
 /// Download progress information
@@ -32,42 +36,117 @@ pub struct DownloadProgress {
 /// Service for managing game versions
 pub struct GameVersionService {
     repository: Arc<dyn GameVersionRepository>,
+    cache_repository: Arc<SledGameCacheRepository>,
     event_bus: Arc<EventBus>,
     /// Track download progress for each game
     download_progress: Arc<RwLock<std::collections::HashMap<i32, DownloadProgress>>>,
 }
 
 impl GameVersionService {
-    pub fn new(repository: Arc<dyn GameVersionRepository>, event_bus: Arc<EventBus>) -> Self {
+    pub fn new(
+        repository: Arc<dyn GameVersionRepository>,
+        cache_repository: Arc<SledGameCacheRepository>,
+        event_bus: Arc<EventBus>,
+    ) -> Self {
         Self {
             repository,
+            cache_repository,
             event_bus,
             download_progress: Arc::new(RwLock::new(std::collections::HashMap::new())),
         }
     }
 
-    /// Get all games with their status
+    /// Initialize cache on first run by scanning filesystem for existing games
+    pub async fn initialize_cache_if_empty(&self) -> Result<(), GameVersionError> {
+        let is_empty = self
+            .cache_repository
+            .is_empty()
+            .await
+            .map_err(|e| GameVersionError::InvalidMetadata(format!("Cache error: {}", e)))?;
+
+        if is_empty {
+            tracing::info!("Cache is empty, scanning filesystem for installed games...");
+            let discovered_games = self.repository.scan_installed_games().await?;
+
+            for metadata in discovered_games {
+                let entry = CachedGameEntry::from_local_only(metadata);
+                self.cache_repository
+                    .set_entry(&entry)
+                    .await
+                    .map_err(|e| {
+                        GameVersionError::InvalidMetadata(format!("Cache error: {}", e))
+                    })?;
+            }
+
+            tracing::info!("Cache initialized from filesystem scan");
+        }
+
+        Ok(())
+    }
+
+    /// Sync cache with Alakazam server (best effort - doesn't fail if offline)
+    /// Returns true if online and synced successfully, false if offline
+    pub async fn sync_cache_with_server(&self) -> Result<bool, GameVersionError> {
+        tracing::info!("Attempting to sync cache with Alakazam server...");
+
+        match self.repository.fetch_game_assignments().await {
+            Ok(assignments) => {
+                // Build a lookup for local metadata
+                let mut local_metadata_map = std::collections::HashMap::new();
+                for assignment in &assignments {
+                    if let Ok(Some(metadata)) = self
+                        .repository
+                        .get_local_metadata(&assignment.game_name)
+                        .await
+                    {
+                        local_metadata_map.insert(assignment.game_name.clone(), metadata);
+                    }
+                }
+
+                // Sync to cache
+                self.cache_repository
+                    .sync_from_assignments(assignments, |game_name| {
+                        local_metadata_map.get(game_name).cloned()
+                    })
+                    .await
+                    .map_err(|e| {
+                        GameVersionError::InvalidMetadata(format!("Cache sync error: {}", e))
+                    })?;
+
+                tracing::info!("Cache synced successfully with server");
+                Ok(true)
+            }
+            Err(e) => {
+                tracing::warn!("Failed to sync with server (offline?): {}", e);
+                Ok(false)
+            }
+        }
+    }
+
+    /// Get all games with their status (cache-first with background sync)
     pub async fn get_game_statuses(&self) -> Result<Vec<GameStatus>, GameVersionError> {
-        // Fetch game assignments from Alakazam
-        let assignments = self.repository.fetch_game_assignments().await?;
+        // Try to sync with server first (best effort)
+        let online = self.sync_cache_with_server().await.unwrap_or(false);
+
+        // Always read from cache
+        let entries = self
+            .cache_repository
+            .get_all_entries()
+            .await
+            .map_err(|e| GameVersionError::InvalidMetadata(format!("Cache error: {}", e)))?;
 
         let mut statuses = Vec::new();
 
-        for assignment in assignments {
-            // Get local metadata to check installed version
-            let local_metadata = self
-                .repository
-                .get_local_metadata(&assignment.game_name)
-                .await?;
-
-            let installed_version = local_metadata
+        for entry in entries {
+            let installed_version = entry
+                .local_metadata
                 .as_ref()
                 .map(|m| m.installed_version.clone());
 
             // Check if update is available
-            let update_available = if let Some(ref metadata) = local_metadata {
+            let update_available = if let Some(ref metadata) = entry.local_metadata {
                 // Compare version IDs to determine if update needed
-                metadata.installed_version_id != assignment.assigned_version.version_id
+                metadata.installed_version_id != entry.assigned_version.version_id
             } else {
                 // No version installed, so update is "available" (first install)
                 true
@@ -76,18 +155,24 @@ impl GameVersionService {
             // Get download progress if downloading
             let download_progress = {
                 let progress_map = self.download_progress.read().await;
-                progress_map.get(&assignment.game_id).cloned()
+                progress_map.get(&entry.game_id).cloned()
             };
 
             statuses.push(GameStatus {
-                game_id: assignment.game_id,
-                game_name: assignment.game_name,
+                game_id: entry.game_id,
+                game_name: entry.game_name,
                 installed_version,
-                assigned_version: assignment.assigned_version.version.clone(),
-                assigned_version_id: assignment.assigned_version.version_id,
+                assigned_version: entry.assigned_version.version.clone(),
+                assigned_version_id: entry.assigned_version.version_id,
                 update_available,
                 download_progress,
+                online,
+                last_synced: entry.last_synced,
             });
+        }
+
+        if statuses.is_empty() && !online {
+            tracing::warn!("No games in cache and unable to reach server");
         }
 
         Ok(statuses)
@@ -170,6 +255,12 @@ impl GameVersionService {
             .save_local_metadata(&game_name, &metadata)
             .await?;
 
+        // Update cache with new metadata
+        self.cache_repository
+            .update_local_metadata(game_id, metadata.clone())
+            .await
+            .map_err(|e| GameVersionError::InvalidMetadata(format!("Cache update error: {}", e)))?;
+
         // Report version status to Alakazam
         self.repository
             .report_version_status(game_id, Some(version_id))
@@ -220,5 +311,18 @@ impl GameVersionService {
     pub async fn cancel_download(&self, game_id: i32) {
         self.download_progress.write().await.remove(&game_id);
         tracing::info!("Cancelled download for game {}", game_id);
+    }
+
+    /// Force refresh games from server (requires internet connection)
+    pub async fn force_refresh(&self) -> Result<Vec<GameStatus>, GameVersionError> {
+        let online = self.sync_cache_with_server().await.unwrap_or(false);
+
+        if !online {
+            return Err(GameVersionError::Network(
+                "Unable to connect to server".to_string(),
+            ));
+        }
+
+        self.get_game_statuses().await
     }
 }

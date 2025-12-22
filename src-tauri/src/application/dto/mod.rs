@@ -3,7 +3,7 @@ mod battery;
 mod client_apk_metadata;
 mod command;
 mod device;
-mod game_version;
+pub mod game_version;
 mod operation_progress;
 mod volume;
 

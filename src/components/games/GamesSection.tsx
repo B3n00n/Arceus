@@ -3,9 +3,9 @@ import { GameCard } from './GameCard';
 import { gameVersionService, GameStatus } from '../../services/gameVersionService';
 import { GameService } from '../../services/gameService';
 import { useGameStore } from '../../stores/gameStore';
+import { useConnectionStore } from '../../stores/connectionStore';
 import { toast } from '../../lib/toast';
-import { Loader2, RefreshCw } from 'lucide-react';
-import { Button } from '../ui/button';
+import { Loader2 } from 'lucide-react';
 import { useTauriEvent } from '../../hooks/useTauriEvent';
 import type { ArceusEvent } from '../../types/events.types';
 
@@ -14,14 +14,18 @@ export function GamesSection() {
   const [loading, setLoading] = useState(true);
   const [updatingGameIds, setUpdatingGameIds] = useState<Set<number>>(new Set());
   const { currentGame, setCurrentGame } = useGameStore();
+  const { setIsOnline } = useConnectionStore();
 
   const loadGames = async () => {
     try {
       setLoading(true);
       const gameList = await gameVersionService.getGameList();
       setGames(gameList);
+      // Update global connection status from first game (all will have same status)
+      setIsOnline(gameList.length > 0 ? gameList[0].online : false);
     } catch (error) {
       console.error('Failed to load games:', error);
+      setIsOnline(false);
       toast.error('Failed to load games', {
         description: 'Could not load games list',
       });
@@ -138,20 +142,6 @@ export function GamesSection() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-white">Games</h2>
-          <p className="text-gray-400 text-sm mt-1">
-            Manage your game installations and updates
-          </p>
-        </div>
-        <Button onClick={loadGames} variant="outline" size="sm">
-          <RefreshCw className="w-4 h-4 mr-2" />
-          Refresh
-        </Button>
-      </div>
-
       {/* Games Grid */}
       {games.length === 0 ? (
         <div className="text-center py-12 bg-gray-800/50 rounded-lg border border-gray-700">

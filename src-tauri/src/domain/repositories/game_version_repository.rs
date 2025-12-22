@@ -45,6 +45,10 @@ pub trait GameVersionRepository: Send + Sync {
 
     /// Get the installation directory for a game
     fn get_game_directory(&self, game_name: &str) -> PathBuf;
+
+    /// Scan the games directory and discover all installed games
+    /// Returns a list of LocalGameMetadata for all games found
+    async fn scan_installed_games(&self) -> Result<Vec<LocalGameMetadata>, GameVersionError>;
 }
 
 /// Errors that can occur during game version operations

@@ -62,3 +62,63 @@ impl LocalGameMetadata {
         }
     }
 }
+
+/// Cached game entry combining Alakazam assignment data with local metadata
+/// Stored in Sled database for offline access
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CachedGameEntry {
+    // From Alakazam assignment
+    pub game_id: i32,
+    pub game_name: String,
+    pub assigned_version: VersionInfo,
+    pub current_version: Option<VersionInfo>,
+
+    // From local filesystem
+    pub local_metadata: Option<LocalGameMetadata>,
+
+    // Cache metadata
+    pub cached_at: DateTime<Utc>,
+    pub last_synced: Option<DateTime<Utc>>,
+}
+
+impl CachedGameEntry {
+    /// Create entry from Alakazam assignment and optional local metadata
+    pub fn from_assignment_and_metadata(
+        assignment: GameAssignment,
+        local_metadata: Option<LocalGameMetadata>,
+    ) -> Self {
+        Self {
+            game_id: assignment.game_id,
+            game_name: assignment.game_name,
+            assigned_version: assignment.assigned_version,
+            current_version: assignment.current_version,
+            local_metadata,
+            cached_at: Utc::now(),
+            last_synced: Some(Utc::now()),
+        }
+    }
+
+    /// Create entry from local metadata only (when offline and no server data available)
+    pub fn from_local_only(local_metadata: LocalGameMetadata) -> Self {
+        Self {
+            game_id: local_metadata.game_id,
+            game_name: local_metadata.game_name.clone(),
+            assigned_version: VersionInfo {
+                version_id: local_metadata.installed_version_id,
+                version: local_metadata.installed_version.clone(),
+                gcs_path: String::new(), // Unknown without online data
+                release_date: local_metadata.installed_at,
+            },
+            current_version: None,
+            local_metadata: Some(local_metadata),
+            cached_at: Utc::now(),
+            last_synced: None, // Never synced with server
+        }
+    }
+
+    /// Update the local metadata portion of this entry
+    pub fn update_local_metadata(&mut self, metadata: LocalGameMetadata) {
+        self.local_metadata = Some(metadata);
+        self.cached_at = Utc::now();
+    }
+}

@@ -359,4 +359,61 @@ impl GameVersionRepository for FsGameVersionRepository {
     fn get_game_directory(&self, game_name: &str) -> PathBuf {
         self.games_directory.join(game_name)
     }
+
+    async fn scan_installed_games(&self) -> Result<Vec<LocalGameMetadata>, GameVersionError> {
+        let mut discovered_games = Vec::new();
+
+        if !self.games_directory.exists() {
+            tracing::warn!("Games directory does not exist: {:?}", self.games_directory);
+            return Ok(discovered_games);
+        }
+
+        let mut entries = fs::read_dir(&self.games_directory).await?;
+
+        while let Some(entry) = entries.next_entry().await? {
+            let path = entry.path();
+
+            if !path.is_dir() {
+                continue;
+            }
+
+            let game_name = match path.file_name().and_then(|n| n.to_str()) {
+                Some(name) => name.to_string(),
+                None => continue,
+            };
+
+            let metadata_path = path.join(GAME_METADATA_FILENAME);
+
+            if metadata_path.exists() {
+                match fs::read_to_string(&metadata_path).await {
+                    Ok(contents) => {
+                        match serde_json::from_str::<LocalGameMetadata>(&contents) {
+                            Ok(metadata) => {
+                                tracing::info!(
+                                    "Discovered installed game: {} v{}",
+                                    metadata.game_name,
+                                    metadata.installed_version
+                                );
+                                discovered_games.push(metadata);
+                            }
+                            Err(e) => {
+                                tracing::warn!("Invalid metadata in {:?}: {}", metadata_path, e);
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        tracing::warn!("Failed to read metadata from {:?}: {}", metadata_path, e);
+                    }
+                }
+            } else {
+                tracing::debug!("No metadata found in directory: {}", game_name);
+            }
+        }
+
+        tracing::info!(
+            "Filesystem scan complete: found {} game(s)",
+            discovered_games.len()
+        );
+        Ok(discovered_games)
+    }
 }
