@@ -1,4 +1,4 @@
-import { Download, CheckCircle, AlertCircle, Play, Square, WifiOff } from 'lucide-react';
+import { Download, CheckCircle, AlertCircle, Play, WifiOff } from 'lucide-react';
 import { GameStatus } from '../../services/gameVersionService';
 import { Button } from '../ui/button';
 import { Progress } from '../ui/progress';
@@ -12,132 +12,154 @@ interface GameCardProps {
   isRunning: boolean;
 }
 
+// TODO: Remove this and use a proper image.
+function getGradientFromName(name: string): string {
+  const hash = name.split('').reduce((acc, char) => {
+    return char.charCodeAt(0) + ((acc << 5) - acc);
+  }, 0);
+
+  const hue1 = Math.abs(hash % 360);
+  const hue2 = Math.abs((hash * 2) % 360);
+
+  return `linear-gradient(135deg, hsl(${hue1}, 70%, 35%) 0%, hsl(${hue2}, 60%, 25%) 100%)`;
+}
+
 export function GameCard({ game, onUpdate, onLaunch, onStop, isUpdating, isRunning }: GameCardProps) {
   const isDownloading = game.downloadProgress !== null;
   const progress = game.downloadProgress?.percentage || 0;
   const isInstalled = game.installedVersion !== null;
+  const gradient = getGradientFromName(game.gameName);
 
   return (
-    <div className="bg-gray-800 rounded-lg p-6 border border-gray-700 hover:border-blue-500 transition-colors">
-      {/* Game Header */}
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex-1">
-          <h3 className="text-xl font-semibold text-white mb-1">{game.gameName}</h3>
-          <div className="flex items-center gap-2 text-sm">
-            {game.installedVersion ? (
-              <span className="text-gray-400">
-                Installed: <span className="text-blue-400">{game.installedVersion}</span>
-              </span>
-            ) : (
-              <span className="text-gray-500">Not installed</span>
-            )}
-          </div>
-          {game.updateAvailable && game.installedVersion && (
-            <div className="flex items-center gap-2 text-sm mt-1">
-              <span className="text-gray-400">
-                Latest: <span className="text-green-400">{game.assignedVersion}</span>
-              </span>
-            </div>
-          )}
-        </div>
+    <div
+      className="relative rounded-lg overflow-hidden border border-gray-700 hover:border-blue-500 transition-all duration-300 group h-80"
+      style={{ background: gradient }}
+    >
+      {/* Overlay for better text readability */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/20" />
 
-        {/* Status Badge */}
+      {/* Status Badge - Top Right */}
+      <div className="absolute top-4 right-4 z-10">
         {game.updateAvailable ? (
           game.online ? (
-            <div className="flex items-center gap-1 px-3 py-1 bg-yellow-500/20 text-yellow-400 rounded-full text-sm">
-              <AlertCircle className="w-4 h-4" />
+            <div className="flex items-center gap-1 px-3 py-1 bg-yellow-500/90 text-yellow-900 rounded-full text-xs font-semibold backdrop-blur-sm">
+              <AlertCircle className="w-3 h-3" />
               Update Available
             </div>
           ) : (
-            <div className="flex items-center gap-1 px-3 py-1 bg-orange-500/20 text-orange-400 rounded-full text-sm">
-              <WifiOff className="w-4 h-4" />
+            <div className="flex items-center gap-1 px-3 py-1 bg-orange-500/90 text-orange-900 rounded-full text-xs font-semibold backdrop-blur-sm">
+              <WifiOff className="w-3 h-3" />
               Update (Offline)
             </div>
           )
         ) : game.installedVersion ? (
-          <div className="flex items-center gap-1 px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-sm">
-            <CheckCircle className="w-4 h-4" />
+          <div className="flex items-center gap-1 px-3 py-1 bg-green-500/90 text-green-900 rounded-full text-xs font-semibold backdrop-blur-sm">
+            <CheckCircle className="w-3 h-3" />
             Up to date
           </div>
-        ) : null}
+        ) : (
+          <div className="flex items-center gap-1 px-3 py-1 bg-gray-500/90 text-gray-900 rounded-full text-xs font-semibold backdrop-blur-sm">
+            Not installed
+          </div>
+        )}
       </div>
 
-      {/* Offline Warning Banner */}
-      {game.updateAvailable && !game.online && (
-        <div className="mb-4 p-3 bg-orange-500/10 border border-orange-500/30 rounded text-sm text-orange-300">
-          <div className="flex items-center gap-2">
-            <WifiOff className="w-4 h-4 flex-shrink-0" />
-            <span>Update available but you're offline. Connect to internet to download.</span>
-          </div>
-        </div>
-      )}
-
-      {/* Download Progress */}
+      {/* Download Progress - Center overlay when downloading */}
       {isDownloading && game.downloadProgress && (
-        <div className="mb-4 bg-gray-900/50 rounded-lg p-4 border border-blue-500/20">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <Download className="w-4 h-4 text-blue-400 animate-pulse" />
-              <span className="text-sm font-medium text-blue-400">Downloading</span>
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+          <div className="w-3/4 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Download className="w-5 h-5 text-blue-400 animate-pulse" />
+                <span className="text-sm font-medium text-blue-400">Downloading</span>
+              </div>
+              <span className="text-2xl font-bold text-blue-400">
+                {progress.toFixed(0)}%
+              </span>
             </div>
-            <span className="text-lg font-bold text-blue-400">
-              {progress.toFixed(0)}%
-            </span>
+            <Progress value={progress} className="h-3" />
           </div>
-          <Progress value={progress} className="h-2.5" />
         </div>
       )}
 
-      {/* Action Buttons */}
-      <div className="flex gap-2">
-        {/* Launch/Stop Button (only for installed games) */}
-        {isInstalled && (
-          <Button
-            onClick={() => isRunning ? onStop() : onLaunch(game.gameId, game.gameName)}
-            disabled={isUpdating || isDownloading}
-            className="flex-1"
-            variant={isRunning ? 'destructive' : 'secondary'}
-          >
-            {isRunning ? (
-              <>
-                <Square className="w-4 h-4 mr-2" />
-                Stop
-              </>
-            ) : (
-              <>
-                <Play className="w-4 h-4 mr-2" />
-                Launch
-              </>
+      {/* Bottom Section */}
+      <div className="absolute bottom-0 left-0 right-0 z-10 p-6">
+        {/* Version Info */}
+        <div className="mb-3 space-y-1">
+          <div className="flex items-center gap-2 text-xs">
+            {game.installedVersion ? (
+              <span className="text-gray-300">
+                Installed: <span className="text-blue-300 font-semibold">{game.installedVersion}</span>
+              </span>
+            ) : null}
+            {game.updateAvailable && game.installedVersion && (
+              <span className="text-gray-300">
+                → Latest: <span className="text-green-300 font-semibold">{game.assignedVersion}</span>
+              </span>
             )}
-          </Button>
-        )}
+          </div>
+        </div>
 
-        {/* Update/Install Button */}
-        {game.updateAvailable && (
-          <Button
-            onClick={() => onUpdate(game.gameId)}
-            disabled={isUpdating || isRunning || !game.online}
-            className={isInstalled ? 'flex-1' : 'w-full'}
-            variant={isDownloading ? 'outline' : 'default'}
-          >
-            {!game.online && !isDownloading ? (
-              <>
-                <WifiOff className="w-4 h-4 mr-2" />
-                Offline
-              </>
-            ) : isDownloading ? (
-              <>
-                <Download className="w-4 h-4 mr-2 animate-pulse" />
-                Downloading...
-              </>
-            ) : (
-              <>
-                <Download className="w-4 h-4 mr-2" />
-                {game.installedVersion ? 'Update' : 'Install'}
-              </>
+        {/* Game Name and Action Button */}
+        <div className="flex items-end justify-between gap-4">
+          {/* Game Name - Bottom Left */}
+          <div className="flex-1 min-w-0">
+            <h3 className="text-2xl font-bold text-white truncate drop-shadow-lg">
+              {game.gameName}
+            </h3>
+          </div>
+
+          {/* Action Buttons - Bottom Right */}
+          <div className="flex gap-2 flex-shrink-0">
+            {/* Launch/Stop Button (always show when installed) */}
+            {isInstalled && (
+              <Button
+                onClick={() => isRunning ? onStop() : onLaunch(game.gameId, game.gameName)}
+                disabled={isUpdating || isDownloading}
+                className="shadow-lg"
+                variant={isRunning ? 'destructive' : 'default'}
+                size="lg"
+              >
+                {isRunning ? (
+                  'Stop'
+                ) : (
+                  <>
+                    <Play className="w-4 h-4 mr-2" />
+                    Launch
+                  </>
+                )}
+              </Button>
             )}
-          </Button>
-        )}
+
+            {/* Update/Install Button */}
+            {game.updateAvailable && (
+              <Button
+                onClick={() => onUpdate(game.gameId)}
+                disabled={isUpdating || isRunning || !game.online}
+                variant={isDownloading ? 'outline' : isInstalled ? 'secondary' : 'default'}
+                size="lg"
+                className="shadow-lg"
+              >
+                {!game.online && !isDownloading ? (
+                  <>
+                    <WifiOff className="w-4 h-4 mr-2" />
+                    Offline
+                  </>
+                ) : isDownloading ? (
+                  <>
+                    <Download className="w-4 h-4 mr-2 animate-pulse" />
+                    Downloading...
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-4 h-4 mr-2" />
+                    {game.installedVersion ? 'Update' : 'Install'}
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

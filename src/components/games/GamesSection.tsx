@@ -8,11 +8,14 @@ import { toast } from '../../lib/toast';
 import { Loader2 } from 'lucide-react';
 import { useTauriEvent } from '../../hooks/useTauriEvent';
 import type { ArceusEvent } from '../../types/events.types';
+import { ConfirmationDialog } from '../dialogs/ConfirmationDialog';
 
 export function GamesSection() {
   const [games, setGames] = useState<GameStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingGameIds, setUpdatingGameIds] = useState<Set<number>>(new Set());
+  const [showUpdateConfirmDialog, setShowUpdateConfirmDialog] = useState(false);
+  const [gameToUpdate, setGameToUpdate] = useState<{ id: number; name: string } | null>(null);
   const { currentGame, setCurrentGame } = useGameStore();
   const { setIsOnline } = useConnectionStore();
 
@@ -43,9 +46,6 @@ export function GamesSection() {
             ? {
                 ...game,
                 downloadProgress: {
-                  totalFiles: game.downloadProgress?.totalFiles ?? 0,
-                  downloadedFiles: game.downloadProgress?.downloadedFiles ?? 0,
-                  currentFile: game.downloadProgress?.currentFile ?? '',
                   percentage: event.percentage,
                 },
               }
@@ -77,19 +77,27 @@ export function GamesSection() {
   }, []);
 
   const handleUpdate = async (gameId: number) => {
-    setUpdatingGameIds((prev) => new Set(prev).add(gameId));
-
     const game = games.find((g) => g.gameId === gameId);
     if (!game) return;
 
+    setGameToUpdate({ id: gameId, name: game.gameName });
+    setShowUpdateConfirmDialog(true);
+  };
+
+  const executeUpdate = async () => {
+    if (!gameToUpdate) return;
+
+    setShowUpdateConfirmDialog(false);
+    setUpdatingGameIds((prev) => new Set(prev).add(gameToUpdate.id));
+
     toast.info('Download Started', {
-      description: `Downloading ${game.gameName}...`,
+      description: `Downloading ${gameToUpdate.name}...`,
     });
 
     try {
-      await gameVersionService.downloadGame(gameId);
+      await gameVersionService.downloadGame(gameToUpdate.id);
       toast.success('Installation Complete', {
-        description: `${game.gameName} has been installed successfully`,
+        description: `${gameToUpdate.name} has been installed successfully`,
       });
       loadGames();
     } catch (error) {
@@ -97,9 +105,11 @@ export function GamesSection() {
       toast.error('Installation Failed', { description: message });
       setUpdatingGameIds((prev) => {
         const next = new Set(prev);
-        next.delete(gameId);
+        next.delete(gameToUpdate.id);
         return next;
       });
+    } finally {
+      setGameToUpdate(null);
     }
   };
 
@@ -162,6 +172,29 @@ export function GamesSection() {
           ))}
         </div>
       )}
+
+      {/* Update Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={showUpdateConfirmDialog}
+        onClose={() => {
+          setShowUpdateConfirmDialog(false);
+          setGameToUpdate(null);
+        }}
+        onConfirm={executeUpdate}
+        title={gameToUpdate?.name && games.find(g => g.gameId === gameToUpdate.id)?.installedVersion ? "Update Game" : "Install Game"}
+        message={
+          <div className="space-y-2">
+            <p>
+              Are you sure you want to install <span className="text-white font-medium">{gameToUpdate?.name}</span>?
+            </p>
+            <p className="text-yellow-400 text-sm">
+              This will require updating the headsets as well.
+            </p>
+          </div>
+        }
+        confirmText={gameToUpdate?.name && games.find(g => g.gameId === gameToUpdate.id)?.installedVersion ? "Update" : "Install"}
+        loading={loading}
+      />
     </div>
   );
 }

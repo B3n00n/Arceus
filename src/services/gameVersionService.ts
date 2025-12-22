@@ -13,9 +13,6 @@ export interface GameStatus {
 }
 
 export interface DownloadProgress {
-  totalFiles: number;
-  downloadedFiles: number;
-  currentFile: string;
   percentage: number;
 }
 
