@@ -80,6 +80,7 @@ export function Header() {
             <button
               onClick={togglePanel}
               className="relative p-2 rounded-lg hover:bg-discord-dark-2 transition-colors group"
+              title="Notifications"
             >
               <Bell className="h-5 w-5 text-gray-400 group-hover:text-white transition-colors" />
               {unreadCount > 0 && (

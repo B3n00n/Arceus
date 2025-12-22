@@ -1,4 +1,4 @@
-import { Download, CheckCircle, AlertCircle, Play, WifiOff } from 'lucide-react';
+import { CheckCircle, AlertCircle, Download, WifiOff } from 'lucide-react';
 import { GameStatus } from '../../services/gameVersionService';
 import { Button } from '../ui/button';
 import { Progress } from '../ui/progress';
@@ -37,6 +37,13 @@ export function GameCard({ game, onUpdate, onLaunch, onStop, isUpdating, isRunni
     >
       {/* Overlay for better text readability */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/20" />
+
+      {/* Game Name - Top Left */}
+      <div className="absolute top-4 left-4 z-10">
+        <h3 className="text-2xl font-bold text-white drop-shadow-lg">
+          {game.gameName}
+        </h3>
+      </div>
 
       {/* Status Badge - Top Right */}
       <div className="absolute top-4 right-4 z-10">
@@ -84,29 +91,22 @@ export function GameCard({ game, onUpdate, onLaunch, onStop, isUpdating, isRunni
 
       {/* Bottom Section */}
       <div className="absolute bottom-0 left-0 right-0 z-10 p-6">
-        {/* Version Info */}
-        <div className="mb-3 space-y-1">
-          <div className="flex items-center gap-2 text-xs">
-            {game.installedVersion ? (
-              <span className="text-gray-300">
-                Installed: <span className="text-blue-300 font-semibold">{game.installedVersion}</span>
-              </span>
-            ) : null}
-            {game.updateAvailable && game.installedVersion && (
-              <span className="text-gray-300">
-                → Latest: <span className="text-green-300 font-semibold">{game.assignedVersion}</span>
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Game Name and Action Button */}
+        {/* Version Info and Action Buttons */}
         <div className="flex items-end justify-between gap-4">
-          {/* Game Name - Bottom Left */}
+          {/* Version Info - Bottom Left */}
           <div className="flex-1 min-w-0">
-            <h3 className="text-2xl font-bold text-white truncate drop-shadow-lg">
-              {game.gameName}
-            </h3>
+            <div className="flex items-center gap-2 text-xs">
+              {game.installedVersion ? (
+                <span className="text-gray-300">
+                  Installed: <span className="text-blue-300 font-semibold">{game.installedVersion}</span>
+                </span>
+              ) : null}
+              {game.updateAvailable && game.installedVersion && (
+                <span className="text-gray-300">
+                  → Latest: <span className="text-green-300 font-semibold">{game.assignedVersion}</span>
+                </span>
+              )}
+            </div>
           </div>
 
           {/* Action Buttons - Bottom Right */}
@@ -120,14 +120,7 @@ export function GameCard({ game, onUpdate, onLaunch, onStop, isUpdating, isRunni
                 variant={isRunning ? 'destructive' : 'default'}
                 size="lg"
               >
-                {isRunning ? (
-                  'Stop'
-                ) : (
-                  <>
-                    <Play className="w-4 h-4 mr-2" />
-                    Launch
-                  </>
-                )}
+                {isRunning ? 'Stop' : 'Launch'}
               </Button>
             )}
 
@@ -141,20 +134,11 @@ export function GameCard({ game, onUpdate, onLaunch, onStop, isUpdating, isRunni
                 className="shadow-lg"
               >
                 {!game.online && !isDownloading ? (
-                  <>
-                    <WifiOff className="w-4 h-4 mr-2" />
-                    Offline
-                  </>
+                  'Offline'
                 ) : isDownloading ? (
-                  <>
-                    <Download className="w-4 h-4 mr-2 animate-pulse" />
-                    Downloading...
-                  </>
+                  'Downloading...'
                 ) : (
-                  <>
-                    <Download className="w-4 h-4 mr-2" />
-                    {game.installedVersion ? 'Update' : 'Install'}
-                  </>
+                  game.installedVersion ? 'Update' : 'Install'
                 )}
               </Button>
             )}
