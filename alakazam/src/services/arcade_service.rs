@@ -2,18 +2,22 @@ use crate::{
     error::{AppError, Result},
     models::{ArcadeConfigResponse, GameAssignmentResponse},
     repositories::{ArcadeRepository, GameRepository},
+    services::GcsService,
 };
+use std::sync::Arc;
 
 pub struct ArcadeService {
     arcade_repo: ArcadeRepository,
     game_repo: GameRepository,
+    gcs_service: Arc<GcsService>,
 }
 
 impl ArcadeService {
-    pub fn new(arcade_repo: ArcadeRepository, game_repo: GameRepository) -> Self {
+    pub fn new(arcade_repo: ArcadeRepository, game_repo: GameRepository, gcs_service: Arc<GcsService>) -> Self {
         Self {
             arcade_repo,
             game_repo,
+            gcs_service,
         }
     }
 
@@ -75,11 +79,22 @@ impl ArcadeService {
                 None
             };
 
+            // Generate signed URL for background image
+            // Background image path for games: <GameName>/<GameName>BG.jpg
+            let background_image_url = {
+                let bg_path = format!("{}/{}BG.jpg", game.name, game.name);
+                self.gcs_service
+                    .generate_signed_download_url(&bg_path)
+                    .await
+                    .ok()
+            };
+
             responses.push(GameAssignmentResponse {
                 game_id: game.id,
-                game_name: game.name,
+                game_name: game.name.clone(),
                 assigned_version: assigned_version.into(),
                 current_version,
+                background_image_url,
             });
         }
 

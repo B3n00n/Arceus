@@ -129,6 +129,7 @@ pub fn run() {
                 game_version_repo as Arc<dyn crate::domain::repositories::GameVersionRepository>,
                 game_cache_repo,
                 event_bus.clone(),
+                config.games_directory.clone(),
             ));
 
             // Initialize cache from filesystem on first run

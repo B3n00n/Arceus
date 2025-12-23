@@ -21,6 +21,7 @@ pub struct GameStatus {
     pub download_progress: Option<DownloadProgress>,
     pub online: bool,
     pub last_synced: Option<DateTime<Utc>>,
+    pub background_image_path: Option<String>,
 }
 
 /// Download progress information
@@ -40,6 +41,8 @@ pub struct GameVersionService {
     event_bus: Arc<EventBus>,
     /// Track download progress for each game
     download_progress: Arc<RwLock<std::collections::HashMap<i32, DownloadProgress>>>,
+    /// Base directory for game installations (C:/Combatica)
+    games_directory: std::path::PathBuf,
 }
 
 impl GameVersionService {
@@ -47,13 +50,87 @@ impl GameVersionService {
         repository: Arc<dyn GameVersionRepository>,
         cache_repository: Arc<SledGameCacheRepository>,
         event_bus: Arc<EventBus>,
+        games_directory: std::path::PathBuf,
     ) -> Self {
         Self {
             repository,
             cache_repository,
             event_bus,
             download_progress: Arc::new(RwLock::new(std::collections::HashMap::new())),
+            games_directory,
         }
+    }
+
+    /// Check if a background image exists locally and return it as base64 data URL
+    /// Background images are stored at: C:/Combatica/<GameName>/<GameName>BG.jpg
+    fn get_background_image_path(&self, game_name: &str) -> Option<String> {
+        let bg_path = self.games_directory
+            .join(game_name)
+            .join(format!("{}BG.jpg", game_name));
+
+        tracing::debug!("Checking for background image at: {:?}", bg_path);
+
+        if bg_path.exists() {
+            // Read file and convert to base64 data URL
+            match std::fs::read(&bg_path) {
+                Ok(bytes) => {
+                    let base64 = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &bytes);
+                    let data_url = format!("data:image/jpeg;base64,{}", base64);
+                    tracing::info!("Loaded background image for {} ({} bytes)", game_name, bytes.len());
+                    Some(data_url)
+                }
+                Err(e) => {
+                    tracing::warn!("Failed to read background image for {}: {}", game_name, e);
+                    None
+                }
+            }
+        } else {
+            tracing::debug!("No background image found for {} at {:?}", game_name, bg_path);
+            None
+        }
+    }
+
+    /// Download and save a background image to local storage
+    /// Saves to: C:/Combatica/<GameName>/<GameName>BG.jpg
+    async fn download_background_image(
+        &self,
+        game_name: &str,
+        download_url: &str,
+    ) -> Result<(), GameVersionError> {
+        use tokio::io::AsyncWriteExt;
+
+        // Download the image
+        let response = reqwest::get(download_url)
+            .await
+            .map_err(|e| GameVersionError::Network(format!("Failed to download background image: {}", e)))?;
+
+        if !response.status().is_success() {
+            return Err(GameVersionError::Network(format!(
+                "Failed to download background image: HTTP {}",
+                response.status()
+            )));
+        }
+
+        let bytes = response
+            .bytes()
+            .await
+            .map_err(|e| GameVersionError::Network(format!("Failed to read background image bytes: {}", e)))?;
+
+        // Prepare local path
+        let bg_path = self.games_directory
+            .join(game_name)
+            .join(format!("{}BG.jpg", game_name));
+
+        // Ensure parent directory exists
+        if let Some(parent) = bg_path.parent() {
+            tokio::fs::create_dir_all(parent).await?;
+        }
+
+        // Write the image file
+        let mut file = tokio::fs::File::create(&bg_path).await?;
+        file.write_all(&bytes).await?;
+
+        Ok(())
     }
 
     /// Initialize cache on first run by scanning filesystem for existing games
@@ -158,9 +235,12 @@ impl GameVersionService {
                 progress_map.get(&entry.game_id).cloned()
             };
 
+            // Check for local background image
+            let background_image_path = self.get_background_image_path(&entry.game_name);
+
             statuses.push(GameStatus {
                 game_id: entry.game_id,
-                game_name: entry.game_name,
+                game_name: entry.game_name.clone(),
                 installed_version,
                 assigned_version: entry.assigned_version.version.clone(),
                 assigned_version_id: entry.assigned_version.version_id,
@@ -168,6 +248,7 @@ impl GameVersionService {
                 download_progress,
                 online,
                 last_synced: entry.last_synced,
+                background_image_path,
             });
         }
 
@@ -248,6 +329,17 @@ impl GameVersionService {
         self.repository
             .download_game_files(&game_name, &download_response.files, progress_callback)
             .await?;
+
+        // Download background image if available
+        if let Ok(Some(cache_entry)) = self.cache_repository.get_entry(game_id).await {
+            if let Some(ref bg_url) = cache_entry.background_image_url {
+                tracing::info!("Downloading background image for {}", game_name);
+                if let Err(e) = self.download_background_image(&game_name, bg_url).await {
+                    // Don't fail the whole download if background image fails
+                    tracing::warn!("Failed to download background image for {}: {}", game_name, e);
+                }
+            }
+        }
 
         // Save local metadata
         let metadata = LocalGameMetadata::new(game_id, game_name.clone(), version, version_id);

@@ -37,6 +37,7 @@ pub struct GameAssignmentResponse {
     pub game_name: String,
     pub assigned_version: VersionInfo,
     pub current_version: Option<VersionInfo>,
+    pub background_image_url: Option<String>,
 }
 
 /// Version information in response

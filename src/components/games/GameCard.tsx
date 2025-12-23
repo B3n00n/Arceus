@@ -12,28 +12,24 @@ interface GameCardProps {
   isRunning: boolean;
 }
 
-// TODO: Remove this and use a proper image.
-function getGradientFromName(name: string): string {
-  const hash = name.split('').reduce((acc, char) => {
-    return char.charCodeAt(0) + ((acc << 5) - acc);
-  }, 0);
-
-  const hue1 = Math.abs(hash % 360);
-  const hue2 = Math.abs((hash * 2) % 360);
-
-  return `linear-gradient(135deg, hsl(${hue1}, 70%, 35%) 0%, hsl(${hue2}, 60%, 25%) 100%)`;
-}
-
 export function GameCard({ game, onUpdate, onLaunch, onStop, isUpdating, isRunning }: GameCardProps) {
   const isDownloading = game.downloadProgress !== null;
   const progress = game.downloadProgress?.percentage || 0;
   const isInstalled = game.installedVersion !== null;
-  const gradient = getGradientFromName(game.gameName);
+
+  // Use local cached background image (base64 data URL) if available, otherwise black background
+  const backgroundStyle = game.backgroundImagePath
+    ? {
+        backgroundImage: `url("${game.backgroundImagePath}")`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      }
+    : { background: '#000000' };
 
   return (
     <div
       className="relative rounded-lg overflow-hidden border border-gray-700 hover:border-blue-500 transition-all duration-300 group h-80"
-      style={{ background: gradient }}
+      style={backgroundStyle}
     >
       {/* Overlay for better text readability */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/20" />

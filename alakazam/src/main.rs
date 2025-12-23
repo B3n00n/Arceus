@@ -36,8 +36,7 @@ async fn main() -> anyhow::Result<()> {
     let arcade_repo = ArcadeRepository::new(pool.clone());
     let game_repo = GameRepository::new(pool.clone());
 
-    // Initialize services
-    let arcade_service = Arc::new(ArcadeService::new(arcade_repo, game_repo));
+    // Initialize GCS service
     let gcs_service = Arc::new(
         GcsService::new(
             config.gcs.bucket_name.clone(),
@@ -49,6 +48,9 @@ async fn main() -> anyhow::Result<()> {
     );
 
     info!("GCS service initialized for bucket: {}", config.gcs.bucket_name);
+
+    // Initialize arcade service
+    let arcade_service = Arc::new(ArcadeService::new(arcade_repo, game_repo, gcs_service.clone()));
 
     // Build application router
     let app = axum::Router::new()

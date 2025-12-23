@@ -8,6 +8,7 @@ pub struct GameAssignment {
     pub game_name: String,
     pub assigned_version: VersionInfo,
     pub current_version: Option<VersionInfo>,
+    pub background_image_url: Option<String>,
 }
 
 /// Version information for a game
@@ -72,6 +73,7 @@ pub struct CachedGameEntry {
     pub game_name: String,
     pub assigned_version: VersionInfo,
     pub current_version: Option<VersionInfo>,
+    pub background_image_url: Option<String>,
 
     // From local filesystem
     pub local_metadata: Option<LocalGameMetadata>,
@@ -92,6 +94,7 @@ impl CachedGameEntry {
             game_name: assignment.game_name,
             assigned_version: assignment.assigned_version,
             current_version: assignment.current_version,
+            background_image_url: assignment.background_image_url,
             local_metadata,
             cached_at: Utc::now(),
             last_synced: Some(Utc::now()),
@@ -110,6 +113,7 @@ impl CachedGameEntry {
                 release_date: local_metadata.installed_at,
             },
             current_version: None,
+            background_image_url: None, // Unknown without server data
             local_metadata: Some(local_metadata),
             cached_at: Utc::now(),
             last_synced: None, // Never synced with server

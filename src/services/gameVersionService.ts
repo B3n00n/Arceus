@@ -10,6 +10,7 @@ export interface GameStatus {
   downloadProgress: DownloadProgress | null;
   online: boolean;
   lastSynced: string | null;
+  backgroundImagePath: string | null;
 }
 
 export interface DownloadProgress {
