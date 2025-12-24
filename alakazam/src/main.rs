@@ -8,8 +8,8 @@ mod routes;
 mod services;
 
 use config::Config;
-use repositories::{ArcadeRepository, GameRepository};
-use services::{ArcadeService, GcsService};
+use repositories::{ArcadeRepository, GameRepository, SnorlaxRepository};
+use services::{ArcadeService, GcsService, SnorlaxService};
 use std::sync::Arc;
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use tracing::info;
@@ -35,6 +35,7 @@ async fn main() -> anyhow::Result<()> {
     // Initialize repositories
     let arcade_repo = ArcadeRepository::new(pool.clone());
     let game_repo = GameRepository::new(pool.clone());
+    let snorlax_repo = SnorlaxRepository::new(pool.clone());
 
     // Initialize GCS service
     let gcs_service = Arc::new(
@@ -42,20 +43,20 @@ async fn main() -> anyhow::Result<()> {
             config.gcs.bucket_name.clone(),
             config.gcs.service_account_path.clone(),
             config.gcs.signed_url_duration_secs,
-            config.gcs.snorlax_version.clone(),
         )
         .await?,
     );
 
     info!("GCS service initialized for bucket: {}", config.gcs.bucket_name);
 
-    // Initialize arcade service
+    // Initialize services
     let arcade_service = Arc::new(ArcadeService::new(arcade_repo, game_repo, gcs_service.clone()));
+    let snorlax_service = Arc::new(SnorlaxService::new(snorlax_repo, gcs_service.clone()));
 
     // Build application router
     let app = axum::Router::new()
         .merge(routes::create_router())
-        .nest("/api", api::create_api_router(arcade_service, gcs_service))
+        .nest("/api", api::create_api_router(arcade_service, gcs_service, snorlax_service))
         .layer(CorsLayer::permissive())
         .layer(TraceLayer::new_for_http());
 

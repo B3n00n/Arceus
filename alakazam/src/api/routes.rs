@@ -1,4 +1,4 @@
-use crate::{api::handlers, services::{ArcadeService, GcsService}};
+use crate::{api::handlers, services::{ArcadeService, GcsService, SnorlaxService}};
 use axum::{
     routing::{get, post},
     Router,
@@ -8,6 +8,7 @@ use std::sync::Arc;
 pub fn create_api_router(
     arcade_service: Arc<ArcadeService>,
     gcs_service: Arc<GcsService>,
+    snorlax_service: Arc<SnorlaxService>,
 ) -> Router {
     // Arcade endpoints
     let arcade_router = Router::new()
@@ -33,7 +34,7 @@ pub fn create_api_router(
             "/arcade/snorlax/latest",
             get(handlers::get_snorlax_latest),
         )
-        .with_state((arcade_service, gcs_service));
+        .with_state((arcade_service, snorlax_service));
 
     // Merge routers
     arcade_router

@@ -23,7 +23,6 @@ pub struct GcsConfig {
     pub bucket_name: String,
     pub service_account_path: String,
     pub signed_url_duration_secs: u32,
-    pub snorlax_version: String,
 }
 
 impl Config {
@@ -46,8 +45,6 @@ impl Config {
                 signed_url_duration_secs: std::env::var("GCS_SIGNED_URL_DURATION_SECS")
                     .unwrap_or_else(|_| "3600".to_string())
                     .parse()?,
-                snorlax_version: std::env::var("SNORLAX_VERSION")
-                    .unwrap_or_else(|_| "1.0.0".to_string()),
             },
         })
     }

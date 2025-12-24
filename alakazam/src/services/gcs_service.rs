@@ -46,7 +46,6 @@ pub struct GcsService {
     client_email: String,
     private_key_pem: String,
     url_duration_secs: u32,
-    snorlax_version: String,
 }
 
 impl GcsService {
@@ -54,7 +53,6 @@ impl GcsService {
         bucket_name: String,
         service_account_path: String,
         duration_secs: u32,
-        snorlax_version: String,
     ) -> Result<Self> {
         let key_json = fs::read_to_string(&service_account_path).map_err(|e| {
             AppError::Internal(format!("Failed to read service account key: {}", e))
@@ -69,18 +67,12 @@ impl GcsService {
             client_email: key.client_email,
             private_key_pem: key.private_key,
             url_duration_secs: duration_secs,
-            snorlax_version,
         })
     }
 
     /// Get the URL duration in seconds
     pub fn get_url_duration_secs(&self) -> u32 {
         self.url_duration_secs
-    }
-
-    /// Get the Snorlax APK version
-    pub fn get_snorlax_version(&self) -> &str {
-        &self.snorlax_version
     }
 
     /// Generate a signed URL for downloading an object (v4 signing)
