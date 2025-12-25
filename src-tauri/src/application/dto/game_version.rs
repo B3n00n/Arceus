@@ -65,7 +65,7 @@ impl LocalGameMetadata {
 }
 
 /// Cached game entry combining Alakazam assignment data with local metadata
-/// Stored in Sled database for offline access
+/// Stored in SQLite database for offline access
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CachedGameEntry {
     // From Alakazam assignment

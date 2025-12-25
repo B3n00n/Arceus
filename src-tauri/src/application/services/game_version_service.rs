@@ -6,7 +6,7 @@ use tokio::sync::RwLock;
 use crate::app::EventBus;
 use crate::application::dto::{CachedGameEntry, LocalGameMetadata};
 use crate::domain::repositories::{GameVersionError, GameVersionRepository};
-use crate::infrastructure::repositories::SledGameCacheRepository;
+use crate::infrastructure::repositories::SqliteGameCacheRepository;
 
 /// Game status information for the dashboard
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -37,7 +37,7 @@ pub struct DownloadProgress {
 /// Service for managing game versions
 pub struct GameVersionService {
     repository: Arc<dyn GameVersionRepository>,
-    cache_repository: Arc<SledGameCacheRepository>,
+    cache_repository: Arc<SqliteGameCacheRepository>,
     event_bus: Arc<EventBus>,
     /// Track download progress for each game
     download_progress: Arc<RwLock<std::collections::HashMap<i32, DownloadProgress>>>,
@@ -48,7 +48,7 @@ pub struct GameVersionService {
 impl GameVersionService {
     pub fn new(
         repository: Arc<dyn GameVersionRepository>,
-        cache_repository: Arc<SledGameCacheRepository>,
+        cache_repository: Arc<SqliteGameCacheRepository>,
         event_bus: Arc<EventBus>,
         games_directory: std::path::PathBuf,
     ) -> Self {

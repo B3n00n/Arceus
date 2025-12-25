@@ -16,8 +16,9 @@ use application::services::{
 };
 use infrastructure::repositories::{
     FsApkRepository, FsClientApkRepository, FsGameVersionRepository, InMemoryDeviceRepository,
-    SledDeviceNameRepository, SledGameCacheRepository,
+    SqliteDeviceNameRepository, SqliteGameCacheRepository,
 };
+use infrastructure::database::Database;
 use infrastructure::network::TcpServer;
 use std::sync::Arc;
 use tauri::Manager;
@@ -63,13 +64,20 @@ pub fn run() {
             let event_bus = Arc::new(EventBus::new(app.handle().clone()));
             let device_repo = Arc::new(InMemoryDeviceRepository::new());
 
-            // Open shared Sled database
-            let sled_db = sled::open(&config.database_path)
-                .map_err(|e| format!("Failed to open database at {:?}: {}", config.database_path, e))?;
+            // Initialize SQLite database
+            let (device_name_repo, game_cache_repo) = tauri::async_runtime::block_on(async {
+                let database = Database::new(&config.database_path)
+                    .await
+                    .map_err(|e| format!("Failed to initialize database at {:?}: {}", config.database_path, e))?;
 
-            // Create repositories sharing the same database instance
-            let device_name_repo = Arc::new(SledDeviceNameRepository::from_db(sled_db.clone()));
-            let game_cache_repo = Arc::new(SledGameCacheRepository::from_db(sled_db));
+                let db_pool = database.pool().clone();
+
+                // Create repositories sharing the same database pool
+                let device_name_repo = Arc::new(SqliteDeviceNameRepository::new(db_pool.clone()));
+                let game_cache_repo = Arc::new(SqliteGameCacheRepository::new(db_pool.clone()));
+
+                Ok::<_, String>((device_name_repo, game_cache_repo))
+            })?;
 
             let http_host = if config.server.tcp_host == "0.0.0.0" {
                 local_ip_address::local_ip()
