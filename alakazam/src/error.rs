@@ -16,6 +16,9 @@ pub enum AppError {
     #[error("Invalid MAC address")]
     InvalidMacAddress,
 
+    #[error("Unauthorized")]
+    Unauthorized,
+
     #[error("Game not found")]
     GameNotFound,
 
@@ -44,6 +47,7 @@ impl IntoResponse for AppError {
             }
             AppError::ArcadeNotFound => (StatusCode::NOT_FOUND, "Arcade not found"),
             AppError::InvalidMacAddress => (StatusCode::UNAUTHORIZED, "Invalid MAC address"),
+            AppError::Unauthorized => (StatusCode::UNAUTHORIZED, "Unauthorized"),
             AppError::GameNotFound => (StatusCode::NOT_FOUND, "Game not found"),
             AppError::GameVersionNotFound => (StatusCode::NOT_FOUND, "Game version not found"),
             AppError::NoAssignment => (StatusCode::NOT_FOUND, "No assignment found"),

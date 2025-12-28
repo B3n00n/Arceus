@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::types::chrono::{DateTime, Utc};
 
 /// Game entity from database
-#[derive(Debug, Clone, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, sqlx::FromRow)]
 pub struct Game {
     pub id: i32,
     pub name: String,
@@ -10,7 +10,7 @@ pub struct Game {
 }
 
 /// Game version entity from database
-#[derive(Debug, Clone, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, sqlx::FromRow)]
 pub struct GameVersion {
     pub id: i32,
     pub game_id: i32,
@@ -20,7 +20,7 @@ pub struct GameVersion {
 }
 
 /// Arcade game assignment entity from database
-#[derive(Debug, Clone, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, sqlx::FromRow)]
 pub struct ArcadeGameAssignment {
     pub id: i32,
     pub arcade_id: i32,

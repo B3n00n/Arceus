@@ -8,12 +8,12 @@ use chrono::Utc;
 use std::sync::Arc;
 
 pub struct SnorlaxService {
-    repository: SnorlaxRepository,
+    repository: Arc<SnorlaxRepository>,
     gcs_service: Arc<GcsService>,
 }
 
 impl SnorlaxService {
-    pub fn new(repository: SnorlaxRepository, gcs_service: Arc<GcsService>) -> Self {
+    pub fn new(repository: Arc<SnorlaxRepository>, gcs_service: Arc<GcsService>) -> Self {
         Self {
             repository,
             gcs_service,

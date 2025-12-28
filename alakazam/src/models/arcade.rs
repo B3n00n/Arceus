@@ -2,7 +2,7 @@ use serde::{Serialize};
 use sqlx::types::chrono::{DateTime, Utc};
 
 /// Arcade entity from database
-#[derive(Debug, Clone, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, sqlx::FromRow)]
 pub struct Arcade {
     pub id: i32,
     pub name: String,

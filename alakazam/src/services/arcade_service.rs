@@ -7,13 +7,13 @@ use crate::{
 use std::sync::Arc;
 
 pub struct ArcadeService {
-    arcade_repo: ArcadeRepository,
-    game_repo: GameRepository,
+    arcade_repo: Arc<ArcadeRepository>,
+    game_repo: Arc<GameRepository>,
     gcs_service: Arc<GcsService>,
 }
 
 impl ArcadeService {
-    pub fn new(arcade_repo: ArcadeRepository, game_repo: GameRepository, gcs_service: Arc<GcsService>) -> Self {
+    pub fn new(arcade_repo: Arc<ArcadeRepository>, game_repo: Arc<GameRepository>, gcs_service: Arc<GcsService>) -> Self {
         Self {
             arcade_repo,
             game_repo,
