@@ -1,0 +1,9 @@
+[package]
+name = "calyrex"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+mac_address = "1.1"
+arboard = "3.4"
+colored = "2.1"
