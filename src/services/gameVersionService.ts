@@ -9,7 +9,6 @@ export interface GameStatus {
   updateAvailable: boolean;
   downloadProgress: DownloadProgress | null;
   online: boolean;
-  lastSynced: string | null;
   backgroundImagePath: string | null;
 }
 

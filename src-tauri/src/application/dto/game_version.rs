@@ -29,6 +29,7 @@ pub struct GameDownloadResponse {
     pub version_id: i32,
     pub gcs_path: String,
     pub files: Vec<GameFile>,
+    pub background_image_url: Option<String>,
     pub expires_at: DateTime<Utc>,
 }
 
@@ -64,23 +65,21 @@ impl LocalGameMetadata {
     }
 }
 
-/// Cached game entry combining Alakazam assignment data with local metadata
-/// Stored in SQLite database for offline access
+/// Cached game entry - minimal structure for offline access
+/// Stores only what's needed to display games and detect updates
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CachedGameEntry {
-    // From Alakazam assignment
     pub game_id: i32,
     pub game_name: String,
-    pub assigned_version: VersionInfo,
-    pub current_version: Option<VersionInfo>,
-    pub background_image_url: Option<String>,
 
-    // From local filesystem
-    pub local_metadata: Option<LocalGameMetadata>,
+    // Assigned version (from Alakazam server)
+    pub assigned_version_id: i32,
+    pub assigned_version: String,
 
-    // Cache metadata
-    pub cached_at: DateTime<Utc>,
-    pub last_synced: Option<DateTime<Utc>>,
+    // Installed version (from local filesystem)
+    pub installed_version_id: Option<i32>,
+    pub installed_version: Option<String>,
+    pub installed_at: Option<DateTime<Utc>>,
 }
 
 impl CachedGameEntry {
@@ -92,12 +91,11 @@ impl CachedGameEntry {
         Self {
             game_id: assignment.game_id,
             game_name: assignment.game_name,
-            assigned_version: assignment.assigned_version,
-            current_version: assignment.current_version,
-            background_image_url: assignment.background_image_url,
-            local_metadata,
-            cached_at: Utc::now(),
-            last_synced: Some(Utc::now()),
+            assigned_version_id: assignment.assigned_version.version_id,
+            assigned_version: assignment.assigned_version.version,
+            installed_version_id: local_metadata.as_ref().map(|m| m.installed_version_id),
+            installed_version: local_metadata.as_ref().map(|m| m.installed_version.clone()),
+            installed_at: local_metadata.map(|m| m.installed_at),
         }
     }
 
@@ -106,23 +104,11 @@ impl CachedGameEntry {
         Self {
             game_id: local_metadata.game_id,
             game_name: local_metadata.game_name.clone(),
-            assigned_version: VersionInfo {
-                version_id: local_metadata.installed_version_id,
-                version: local_metadata.installed_version.clone(),
-                gcs_path: String::new(), // Unknown without online data
-                release_date: local_metadata.installed_at,
-            },
-            current_version: None,
-            background_image_url: None, // Unknown without server data
-            local_metadata: Some(local_metadata),
-            cached_at: Utc::now(),
-            last_synced: None, // Never synced with server
+            assigned_version_id: local_metadata.installed_version_id,
+            assigned_version: local_metadata.installed_version.clone(),
+            installed_version_id: Some(local_metadata.installed_version_id),
+            installed_version: Some(local_metadata.installed_version),
+            installed_at: Some(local_metadata.installed_at),
         }
-    }
-
-    /// Update the local metadata portion of this entry
-    pub fn update_local_metadata(&mut self, metadata: LocalGameMetadata) {
-        self.local_metadata = Some(metadata);
-        self.cached_at = Utc::now();
     }
 }

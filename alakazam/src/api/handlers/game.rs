@@ -17,6 +17,7 @@ pub struct GameDownloadResponse {
     pub version_id: i32,
     pub gcs_path: String,
     pub files: Vec<GameFile>,
+    pub background_image_url: Option<String>,
     pub expires_at: chrono::DateTime<Utc>,
 }
 
@@ -54,6 +55,15 @@ pub async fn get_game_download_urls(
         .list_and_sign_folder(&version.gcs_path)
         .await?;
 
+    // Background image path: <GameName>/<GameName>BG.jpg
+    let background_image_url = {
+        let bg_path = format!("{}/{}BG.jpg", game_assignment.game_name, game_assignment.game_name);
+        gcs_service
+            .generate_signed_download_url(&bg_path)
+            .await
+            .ok()
+    };
+
     // Calculate expiration time
     let duration_secs = gcs_service.get_url_duration_secs();
     let expires_at = Utc::now() + chrono::Duration::seconds(duration_secs as i64);
@@ -65,6 +75,7 @@ pub async fn get_game_download_urls(
         version_id: version.version_id,
         gcs_path: version.gcs_path.clone(),
         files,
+        background_image_url,
         expires_at,
     }))
 }

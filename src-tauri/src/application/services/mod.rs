@@ -12,5 +12,5 @@ pub use battery_monitor::BatteryMonitor;
 pub use client_apk_service::ClientApkService;
 pub use device_app_service::{ApplicationError, DeviceApplicationService};
 pub use game_app_service::GameApplicationService;
-pub use game_version_service::{GameVersionService, GameStatus, DownloadProgress};
+pub use game_version_service::{GameVersionService, GameStatus};
 pub use http_server_service::HttpServerService;
