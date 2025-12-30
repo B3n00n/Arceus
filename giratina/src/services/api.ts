@@ -17,7 +17,7 @@ import type {
   CreateSnorlaxVersionRequest,
 } from '../types';
 
-class AlaakazamAPI {
+class AlakazamAPI {
   private client: AxiosInstance;
 
   constructor(baseURL: string = import.meta.env.VITE_ALAKAZAM_API_URL || 'http://localhost:8080') {
@@ -158,4 +158,4 @@ class AlaakazamAPI {
   }
 }
 
-export const api = new AlaakazamAPI();
+export const api = new AlakazamAPI();
