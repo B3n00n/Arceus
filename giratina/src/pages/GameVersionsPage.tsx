@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Typography,
   Button,
@@ -24,6 +24,7 @@ import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import {
   useGameVersions,
+  useAllGameVersions,
   useCreateGameVersion,
   useUpdateGameVersion,
   useDeleteGameVersion,
@@ -36,7 +37,6 @@ dayjs.extend(relativeTime);
 
 const { Title } = Typography;
 
-// Extended type to include game name
 interface GameVersionWithGame extends GameVersion {
   game_name?: string;
 }
@@ -46,15 +46,24 @@ export const GameVersionsPage = () => {
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [selectedVersion, setSelectedVersion] = useState<GameVersion | undefined>();
   const [searchText, setSearchText] = useState('');
-  const [selectedGameFilter, setSelectedGameFilter] = useState<number | undefined>();
+  const [selectedGameFilter, setSelectedGameFilter] = useState<number | 'all'>('all');
 
   const { data: games = [] } = useGames();
-  const { data: versions = [], isLoading, refetch } = useGameVersions(selectedGameFilter || null);
+  const gameIds = games.map(g => g.id);
+
+  const { data: singleGameVersions = [], isLoading: isLoadingSingle, refetch: refetchSingle } =
+    useGameVersions(typeof selectedGameFilter === 'number' ? selectedGameFilter : null);
+  const { data: allVersions = [], isLoading: isLoadingAll, refetch: refetchAll } =
+    useAllGameVersions(selectedGameFilter === 'all' ? gameIds : []);
+
+  const versions = selectedGameFilter === 'all' ? allVersions : singleGameVersions;
+  const isLoading = selectedGameFilter === 'all' ? isLoadingAll : isLoadingSingle;
+  const refetch = selectedGameFilter === 'all' ? refetchAll : refetchSingle;
+
   const createMutation = useCreateGameVersion();
   const updateMutation = useUpdateGameVersion();
   const deleteMutation = useDeleteGameVersion();
 
-  // Enrich versions with game names
   const enrichedVersions: GameVersionWithGame[] = useMemo(() => {
     return versions.map((version) => ({
       ...version,
@@ -69,13 +78,6 @@ export const GameVersionsPage = () => {
       version.game_name?.toLowerCase().includes(searchText.toLowerCase())
     );
   }, [enrichedVersions, searchText]);
-
-  // Auto-select first game if none selected
-  useEffect(() => {
-    if (games.length > 0 && !selectedGameFilter) {
-      setSelectedGameFilter(games[0].id);
-    }
-  }, [games, selectedGameFilter]);
 
   const handleCreate = () => {
     setModalMode('create');
@@ -115,7 +117,6 @@ export const GameVersionsPage = () => {
       setModalOpen(false);
       setSelectedVersion(undefined);
     } catch (error) {
-      // Error handling is done in the mutation hooks
     }
   };
 
@@ -226,10 +227,13 @@ export const GameVersionsPage = () => {
             style={{ width: 200 }}
             value={selectedGameFilter}
             onChange={setSelectedGameFilter}
-            options={games.map((game) => ({
-              label: game.name,
-              value: game.id,
-            }))}
+            options={[
+              { label: 'All Games', value: 'all' },
+              ...games.map((game) => ({
+                label: game.name,
+                value: game.id,
+              })),
+            ]}
             showSearch
             filterOption={(input, option) =>
               (option?.label ?? '').toLowerCase().includes(input.toLowerCase())

@@ -13,13 +13,15 @@ export function useGameVersions(gameId: number | null) {
   });
 }
 
-export function useAllGameVersions() {
-  // This would require a backend endpoint that returns all versions across all games
-  // For now, we'll return an empty array - you can fetch per-game later
+export function useAllGameVersions(gameIds: number[]) {
   return useQuery({
-    queryKey: ['all-game-versions'],
-    queryFn: async () => [] as GameVersion[],
-    enabled: false,
+    queryKey: ['all-game-versions', gameIds],
+    queryFn: async () => {
+      const allVersionsPromises = gameIds.map(gameId => api.getGameVersions(gameId));
+      const allVersionsArrays = await Promise.all(allVersionsPromises);
+      return allVersionsArrays.flat();
+    },
+    enabled: gameIds.length > 0,
   });
 }
 

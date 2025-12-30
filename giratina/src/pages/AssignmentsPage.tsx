@@ -141,7 +141,7 @@ export const AssignmentsPage = () => {
       render: (_, record) => {
         const isSynced = record.current_version_id === record.assigned_version_id;
         return (
-          <Space direction="vertical" size="small">
+          <Space orientation="vertical" size="small">
             <div>
               <strong>Assigned:</strong> Version ID {record.assigned_version_id}
             </div>
