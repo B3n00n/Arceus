@@ -45,7 +45,7 @@ export function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-30 h-16 border-b border-discord-dark-2 bg-dark">
+      <header className="sticky top-0 z-30 h-16 border-b border-discord-dark-2 bg-discord-dark-4">
         <div className="flex h-full items-center justify-between px-6">
           {/* Left — Title */}
           <div className="flex items-center gap-2">
