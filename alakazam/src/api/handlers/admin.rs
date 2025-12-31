@@ -1,11 +1,11 @@
 use crate::{
     api::IapUser,
-    error::Result,
+    error::{AppError, Result},
     models::{Arcade, ArcadeGameAssignment, Game, GameVersion, SnorlaxVersion},
-    services::{AdminService, SnorlaxService},
+    services::{AdminService, GcsService, SnorlaxService},
 };
 use axum::{
-    extract::{Path, State},
+    extract::{Multipart, Path, State},
     http::StatusCode,
     Json,
 };
@@ -67,6 +67,14 @@ pub struct CreateSnorlaxVersionRequest {
 #[derive(Debug, Serialize)]
 pub struct AdminActionResponse {
     pub message: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct GameWithBackground {
+    pub id: i32,
+    pub name: String,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub background_url: Option<String>,
 }
 
 /// POST /api/admin/arcades
@@ -147,13 +155,27 @@ pub async fn create_game(
 }
 
 /// GET /api/admin/games
-/// List all games
+/// List all games with background image URLs
 pub async fn list_games(
-    State(service): State<Arc<AdminService>>,
+    State((admin_service, gcs_service)): State<(Arc<AdminService>, Arc<GcsService>)>,
     _user: IapUser,
-) -> Result<Json<Vec<Game>>> {
-    let games = service.list_games().await?;
-    Ok(Json(games))
+) -> Result<Json<Vec<GameWithBackground>>> {
+    let games = admin_service.list_games().await?;
+
+    let mut games_with_bg = Vec::new();
+    for game in games {
+        let bg_path = format!("{}/{}BG.jpg", game.name, game.name);
+        let background_url = gcs_service.generate_signed_download_url(&bg_path).await.ok();
+
+        games_with_bg.push(GameWithBackground {
+            id: game.id,
+            name: game.name,
+            created_at: game.created_at,
+            background_url,
+        });
+    }
+
+    Ok(Json(games_with_bg))
 }
 
 /// GET /api/admin/games/{id}
@@ -342,4 +364,101 @@ pub async fn delete_snorlax_version(
 ) -> Result<StatusCode> {
     service.delete_version(id).await?;
     Ok(StatusCode::NO_CONTENT)
+}
+
+/// POST /api/admin/snorlax/upload
+/// Upload Snorlax APK and create new version
+pub async fn upload_snorlax_apk(
+    State((snorlax_service, gcs_service)): State<(Arc<SnorlaxService>, Arc<GcsService>)>,
+    _user: IapUser,
+    mut multipart: Multipart,
+) -> Result<(StatusCode, Json<SnorlaxVersion>)> {
+    let mut file_data: Option<Vec<u8>> = None;
+    let mut version: Option<String> = None;
+
+    while let Some(field) = multipart.next_field().await.map_err(|e| {
+        AppError::BadRequest(format!("Failed to read multipart field: {}", e))
+    })? {
+        match field.name() {
+            Some("file") => {
+                file_data = Some(field.bytes().await.map_err(|e| {
+                    AppError::BadRequest(format!("Failed to read file data: {}", e))
+                })?.to_vec());
+            }
+            Some("version") => {
+                version = Some(field.text().await.map_err(|e| {
+                    AppError::BadRequest(format!("Failed to read version: {}", e))
+                })?);
+            }
+            _ => {}
+        }
+    }
+
+    let file_data = file_data.ok_or_else(|| {
+        AppError::BadRequest("No file provided".to_string())
+    })?;
+
+    let version = version.ok_or_else(|| {
+        AppError::BadRequest("Version is required".to_string())
+    })?;
+
+    if file_data.len() < 100 {
+        return Err(AppError::BadRequest("File too small".to_string()));
+    }
+
+    let gcs_path = format!("Snorlax/{}", version);
+
+    gcs_service
+        .upload_file(
+            &format!("{}/Snorlax.apk", gcs_path),
+            "application/vnd.android.package-archive",
+            file_data,
+        )
+        .await?;
+
+    let snorlax_version = snorlax_service.create_version(&version, &gcs_path).await?;
+
+    Ok((StatusCode::CREATED, Json(snorlax_version)))
+}
+
+/// POST /api/admin/games/{id}/background
+/// Upload background image for a game (JPEG only)
+pub async fn upload_game_background(
+    State((admin_service, gcs_service)): State<(Arc<AdminService>, Arc<GcsService>)>,
+    _user: IapUser,
+    Path(game_id): Path<i32>,
+    mut multipart: Multipart,
+) -> Result<Json<AdminActionResponse>> {
+    let game = admin_service.get_game(game_id).await?;
+
+    let mut file_data: Option<Vec<u8>> = None;
+
+    while let Some(field) = multipart.next_field().await.map_err(|e| {
+        AppError::BadRequest(format!("Failed to read multipart field: {}", e))
+    })? {
+        if field.name() == Some("file") {
+            file_data = Some(field.bytes().await.map_err(|e| {
+                AppError::BadRequest(format!("Failed to read file data: {}", e))
+            })?.to_vec());
+            break;
+        }
+    }
+
+    let file_data = file_data.ok_or_else(|| {
+        AppError::BadRequest("No file provided".to_string())
+    })?;
+
+    if file_data.len() < 100 {
+        return Err(AppError::BadRequest("File too small".to_string()));
+    }
+
+    let gcs_path = format!("{}/{}BG.jpg", game.name, game.name);
+
+    gcs_service
+        .upload_file(&gcs_path, "image/jpeg", file_data)
+        .await?;
+
+    Ok(Json(AdminActionResponse {
+        message: format!("Background uploaded: {}", gcs_path),
+    }))
 }

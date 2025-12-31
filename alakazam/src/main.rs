@@ -7,6 +7,7 @@ mod repositories;
 mod routes;
 mod services;
 
+use axum::extract::DefaultBodyLimit;
 use config::Config;
 use repositories::{ArcadeRepository, GameRepository, SnorlaxRepository};
 use services::{AdminService, ArcadeService, GcsService, SnorlaxService};
@@ -58,6 +59,7 @@ async fn main() -> anyhow::Result<()> {
     let app = axum::Router::new()
         .merge(routes::create_router())
         .nest("/api", api::create_api_router(arcade_service, gcs_service, snorlax_service, admin_service))
+        .layer(DefaultBodyLimit::max(100 * 1024 * 1024)) // 100 MB limit for file uploads
         .layer(CorsLayer::permissive())
         .layer(TraceLayer::new_for_http());
 

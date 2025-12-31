@@ -83,6 +83,17 @@ impl SnorlaxService {
 
     /// Delete a Snorlax version (for admin, only if not current)
     pub async fn delete_version(&self, id: i32) -> Result<()> {
+        let version = self.get_version_by_id(id).await?;
+
+        if version.is_current {
+            return Err(AppError::BadRequest(
+                "Cannot delete the current version".to_string()
+            ));
+        }
+
+        let apk_path = format!("{}/Snorlax.apk", version.gcs_path);
+        self.gcs_service.delete_file(&apk_path).await?;
+
         self.repository.delete_version(id).await
     }
 }

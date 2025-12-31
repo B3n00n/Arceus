@@ -93,6 +93,32 @@ class AlakazamAPI {
     await this.client.delete(`/api/admin/games/${id}`);
   }
 
+  async uploadGameBackground(gameId: number, file: File): Promise<{ message: string }> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const headers: HeadersInit = {};
+
+    // For local development, send a mock IAP header
+    if (import.meta.env.DEV) {
+      headers['X-Goog-Authenticated-User-Email'] = 'accounts.google.com:dev@combatica.com';
+    }
+
+    const baseURL = this.client.defaults.baseURL || '';
+    const response = await fetch(`${baseURL}/api/admin/games/${gameId}/background`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Upload failed' }));
+      throw new Error(error.error || error.details || 'Upload failed');
+    }
+
+    return response.json();
+  }
+
   // Game Version endpoints
   async getGameVersions(gameId: number): Promise<GameVersion[]> {
     const response = await this.client.get(`/api/admin/games/${gameId}/versions`);
@@ -155,6 +181,42 @@ class AlakazamAPI {
 
   async deleteSnorlaxVersion(id: number): Promise<void> {
     await this.client.delete(`/api/admin/snorlax/versions/${id}`);
+  }
+
+  async uploadSnorlaxApk(version: string, file: File): Promise<SnorlaxVersion> {
+    const formData = new FormData();
+    formData.append('version', version);
+    formData.append('file', file);
+
+    const headers: HeadersInit = {};
+
+    if (import.meta.env.DEV) {
+      headers['X-Goog-Authenticated-User-Email'] = 'accounts.google.com:dev@combatica.com';
+    }
+
+    const baseURL = this.client.defaults.baseURL || '';
+    const response = await fetch(`${baseURL}/api/admin/snorlax/upload`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const contentType = response.headers.get('content-type');
+      let errorMessage = `Upload failed (${response.status})`;
+
+      if (contentType?.includes('application/json')) {
+        const error = await response.json().catch(() => ({}));
+        errorMessage = error.error || error.details || errorMessage;
+      } else {
+        const text = await response.text().catch(() => '');
+        if (text) errorMessage = text;
+      }
+
+      throw new Error(errorMessage);
+    }
+
+    return response.json();
   }
 }
 

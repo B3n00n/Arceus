@@ -11,6 +11,7 @@ import {
   Flex,
   Tag,
   Badge,
+  message,
 } from 'antd';
 import {
   PlusOutlined,
@@ -32,6 +33,7 @@ import {
 } from '../hooks/useSnorlax';
 import { SnorlaxModal } from '../components/SnorlaxModal';
 import type { SnorlaxVersion } from '../types';
+import { api } from '../services/api';
 
 dayjs.extend(relativeTime);
 
@@ -67,10 +69,19 @@ export const SnorlaxVersionsPage = () => {
 
   const handleModalSubmit = async (values: any) => {
     try {
-      await createMutation.mutateAsync(values);
+      const { apkFile, version } = values;
+
+      if (!apkFile) {
+        message.error('APK file is required');
+        return;
+      }
+
+      await api.uploadSnorlaxApk(version, apkFile);
+      await refetch();
+      message.success(`Snorlax version ${version} created successfully`);
       setModalOpen(false);
-    } catch (error) {
-      // Error handling is done in the mutation hooks
+    } catch (error: any) {
+      message.error(error.message || 'Failed to upload Snorlax APK');
     }
   };
 

@@ -207,7 +207,7 @@ impl GcsService {
         let now = Utc::now().timestamp();
         let claims = Claims {
             iss: self.client_email.clone(),
-            scope: "https://www.googleapis.com/auth/devstorage.read_only".to_string(),
+            scope: "https://www.googleapis.com/auth/devstorage.full_control".to_string(),
             aud: "https://oauth2.googleapis.com/token".to_string(),
             exp: now + 3600,
             iat: now,
@@ -242,6 +242,76 @@ impl GcsService {
             .map_err(|e| AppError::Internal(format!("Failed to parse token response: {}", e)))?;
 
         Ok(token_response.access_token)
+    }
+
+    /// Upload a file to GCS
+    pub async fn upload_file(
+        &self,
+        object_path: &str,
+        content_type: &str,
+        data: Vec<u8>,
+    ) -> Result<()> {
+        use reqwest::Client;
+
+        let token = self.get_access_token().await?;
+        let upload_url = format!(
+            "https://storage.googleapis.com/upload/storage/v1/b/{}/o?uploadType=media&name={}",
+            self.bucket_name,
+            percent_encoding::utf8_percent_encode(object_path, &percent_encoding::NON_ALPHANUMERIC)
+        );
+
+        let client = Client::new();
+        let response = client
+            .post(&upload_url)
+            .header("Authorization", format!("Bearer {}", token))
+            .header("Content-Type", content_type)
+            .header("Content-Length", data.len())
+            .body(data)
+            .send()
+            .await
+            .map_err(|e| AppError::Internal(format!("Failed to upload to GCS: {}", e)))?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_default();
+            return Err(AppError::Internal(format!(
+                "GCS upload failed with status {}: {}",
+                status, error_text
+            )));
+        }
+
+        Ok(())
+    }
+
+    /// Delete a file from GCS
+    pub async fn delete_file(&self, object_path: &str) -> Result<()> {
+        use reqwest::Client;
+
+        let token = self.get_access_token().await?;
+        let delete_url = format!(
+            "https://storage.googleapis.com/storage/v1/b/{}/o/{}",
+            self.bucket_name,
+            percent_encoding::utf8_percent_encode(object_path, &percent_encoding::NON_ALPHANUMERIC)
+        );
+
+        let client = Client::new();
+        let response = client
+            .delete(&delete_url)
+            .header("Authorization", format!("Bearer {}", token))
+            .send()
+            .await
+            .map_err(|e| AppError::Internal(format!("Failed to delete from GCS: {}", e)))?;
+
+        if !response.status().is_success() && response.status().as_u16() != 404 {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_default();
+            return Err(AppError::Internal(format!(
+                "GCS delete failed with status {}: {}",
+                status, error_text
+            )));
+        }
+
+        Ok(())
     }
 
     /// Sign a string using RSA-SHA256 with the private key

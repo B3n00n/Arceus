@@ -23,6 +23,7 @@ import relativeTime from 'dayjs/plugin/relativeTime';
 import { useGames, useCreateGame, useUpdateGame, useDeleteGame } from '../hooks/useGames';
 import { GameModal } from '../components/GameModal';
 import type { Game } from '../types';
+import { api } from '../services/api';
 
 dayjs.extend(relativeTime);
 
@@ -64,7 +65,12 @@ export const GamesPage = () => {
   const handleModalSubmit = async (values: any) => {
     try {
       if (modalMode === 'create') {
-        await createMutation.mutateAsync(values);
+        const { backgroundFile, ...gameData } = values;
+        const newGame = await createMutation.mutateAsync(gameData);
+
+        if (backgroundFile && newGame?.id) {
+          await api.uploadGameBackground(newGame.id, backgroundFile);
+        }
       } else if (selectedGame) {
         await updateMutation.mutateAsync({
           id: selectedGame.id,
@@ -90,6 +96,41 @@ export const GamesPage = () => {
       key: 'id',
       width: 80,
       sorter: (a, b) => a.id - b.id,
+    },
+    {
+      title: 'Image',
+      dataIndex: 'background_url',
+      key: 'background_url',
+      width: 100,
+      render: (url: string | undefined) =>
+        url ? (
+          <img
+            src={url}
+            alt="Game background"
+            style={{
+              width: 60,
+              height: 40,
+              objectFit: 'cover',
+              borderRadius: 4,
+              border: '1px solid #424242'
+            }}
+          />
+        ) : (
+          <div style={{
+            width: 60,
+            height: 40,
+            backgroundColor: '#1a1a1a',
+            borderRadius: 4,
+            border: '1px solid #424242',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 10,
+            color: '#666'
+          }}>
+            No image
+          </div>
+        ),
     },
     {
       title: 'Name',

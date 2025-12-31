@@ -13,6 +13,7 @@ export interface Game {
   id: number;
   name: string;
   created_at: string;
+  background_url?: string;
 }
 
 export interface GameVersion {

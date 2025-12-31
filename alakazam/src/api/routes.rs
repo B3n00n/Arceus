@@ -47,8 +47,7 @@ pub fn create_api_router(
                 .delete(handlers::delete_arcade))
         .route("/admin/arcades/{id}/assignments", get(handlers::get_arcade_assignments))
         .route("/admin/games",
-            post(handlers::create_game)
-                .get(handlers::list_games))
+            post(handlers::create_game))
         .route("/admin/games/{id}",
             get(handlers::get_game)
                 .put(handlers::update_game)
@@ -67,7 +66,13 @@ pub fn create_api_router(
         .route("/admin/assignments/{id}",
             put(handlers::update_assignment)
                 .delete(handlers::delete_assignment))
-        .with_state(admin_service);
+        .with_state(admin_service.clone());
+
+    // Game endpoints that require GCS service
+    let game_gcs_router = Router::new()
+        .route("/admin/games", get(handlers::list_games))
+        .route("/admin/games/{id}/background", post(handlers::upload_game_background))
+        .with_state((admin_service, gcs_service.clone()));
 
     // Snorlax admin endpoints
     let snorlax_admin_router = Router::new()
@@ -76,12 +81,19 @@ pub fn create_api_router(
                 .post(handlers::create_snorlax_version))
         .route("/admin/snorlax/versions/{id}/set-current", put(handlers::set_current_snorlax_version))
         .route("/admin/snorlax/versions/{id}", delete(handlers::delete_snorlax_version))
-        .with_state(snorlax_service);
+        .with_state(snorlax_service.clone());
+
+    // Snorlax upload endpoint (requires both snorlax and GCS services)
+    let snorlax_upload_router = Router::new()
+        .route("/admin/snorlax/upload", post(handlers::upload_snorlax_apk))
+        .with_state((snorlax_service, gcs_service));
 
     // Merge routers
     arcade_router
         .merge(game_download_router)
         .merge(snorlax_router)
         .merge(admin_router)
+        .merge(game_gcs_router)
         .merge(snorlax_admin_router)
+        .merge(snorlax_upload_router)
 }

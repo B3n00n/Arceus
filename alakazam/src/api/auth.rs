@@ -33,6 +33,7 @@ impl From<MacKey> for String {
 /// IAP (Identity-Aware Proxy) authenticated user
 /// Extracts user email from Google Cloud IAP headers
 pub struct IapUser {
+    #[allow(dead_code)]
     pub email: String,
 }
 
