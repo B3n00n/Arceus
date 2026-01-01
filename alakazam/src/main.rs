@@ -8,6 +8,7 @@ mod routes;
 mod services;
 
 use axum::extract::DefaultBodyLimit;
+use axum::http::{HeaderValue, Method};
 use config::Config;
 use repositories::{ArcadeRepository, GameRepository, SnorlaxRepository};
 use services::{AdminService, ArcadeService, GcsService, SnorlaxService};
@@ -55,12 +56,25 @@ async fn main() -> anyhow::Result<()> {
     let snorlax_service = Arc::new(SnorlaxService::new(snorlax_repo.clone(), gcs_service.clone()));
     let admin_service = Arc::new(AdminService::new(arcade_repo.clone(), game_repo.clone()));
 
+    // Configure CORS
+    let cors = CorsLayer::new()
+        .allow_origin(config.cors.allowed_origin.parse::<HeaderValue>()
+            .expect("Invalid CORS origin"))
+        .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE])
+        .allow_headers([
+            axum::http::header::CONTENT_TYPE,
+            axum::http::header::AUTHORIZATION,
+        ])
+        .allow_credentials(true);
+
+    info!("CORS configured for origin: {}", config.cors.allowed_origin);
+
     // Build application router
     let app = axum::Router::new()
         .merge(routes::create_router())
         .nest("/api", api::create_api_router(arcade_service, gcs_service, snorlax_service, admin_service))
         .layer(DefaultBodyLimit::max(20 * 1024 * 1024 * 1024)) // 20 GB limit for file uploads
-        .layer(CorsLayer::permissive())
+        .layer(cors)
         .layer(TraceLayer::new_for_http());
 
     // Start server
