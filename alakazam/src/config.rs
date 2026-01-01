@@ -5,6 +5,7 @@ pub struct Config {
     pub server: ServerConfig,
     pub database: DatabaseConfig,
     pub gcs: GcsConfig,
+    pub cors: CorsConfig,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -23,6 +24,11 @@ pub struct GcsConfig {
     pub bucket_name: String,
     pub service_account_path: String,
     pub signed_url_duration_secs: u32,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct CorsConfig {
+    pub allowed_origin: String,
 }
 
 impl Config {
@@ -45,6 +51,10 @@ impl Config {
                 signed_url_duration_secs: std::env::var("GCS_SIGNED_URL_DURATION_SECS")
                     .unwrap_or_else(|_| "3600".to_string())
                     .parse()?,
+            },
+            cors: CorsConfig {
+                allowed_origin: std::env::var("CORS_ALLOWED_ORIGIN")
+                    .unwrap_or_else(|_| "http://localhost:5173".to_string()),
             },
         })
     }
