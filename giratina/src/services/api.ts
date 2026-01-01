@@ -93,30 +93,27 @@ class AlakazamAPI {
     await this.client.delete(`/api/admin/games/${id}`);
   }
 
-  async uploadGameBackground(gameId: number, file: File): Promise<{ message: string }> {
+  async uploadGameBackground(
+    gameId: number,
+    file: File,
+    onProgress?: (progress: number) => void
+  ): Promise<{ message: string }> {
     const formData = new FormData();
     formData.append('file', file);
 
-    const headers: HeadersInit = {};
-
-    // For local development, send a mock IAP header
-    if (import.meta.env.DEV) {
-      headers['X-Goog-Authenticated-User-Email'] = 'accounts.google.com:dev@combatica.com';
-    }
-
-    const baseURL = this.client.defaults.baseURL || '';
-    const response = await fetch(`${baseURL}/api/admin/games/${gameId}/background`, {
-      method: 'POST',
-      headers,
-      body: formData,
+    const response = await this.client.post(`/api/admin/games/${gameId}/background`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      onUploadProgress: (progressEvent) => {
+        if (onProgress && progressEvent.total) {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          onProgress(percentCompleted);
+        }
+      },
     });
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: 'Upload failed' }));
-      throw new Error(error.error || error.details || 'Upload failed');
-    }
-
-    return response.json();
+    return response.data;
   }
 
   // Game Version endpoints
@@ -142,6 +139,35 @@ class AlakazamAPI {
 
   async deleteGameVersion(gameId: number, versionId: number): Promise<void> {
     await this.client.delete(`/api/admin/games/${gameId}/versions/${versionId}`);
+  }
+
+  async uploadGameVersion(
+    gameId: number,
+    version: string,
+    file: File,
+    onProgress?: (progress: number) => void
+  ): Promise<GameVersion> {
+    const formData = new FormData();
+    formData.append('version', version);
+    formData.append('file', file);
+
+    const response = await this.client.post(
+      `/api/admin/games/${gameId}/versions/upload`,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        onUploadProgress: (progressEvent) => {
+          if (onProgress && progressEvent.total) {
+            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            onProgress(percentCompleted);
+          }
+        },
+      }
+    );
+
+    return response.data;
   }
 
   // Assignment endpoints
@@ -183,40 +209,28 @@ class AlakazamAPI {
     await this.client.delete(`/api/admin/snorlax/versions/${id}`);
   }
 
-  async uploadSnorlaxApk(version: string, file: File): Promise<SnorlaxVersion> {
+  async uploadSnorlaxApk(
+    version: string,
+    file: File,
+    onProgress?: (progress: number) => void
+  ): Promise<SnorlaxVersion> {
     const formData = new FormData();
     formData.append('version', version);
     formData.append('file', file);
 
-    const headers: HeadersInit = {};
-
-    if (import.meta.env.DEV) {
-      headers['X-Goog-Authenticated-User-Email'] = 'accounts.google.com:dev@combatica.com';
-    }
-
-    const baseURL = this.client.defaults.baseURL || '';
-    const response = await fetch(`${baseURL}/api/admin/snorlax/upload`, {
-      method: 'POST',
-      headers,
-      body: formData,
+    const response = await this.client.post('/api/admin/snorlax/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      onUploadProgress: (progressEvent) => {
+        if (onProgress && progressEvent.total) {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          onProgress(percentCompleted);
+        }
+      },
     });
 
-    if (!response.ok) {
-      const contentType = response.headers.get('content-type');
-      let errorMessage = `Upload failed (${response.status})`;
-
-      if (contentType?.includes('application/json')) {
-        const error = await response.json().catch(() => ({}));
-        errorMessage = error.error || error.details || errorMessage;
-      } else {
-        const text = await response.text().catch(() => '');
-        if (text) errorMessage = text;
-      }
-
-      throw new Error(errorMessage);
-    }
-
-    return response.json();
+    return response.data;
   }
 }
 

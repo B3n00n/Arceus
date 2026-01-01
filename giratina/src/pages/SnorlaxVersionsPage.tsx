@@ -12,6 +12,9 @@ import {
   Tag,
   Badge,
   message,
+  Modal,
+  Progress,
+  App,
 } from 'antd';
 import {
   PlusOutlined,
@@ -27,7 +30,6 @@ import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import {
   useSnorlaxVersions,
-  useCreateSnorlaxVersion,
   useSetSnorlaxVersionCurrent,
   useDeleteSnorlaxVersion,
 } from '../hooks/useSnorlax';
@@ -42,11 +44,14 @@ const { Title } = Typography;
 export const SnorlaxVersionsPage = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [searchText, setSearchText] = useState('');
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
+  const [isUploading, setIsUploading] = useState(false);
 
   const { data: versions = [], isLoading, refetch } = useSnorlaxVersions();
-  const createMutation = useCreateSnorlaxVersion();
   const setCurrentMutation = useSetSnorlaxVersionCurrent();
   const deleteMutation = useDeleteSnorlaxVersion();
+
+  const { modal: antModal } = App.useApp();
 
   const filteredVersions = useMemo(() => {
     return versions.filter((version) =>
@@ -76,17 +81,74 @@ export const SnorlaxVersionsPage = () => {
         return;
       }
 
-      await api.uploadSnorlaxApk(version, apkFile);
-      await refetch();
-      message.success(`Snorlax version ${version} created successfully`);
+      setIsUploading(true);
+      setUploadProgress(0);
       setModalOpen(false);
+
+      // Show progress modal
+      const progressModal = antModal.info({
+        title: 'Uploading Snorlax APK',
+        content: (
+          <div>
+            <p>Uploading {apkFile.name}...</p>
+            <Progress percent={0} status="active" />
+            <p style={{ marginTop: 16, color: '#666', fontSize: 12 }}>
+              Please wait while the file is being uploaded.
+            </p>
+          </div>
+        ),
+        okButtonProps: { style: { display: 'none' } },
+        closable: false,
+        maskClosable: false,
+      });
+
+      try {
+        await api.uploadSnorlaxApk(version, apkFile, (progress) => {
+          setUploadProgress(progress);
+          progressModal.update({
+            content: (
+              <div>
+                <p>Uploading {apkFile.name}...</p>
+                <Progress percent={progress} status="active" />
+                <p style={{ marginTop: 16, color: '#666', fontSize: 12 }}>
+                  {progress < 100
+                    ? 'Please wait while the file is being uploaded.'
+                    : 'Processing...'}
+                </p>
+              </div>
+            ),
+          });
+        });
+
+        progressModal.destroy();
+        await refetch();
+        message.success(`Snorlax version ${version} created successfully`);
+      } catch (error: any) {
+        progressModal.destroy();
+        const errorMessage = error.response?.data?.error || error.message || 'Failed to upload Snorlax APK';
+        message.error(errorMessage);
+      } finally {
+        setIsUploading(false);
+        setUploadProgress(0);
+      }
     } catch (error: any) {
       message.error(error.message || 'Failed to upload Snorlax APK');
     }
   };
 
   const handleModalCancel = () => {
-    setModalOpen(false);
+    if (isUploading) {
+      antModal.confirm({
+        title: 'Upload in progress',
+        content: 'Are you sure you want to cancel? The upload will be interrupted.',
+        onOk: () => {
+          setModalOpen(false);
+          setIsUploading(false);
+        },
+      });
+    } else {
+      setModalOpen(false);
+    }
   };
 
   const columns: ColumnsType<SnorlaxVersion> = [
@@ -267,7 +329,7 @@ export const SnorlaxVersionsPage = () => {
         open={modalOpen}
         onSubmit={handleModalSubmit}
         onCancel={handleModalCancel}
-        loading={createMutation.isPending}
+        loading={isUploading}
       />
 
       <style>{`

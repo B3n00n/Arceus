@@ -59,7 +59,7 @@ async fn main() -> anyhow::Result<()> {
     let app = axum::Router::new()
         .merge(routes::create_router())
         .nest("/api", api::create_api_router(arcade_service, gcs_service, snorlax_service, admin_service))
-        .layer(DefaultBodyLimit::max(100 * 1024 * 1024)) // 100 MB limit for file uploads
+        .layer(DefaultBodyLimit::max(20 * 1024 * 1024 * 1024)) // 20 GB limit for file uploads
         .layer(CorsLayer::permissive())
         .layer(TraceLayer::new_for_http());
 

@@ -244,7 +244,7 @@ impl GcsService {
         Ok(token_response.access_token)
     }
 
-    /// Upload a file to GCS
+    /// Upload a file to GCS (for small files, up to 100MB)
     pub async fn upload_file(
         &self,
         object_path: &str,
@@ -283,6 +283,76 @@ impl GcsService {
         Ok(())
     }
 
+    /// Upload a large file to GCS using resumable upload protocol
+    /// This method receives the full file data and uploads it in chunks to GCS
+    pub async fn upload_file_resumable(
+        &self,
+        object_path: &str,
+        content_type: &str,
+        data: Vec<u8>,
+    ) -> Result<()> {
+        use reqwest::Client;
+
+        // Step 1: Initiate resumable upload session
+        let token = self.get_access_token().await?;
+        let initiate_url = format!(
+            "https://storage.googleapis.com/upload/storage/v1/b/{}/o?uploadType=resumable&name={}",
+            self.bucket_name,
+            percent_encoding::utf8_percent_encode(object_path, &percent_encoding::NON_ALPHANUMERIC)
+        );
+
+        let client = Client::new();
+        let initiate_response = client
+            .post(&initiate_url)
+            .header("Authorization", format!("Bearer {}", token))
+            .header("Content-Type", "application/json")
+            .header("Content-Length", "0")
+            .header("X-Upload-Content-Type", content_type)
+            .header("X-Upload-Content-Length", data.len().to_string())
+            .send()
+            .await
+            .map_err(|e| AppError::Internal(format!("Failed to initiate resumable upload: {}", e)))?;
+
+        if !initiate_response.status().is_success() {
+            let status = initiate_response.status();
+            let error_text = initiate_response.text().await.unwrap_or_default();
+            return Err(AppError::Internal(format!(
+                "GCS resumable upload initiation failed with status {}: {}",
+                status, error_text
+            )));
+        }
+
+        // Extract session URL from Location header
+        let session_url = initiate_response
+            .headers()
+            .get("Location")
+            .ok_or_else(|| AppError::Internal("Missing Location header in resumable upload response".to_string()))?
+            .to_str()
+            .map_err(|e| AppError::Internal(format!("Invalid Location header: {}", e)))?
+            .to_string();
+
+        // Step 2: Upload the file data to the session URL
+        let upload_response = client
+            .put(&session_url)
+            .header("Content-Type", content_type)
+            .header("Content-Length", data.len())
+            .body(data)
+            .send()
+            .await
+            .map_err(|e| AppError::Internal(format!("Failed to upload data to GCS: {}", e)))?;
+
+        if !upload_response.status().is_success() {
+            let status = upload_response.status();
+            let error_text = upload_response.text().await.unwrap_or_default();
+            return Err(AppError::Internal(format!(
+                "GCS resumable upload failed with status {}: {}",
+                status, error_text
+            )));
+        }
+
+        Ok(())
+    }
+
     /// Delete a file from GCS
     pub async fn delete_file(&self, object_path: &str) -> Result<()> {
         use reqwest::Client;
@@ -309,6 +379,47 @@ impl GcsService {
                 "GCS delete failed with status {}: {}",
                 status, error_text
             )));
+        }
+
+        Ok(())
+    }
+
+    /// Delete all files with a specific prefix (folder)
+    pub async fn delete_folder(&self, folder_path: &str) -> Result<()> {
+        use reqwest::Client;
+
+        // List all objects with the prefix
+        let token = self.get_access_token().await?;
+        let list_url = format!(
+            "https://storage.googleapis.com/storage/v1/b/{}/o?prefix={}",
+            self.bucket_name,
+            percent_encoding::utf8_percent_encode(folder_path, &percent_encoding::NON_ALPHANUMERIC)
+        );
+
+        let client = Client::new();
+        let response = client
+            .get(&list_url)
+            .header("Authorization", format!("Bearer {}", token))
+            .send()
+            .await
+            .map_err(|e| AppError::Internal(format!("Failed to list GCS objects: {}", e)))?;
+
+        if !response.status().is_success() {
+            return Err(AppError::Internal(format!(
+                "GCS list failed with status {}: {}",
+                response.status(),
+                response.text().await.unwrap_or_default()
+            )));
+        }
+
+        let list_response: GcsListResponse = response
+            .json()
+            .await
+            .map_err(|e| AppError::Internal(format!("Failed to parse GCS list response: {}", e)))?;
+
+        // Delete each file
+        for item in list_response.items.unwrap_or_default() {
+            self.delete_file(&item.name).await?;
         }
 
         Ok(())

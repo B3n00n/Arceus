@@ -11,6 +11,9 @@ import {
   Flex,
   Select,
   Tag,
+  Modal,
+  Progress,
+  App,
 } from 'antd';
 import {
   PlusOutlined,
@@ -25,12 +28,12 @@ import relativeTime from 'dayjs/plugin/relativeTime';
 import {
   useGameVersions,
   useAllGameVersions,
-  useCreateGameVersion,
   useUpdateGameVersion,
   useDeleteGameVersion,
 } from '../hooks/useGameVersions';
 import { useGames } from '../hooks/useGames';
 import { GameVersionModal } from '../components/GameVersionModal';
+import { api } from '../services/api';
 import type { GameVersion } from '../types';
 
 dayjs.extend(relativeTime);
@@ -47,6 +50,8 @@ export const GameVersionsPage = () => {
   const [selectedVersion, setSelectedVersion] = useState<GameVersion | undefined>();
   const [searchText, setSearchText] = useState('');
   const [selectedGameFilter, setSelectedGameFilter] = useState<number | 'all'>('all');
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
+  const [isUploading, setIsUploading] = useState(false);
 
   const { data: games = [] } = useGames();
   const gameIds = games.map(g => g.id);
@@ -60,7 +65,7 @@ export const GameVersionsPage = () => {
   const isLoading = selectedGameFilter === 'all' ? isLoadingAll : isLoadingSingle;
   const refetch = selectedGameFilter === 'all' ? refetchAll : refetchSingle;
 
-  const createMutation = useCreateGameVersion();
+  const { message, modal } = App.useApp();
   const updateMutation = useUpdateGameVersion();
   const deleteMutation = useDeleteGameVersion();
 
@@ -101,11 +106,64 @@ export const GameVersionsPage = () => {
   const handleModalSubmit = async (values: any) => {
     try {
       if (modalMode === 'create') {
-        const { game_id, ...versionData } = values;
-        await createMutation.mutateAsync({
-          gameId: game_id,
-          data: versionData,
+        const { game_id, version, file } = values;
+
+        if (!file) {
+          message.error('Please select a ZIP file');
+          return;
+        }
+
+        setIsUploading(true);
+        setUploadProgress(0);
+        setModalOpen(false);
+
+        // Show progress modal
+        const progressModal = modal.info({
+          title: 'Uploading Game Version',
+          content: (
+            <div>
+              <p>Uploading {file.name}...</p>
+              <Progress percent={0} status="active" />
+              <p style={{ marginTop: 16, color: '#666', fontSize: 12 }}>
+                This may take several minutes for large files. Do not close this window.
+              </p>
+            </div>
+          ),
+          okButtonProps: { style: { display: 'none' } },
+          closable: false,
+          maskClosable: false,
         });
+
+        try {
+          await api.uploadGameVersion(game_id, version, file, (progress) => {
+            setUploadProgress(progress);
+            progressModal.update({
+              content: (
+                <div>
+                  <p>Uploading {file.name}...</p>
+                  <Progress percent={progress} status="active" />
+                  <p style={{ marginTop: 16, color: '#666', fontSize: 12 }}>
+                    {progress < 100
+                      ? 'This may take several minutes for large files. Do not close this window.'
+                      : 'Processing... The ZIP will be extracted automatically.'}
+                  </p>
+                </div>
+              ),
+            });
+          });
+
+          progressModal.destroy();
+          message.success(`Version ${version} uploaded successfully! Files will be extracted shortly.`);
+          refetch();
+          setSelectedVersion(undefined);
+        } catch (error: any) {
+          progressModal.destroy();
+          const errorMessage = error.response?.data?.error || error.message || 'Upload failed';
+          message.error(errorMessage);
+        } finally {
+          setIsUploading(false);
+          setUploadProgress(0);
+        }
       } else if (selectedVersion) {
         const { game_id, ...versionData } = values;
         await updateMutation.mutateAsync({
@@ -113,16 +171,29 @@ export const GameVersionsPage = () => {
           versionId: selectedVersion.id,
           data: versionData,
         });
+        setModalOpen(false);
+        setSelectedVersion(undefined);
       }
-      setModalOpen(false);
-      setSelectedVersion(undefined);
     } catch (error) {
+      // Mutation error already handled by hook
     }
   };
 
   const handleModalCancel = () => {
-    setModalOpen(false);
-    setSelectedVersion(undefined);
+    if (isUploading) {
+      modal.confirm({
+        title: 'Upload in progress',
+        content: 'Are you sure you want to cancel? The upload will be interrupted.',
+        onOk: () => {
+          setModalOpen(false);
+          setSelectedVersion(undefined);
+          setIsUploading(false);
+        },
+      });
+    } else {
+      setModalOpen(false);
+      setSelectedVersion(undefined);
+    }
   };
 
   const columns: ColumnsType<GameVersionWithGame> = [
@@ -276,7 +347,7 @@ export const GameVersionsPage = () => {
         version={selectedVersion}
         onSubmit={handleModalSubmit}
         onCancel={handleModalCancel}
-        loading={createMutation.isPending || updateMutation.isPending}
+        loading={isUploading || updateMutation.isPending}
       />
     </div>
   );

@@ -57,8 +57,7 @@ pub fn create_api_router(
                 .get(handlers::list_game_versions))
         .route("/admin/games/{game_id}/versions/{version_id}",
             get(handlers::get_game_version)
-                .put(handlers::update_game_version)
-                .delete(handlers::delete_game_version))
+                .put(handlers::update_game_version))
         // Assignment management
         .route("/admin/assignments",
             post(handlers::create_assignment)
@@ -72,6 +71,8 @@ pub fn create_api_router(
     let game_gcs_router = Router::new()
         .route("/admin/games", get(handlers::list_games))
         .route("/admin/games/{id}/background", post(handlers::upload_game_background))
+        .route("/admin/games/{game_id}/versions/upload", post(handlers::upload_game_version))
+        .route("/admin/games/{game_id}/versions/{version_id}", delete(handlers::delete_game_version))
         .with_state((admin_service, gcs_service.clone()));
 
     // Snorlax admin endpoints

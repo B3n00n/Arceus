@@ -263,13 +263,21 @@ pub async fn update_game_version(
 }
 
 /// DELETE /api/admin/games/{game_id}/versions/{version_id}
-/// Delete game version
+/// Delete game version and its files from GCS
 pub async fn delete_game_version(
-    State(service): State<Arc<AdminService>>,
+    State((admin_service, gcs_service)): State<(Arc<AdminService>, Arc<GcsService>)>,
     _user: IapUser,
     Path((_game_id, version_id)): Path<(i32, i32)>,
 ) -> Result<StatusCode> {
-    service.delete_game_version(version_id).await?;
+    // Get the version to retrieve GCS path before deleting from DB
+    let game_version = admin_service.get_game_version(version_id).await?;
+
+    // Delete all files from GCS folder
+    gcs_service.delete_folder(&game_version.gcs_path).await?;
+
+    // Delete from database
+    admin_service.delete_game_version(version_id).await?;
+
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -461,4 +469,74 @@ pub async fn upload_game_background(
     Ok(Json(AdminActionResponse {
         message: format!("Background uploaded: {}", gcs_path),
     }))
+}
+
+/// POST /api/admin/games/{game_id}/versions/upload
+/// Upload game version ZIP file and create database record
+pub async fn upload_game_version(
+    State((admin_service, gcs_service)): State<(Arc<AdminService>, Arc<GcsService>)>,
+    _user: IapUser,
+    Path(game_id): Path<i32>,
+    mut multipart: Multipart,
+) -> Result<(StatusCode, Json<GameVersion>)> {
+    let game = admin_service.get_game(game_id).await?;
+
+    let mut file_data: Option<Vec<u8>> = None;
+    let mut version: Option<String> = None;
+
+    while let Some(field) = multipart.next_field().await.map_err(|e| {
+        AppError::BadRequest(format!("Failed to read multipart field: {}", e))
+    })? {
+        match field.name() {
+            Some("file") => {
+                file_data = Some(field.bytes().await.map_err(|e| {
+                    AppError::BadRequest(format!("Failed to read file data: {}", e))
+                })?.to_vec());
+            }
+            Some("version") => {
+                version = Some(field.text().await.map_err(|e| {
+                    AppError::BadRequest(format!("Failed to read version: {}", e))
+                })?);
+            }
+            _ => {}
+        }
+    }
+
+    let file_data = file_data.ok_or_else(|| {
+        AppError::BadRequest("No file provided".to_string())
+    })?;
+
+    let version_str = version.ok_or_else(|| {
+        AppError::BadRequest("Version is required".to_string())
+    })?;
+
+    if file_data.len() < 100 {
+        return Err(AppError::BadRequest("File too small".to_string()));
+    }
+
+    // Validate version format (X.Y.Z)
+    if !version_str.split('.').all(|part| part.parse::<u32>().is_ok()) {
+        return Err(AppError::BadRequest("Version must be in format X.Y.Z (e.g., 1.0.0)".to_string()));
+    }
+
+    // GCS path: {GameName}/{version}/game.zip
+    let gcs_folder = format!("{}/{}", game.name, version_str);
+    let gcs_path = format!("{}/game.zip", gcs_folder);
+
+    // Upload using resumable upload for large files
+    gcs_service
+        .upload_file_resumable(
+            &gcs_path,
+            "application/zip",
+            file_data,
+        )
+        .await?;
+
+    // Create database record with folder path (not the zip path)
+    // Arceus will list files in this folder after cloud function extracts the ZIP
+    let game_version = admin_service
+        .create_game_version(game_id, &version_str, &gcs_folder)
+        .await?;
+
+    Ok((StatusCode::CREATED, Json(game_version)))
 }
