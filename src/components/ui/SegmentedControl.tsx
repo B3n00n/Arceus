@@ -22,7 +22,7 @@ export function SegmentedControl({
   const widthPercent = 100 / options.length
 
   return (
-    <div className={cn("relative flex border-b border-discord-dark-2", className)}>
+    <div className={cn("relative flex border-b border-grey-700", className)}>
       {options.map((opt) => (
         <button
           key={opt.value}
@@ -30,7 +30,7 @@ export function SegmentedControl({
             "flex-1 px-4 py-2 text-sm font-medium transition-colors duration-200",
             value === opt.value
               ? "text-white"
-              : "text-gray-400 hover:text-white"
+              : "text-grey-200 hover:text-white"
           )}
           onClick={() => onChange(opt.value)}
         >

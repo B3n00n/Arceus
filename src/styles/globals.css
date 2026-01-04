@@ -8,7 +8,7 @@
   --color-grey-800: #161618;
   --color-grey-750: #1D1D20;
   --color-grey-700: #242428;
-  --color-grey-600: #3C3C43;
+  --color-grey-600: #37373E;
   --color-grey-500: #4E4E55;
   --color-grey-400: #6D6D78;
   --color-grey-350: #84848F;
@@ -105,11 +105,11 @@
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-primary-default);
+  background: var(--color-primary-600);
 }
 
 ::-webkit-scrollbar-thumb:active {
-  background: var(--color-primary-400);
+  background: var(--color-primary-default);
 }
 
 /* Animation utilities */
