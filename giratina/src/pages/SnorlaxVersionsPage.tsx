@@ -12,7 +12,6 @@ import {
   Tag,
   Badge,
   message,
-  Modal,
   Progress,
   App,
 } from 'antd';
@@ -44,7 +43,6 @@ const { Title } = Typography;
 export const SnorlaxVersionsPage = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [searchText, setSearchText] = useState('');
-  const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [isUploading, setIsUploading] = useState(false);
 
   const { data: versions = [], isLoading, refetch } = useSnorlaxVersions();
@@ -82,7 +80,6 @@ export const SnorlaxVersionsPage = () => {
       }
 
       setIsUploading(true);
-      setUploadProgress(0);
       setModalOpen(false);
 
       // Show progress modal
@@ -104,7 +101,6 @@ export const SnorlaxVersionsPage = () => {
 
       try {
         await api.uploadSnorlaxApk(version, apkFile, (progress) => {
-          setUploadProgress(progress);
           progressModal.update({
             content: (
               <div>
@@ -129,7 +125,6 @@ export const SnorlaxVersionsPage = () => {
         message.error(errorMessage);
       } finally {
         setIsUploading(false);
-        setUploadProgress(0);
       }
     } catch (error: any) {
       message.error(error.message || 'Failed to upload Snorlax APK');

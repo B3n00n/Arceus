@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Modal, Form, Input, Select, Upload, Progress, Alert, Typography } from 'antd';
+import { Modal, Form, Input, Select, Upload, Alert, Typography } from 'antd';
 import { InboxOutlined } from '@ant-design/icons';
 import type { UploadFile } from 'antd';
 import { useGames } from '../hooks/useGames';

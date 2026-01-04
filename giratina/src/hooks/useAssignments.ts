@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { App } from 'antd';
 import { api } from '../services/api';
-import type { Assignment, CreateAssignmentRequest, UpdateAssignmentRequest } from '../types';
+import type { CreateAssignmentRequest, UpdateAssignmentRequest } from '../types';
 
 export const ASSIGNMENTS_QUERY_KEY = ['assignments'];
 

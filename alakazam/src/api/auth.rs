@@ -48,13 +48,17 @@ where
         let email = parts
             .headers
             .get("X-Goog-Authenticated-User-Email")
-            .and_then(|value| value.to_str().ok())
-            .ok_or(AppError::Unauthorized)?;
+            .and_then(|value| value.to_str().ok());
+
+        // If no IAP header, use a default email (for development with IP whitelisting)
+        let email = email
+            .unwrap_or("admin@localhost")
+            .to_string();
 
         // IAP prefixes emails with "accounts.google.com:" - strip it
         let email = email
             .strip_prefix("accounts.google.com:")
-            .unwrap_or(email)
+            .unwrap_or(&email)
             .to_string();
 
         Ok(IapUser { email })

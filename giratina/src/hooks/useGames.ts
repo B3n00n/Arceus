@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { App } from 'antd';
 import { api } from '../services/api';
-import type { Game, CreateGameRequest, UpdateGameRequest } from '../types';
+import type { CreateGameRequest, UpdateGameRequest } from '../types';
 
 export const GAMES_QUERY_KEY = ['games'];
 

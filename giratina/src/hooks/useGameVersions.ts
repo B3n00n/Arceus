@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { App } from 'antd';
 import { api } from '../services/api';
-import type { GameVersion, CreateGameVersionRequest, UpdateGameVersionRequest } from '../types';
+import type { CreateGameVersionRequest, UpdateGameVersionRequest } from '../types';
 
 export const GAME_VERSIONS_QUERY_KEY = ['game-versions'];
 

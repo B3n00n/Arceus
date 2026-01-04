@@ -26,7 +26,6 @@ export const GameModal = ({
   const [backgroundFile, setBackgroundFile] = useState<File | null>(null);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -59,15 +58,12 @@ export const GameModal = ({
         }
         values.backgroundFile = backgroundFile;
       } else if (mode === 'edit' && backgroundFile && game?.id) {
-        setUploading(true);
         try {
           await api.uploadGameBackground(game.id, backgroundFile);
         } catch (error: any) {
           message.error(error.message || 'Failed to upload background');
-          setUploading(false);
           return;
         }
-        setUploading(false);
       }
 
       onSubmit(values);

@@ -11,7 +11,6 @@ import {
   Flex,
   Select,
   Tag,
-  Modal,
   Progress,
   App,
 } from 'antd';
@@ -50,7 +49,6 @@ export const GameVersionsPage = () => {
   const [selectedVersion, setSelectedVersion] = useState<GameVersion | undefined>();
   const [searchText, setSearchText] = useState('');
   const [selectedGameFilter, setSelectedGameFilter] = useState<number | 'all'>('all');
-  const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [isUploading, setIsUploading] = useState(false);
 
   const { data: games = [] } = useGames();
@@ -114,7 +112,6 @@ export const GameVersionsPage = () => {
         }
 
         setIsUploading(true);
-        setUploadProgress(0);
         setModalOpen(false);
 
         // Show progress modal
@@ -136,7 +133,6 @@ export const GameVersionsPage = () => {
 
         try {
           await api.uploadGameVersion(game_id, version, file, (progress) => {
-            setUploadProgress(progress);
             progressModal.update({
               content: (
                 <div>
@@ -162,7 +158,6 @@ export const GameVersionsPage = () => {
           message.error(errorMessage);
         } finally {
           setIsUploading(false);
-          setUploadProgress(0);
         }
       } else if (selectedVersion) {
         const { game_id, ...versionData } = values;

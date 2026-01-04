@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { App } from 'antd';
 import { api } from '../services/api';
-import type { SnorlaxVersion, CreateSnorlaxVersionRequest } from '../types';
+import type { CreateSnorlaxVersionRequest } from '../types';
 
 export const SNORLAX_QUERY_KEY = ['snorlax-versions'];
 
