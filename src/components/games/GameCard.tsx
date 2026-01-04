@@ -27,7 +27,7 @@ export function GameCard({ game, onUpdate, onLaunch, onStop, isUpdating, isRunni
 
   return (
     <div
-      className="relative rounded-lg overflow-hidden border border-gray-700 hover:border-discord-blurple transition-all duration-300 group h-80"
+      className="relative rounded-lg overflow-hidden border border-grey-600 hover:border-primary-default transition-all duration-300 group h-80"
       style={backgroundStyle}
     >
       {/* Gradient Overlay - darker and blurred when running or downloading */}
@@ -48,7 +48,7 @@ export function GameCard({ game, onUpdate, onLaunch, onStop, isUpdating, isRunni
 
             {/* Status Text */}
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-300">Downloading...</span>
+              <span className="text-sm text-grey-200">Downloading...</span>
               <span className="font-semibold text-yellow-500">
                 {progress.toFixed(0)}%
               </span>
@@ -79,26 +79,26 @@ export function GameCard({ game, onUpdate, onLaunch, onStop, isUpdating, isRunni
         <div className="flex items-center gap-3">
           {/* Current Version or Version to Install */}
           {game.installedVersion ? (
-            <span className="text-sm text-gray-300">
+            <span className="text-sm text-grey-200">
               v{game.installedVersion}
             </span>
           ) : game.assignedVersion ? (
-            <span className="text-sm text-gray-300">
+            <span className="text-sm text-grey-200">
               v{game.assignedVersion}
             </span>
           ) : null}
 
           {/* Status Badge */}
           {!game.installedVersion ? (
-            <div className="flex items-center gap-1 px-2 py-1 border-1 border-neutral-500 bg-neutral-950 text-white rounded text-xs font-semibold uppercase">
+            <div className="flex items-center gap-1 px-2 py-1 border-1 border-grey-500 bg-grey-800 text-white rounded text-xs font-semibold uppercase">
               Not Installed
             </div>
           ) : game.updateAvailable ? (
-            <div className="flex items-center gap-1 px-2 py-1 border-1 border-amber-500 bg-amber-950 text-amber-500 rounded text-xs font-semibold uppercase">
+            <div className="flex items-center gap-1 px-2 py-1 border-1 border-warning-default bg-warning-900 text-warning-default rounded text-xs font-semibold uppercase">
               Update Available
             </div>
           ) : (
-            <div className="flex items-center gap-1 px-2 py-1 border-1 border-green-500 bg-green-950 text-green-500 rounded text-xs font-semibold uppercase">
+            <div className="flex items-center gap-1 px-2 py-1 border-1 border-success-default bg-success-900 text-success-default rounded text-xs font-semibold uppercase">
               Up to Date
             </div>
           )}
@@ -106,8 +106,8 @@ export function GameCard({ game, onUpdate, onLaunch, onStop, isUpdating, isRunni
 
         {/* 3. New Version Available Message (only show when installed and update available) */}
         {game.updateAvailable && game.assignedVersion && game.installedVersion && (
-          <div className="text-sm text-gray-300">
-            New version <span className="font-bold text-yellow-500">v{game.assignedVersion}</span> available
+          <div className="text-sm text-grey-200">
+            New version <span className="font-bold text-primary-default">v{game.assignedVersion}</span> available
           </div>
         )}
 
@@ -115,30 +115,37 @@ export function GameCard({ game, onUpdate, onLaunch, onStop, isUpdating, isRunni
         <div className="flex gap-2">
           {/* Launch/Stop Button */}
           {isInstalled && (
-            <Button
-              onClick={() => isRunning ? onStop() : onLaunch(game.gameId, game.gameName)}
-              disabled={isUpdating || isDownloading}
-              className= "flex-1"
-              variant={isRunning ? 'danger-outline' : 'default'}
-            >
-              {isRunning ? 'Stop' : 'Launch'}
-            </Button>
+            <div className="flex-1">
+              <Button
+                onClick={() => isRunning ? onStop() : onLaunch(game.gameId, game.gameName)}
+                disabled={isUpdating || isDownloading}
+                className="w-full"
+                variant={isRunning ? 'danger-outline' : 'default'}
+              >
+                {isRunning ? 'Stop' : 'Launch'}
+              </Button>
+            </div>
           )}
 
           {/* Update/Install Button */}
           {game.updateAvailable && (
-            <Button
-              onClick={() => onUpdate(game.gameId)}
-              disabled={isUpdating || isRunning || !game.online}
+            <div
               className="flex-1"
-              variant="outline_yellow"
+              title={!game.online ? 'Offline - Not connected to server' : ''}
             >
-              {isDownloading ? (
-                'Downloading...'
-              ) : (
-                game.installedVersion ? 'Update' : 'Install'
-              )}
-            </Button>
+              <Button
+                onClick={() => onUpdate(game.gameId)}
+                disabled={isUpdating || isRunning || !game.online}
+                className="w-full"
+                variant="outline_yellow"
+              >
+                {isDownloading ? (
+                  'Downloading...'
+                ) : (
+                  game.installedVersion ? 'Update' : 'Install'
+                )}
+              </Button>
+            </div>
           )}
         </div>
       </div>
