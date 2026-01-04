@@ -67,11 +67,11 @@ export function DeviceCard({ device, isSelected, onToggle }: DeviceCardProps) {
     <div
       onClick={onToggle}
       className={cn(
-        'group p-4 rounded-lg cursor-pointer transition-all text-gray-300',
-        'bg-discord-dark-4 shadow',
-        'outline outline-1 outline-offset-[-1px] outline-discord-dark-3 hover:outline-white',
+        'group p-4 rounded-lg cursor-pointer transition-all text-grey-200',
+        'bg-grey-900 shadow',
+        'outline outline-1 outline-offset-[-1px] outline-grey-500 hover:outline-primary-default',
         'min-w-[720px] flex flex-col w-full gap-2',
-        isSelected && 'outline-white outline-2 outline-offset-[-2px]'
+        isSelected && 'outline-primary-default outline-2 outline-offset-[-2px]'
       )}
     >
       <div className="flex items-center w-full gap-6">
@@ -80,7 +80,7 @@ export function DeviceCard({ device, isSelected, onToggle }: DeviceCardProps) {
   <Checkbox
     checked={isSelected}
     onCheckedChange={() => onToggle()}
-    className="border-discord-dark-3"
+    className="border-grey-500"
   />
 </div>
 
@@ -110,7 +110,7 @@ export function DeviceCard({ device, isSelected, onToggle }: DeviceCardProps) {
           ) : (
             <>
               <span className="truncate">{device.info.customName || device.info.model}</span>
-              <Pencil className="h-3 w-3 flex-shrink-0 text-gray-400 group-hover/name:text-white transition-all" />
+              <Pencil className="h-3 w-3 flex-shrink-0 text-grey-300 group-hover/name:text-white transition-all" />
             </>
           )}
         </div>
@@ -132,7 +132,7 @@ export function DeviceCard({ device, isSelected, onToggle }: DeviceCardProps) {
 
       {/* Volume */}
       <div className="flex-[0.75] min-w-[6rem] flex justify-start items-center px-2">
-        <div className="text-sm text-gray-300">
+        <div className="text-sm">
           {device.volume ? `${device.volume.volumePercentage}%` : '--'}
         </div>
       </div>
@@ -145,7 +145,7 @@ export function DeviceCard({ device, isSelected, onToggle }: DeviceCardProps) {
             isCharging={device.battery.isCharging}
           />
         ) : (
-          <div className="text-sm font-medium text-gray-300">N/A</div>
+          <div className="text-sm font-medium">N/A</div>
         )}
       </div>
       </div>

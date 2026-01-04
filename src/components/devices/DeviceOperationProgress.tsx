@@ -9,13 +9,13 @@ export function DeviceOperationProgressComponent({ progress }: DeviceOperationPr
   const getStatusColor = () => {
     switch (progress.stage) {
       case 'completed':
-        return 'text-system-success';
+        return 'text-success-default';
       case 'failed':
-        return 'text-system-error';
+        return 'text-error-default';
       case 'inprogress':
-        return 'text-discord-blurple';
+        return 'text-primary-default';
       default:
-        return 'text-system-gray';
+        return 'text-grey-500';
     }
   };
 
@@ -37,7 +37,7 @@ export function DeviceOperationProgressComponent({ progress }: DeviceOperationPr
   return (
     <div className="flex flex-col gap-1.5 w-full">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-xs text-gray-300">
+        <span className="text-xs text-grey-300">
           {progress.operationType === 'download' ? 'Downloading' : 'Installing'}
         </span>
         <span className={`text-xs font-medium ${getStatusColor()}`}>
