@@ -1,8 +1,8 @@
 use crate::error::{AppError, Result};
 use percent_encoding::{percent_encode, AsciiSet, CONTROLS};
 use serde::Deserialize;
-use sha2::{Digest, Sha256};
-use std::fs;
+use sha2::Digest;
+use std::sync::Arc;
 
 // Based on RFC 3986, encode everything except unreserved characters (A-Z, a-z, 0-9, -, ., _, ~)
 const QUERY_ENCODE_SET: &AsciiSet = &CONTROLS
@@ -26,12 +26,6 @@ const QUERY_ENCODE_SET: &AsciiSet = &CONTROLS
     .add(b'+');
 
 #[derive(Debug, Deserialize)]
-struct ServiceAccountKey {
-    client_email: String,
-    private_key: String,
-}
-
-#[derive(Debug, Deserialize)]
 struct GcsListResponse {
     items: Option<Vec<GcsObject>>,
 }
@@ -43,30 +37,23 @@ struct GcsObject {
 
 pub struct GcsService {
     bucket_name: String,
-    client_email: String,
-    private_key_pem: String,
     url_duration_secs: u32,
+    token_provider: Arc<dyn gcp_auth::TokenProvider>,
 }
 
 impl GcsService {
-    pub async fn new(
-        bucket_name: String,
-        service_account_path: String,
-        duration_secs: u32,
-    ) -> Result<Self> {
-        let key_json = fs::read_to_string(&service_account_path).map_err(|e| {
-            AppError::Internal(format!("Failed to read service account key: {}", e))
-        })?;
-
-        let key: ServiceAccountKey = serde_json::from_str(&key_json).map_err(|e| {
-            AppError::Internal(format!("Failed to parse service account key: {}", e))
-        })?;
+    pub async fn new(bucket_name: String, duration_secs: u32) -> Result<Self> {
+        // Initialize Application Default Credentials
+        let token_provider = gcp_auth::provider()
+            .await
+            .map_err(|e| {
+                AppError::Internal(format!("Failed to initialize GCP authentication: {}", e))
+            })?;
 
         Ok(Self {
             bucket_name,
-            client_email: key.client_email,
-            private_key_pem: key.private_key,
             url_duration_secs: duration_secs,
+            token_provider,
         })
     }
 
@@ -93,7 +80,11 @@ impl GcsService {
         let method = "GET";
         let canonical_uri = format!("/{}/{}", self.bucket_name, encoded_path);
         let credential_scope = format!("{}/auto/storage/goog4_request", datestamp);
-        let credential = format!("{}/{}", self.client_email, credential_scope);
+
+        // Get service account email from GCP metadata server
+        let client_email = self.get_service_account_email().await?;
+
+        let credential = format!("{}/{}", client_email, credential_scope);
 
         let encoded_credential = percent_encode(credential.as_bytes(), QUERY_ENCODE_SET).to_string();
         let canonical_query_string = format!(
@@ -117,8 +108,8 @@ impl GcsService {
             timestamp, credential_scope, canonical_request_hash
         );
 
-        // Sign using RSA-SHA256 with private key
-        let signature = self.sign_string(&string_to_sign)?;
+        // Sign the string (using either local key or IAM signBlob API)
+        let signature = self.sign_string(&string_to_sign, &client_email).await?;
 
         // Build final URL
         let url = format!(
@@ -189,59 +180,55 @@ impl GcsService {
         Ok(files)
     }
 
-    /// Get OAuth2 access token using service account
-    async fn get_access_token(&self) -> Result<String> {
-        use chrono::Utc;
-        use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
-        use serde::{Deserialize, Serialize};
-
-        #[derive(Debug, Serialize)]
-        struct Claims {
-            iss: String,
-            scope: String,
-            aud: String,
-            exp: i64,
-            iat: i64,
+    /// Get service account email from GCP metadata server or environment variable
+    async fn get_service_account_email(&self) -> Result<String> {
+        // Try environment variable first (for local development)
+        if let Ok(email) = std::env::var("GCP_SERVICE_ACCOUNT_EMAIL") {
+            return Ok(email);
         }
 
-        let now = Utc::now().timestamp();
-        let claims = Claims {
-            iss: self.client_email.clone(),
-            scope: "https://www.googleapis.com/auth/devstorage.full_control".to_string(),
-            aud: "https://oauth2.googleapis.com/token".to_string(),
-            exp: now + 3600,
-            iat: now,
-        };
-
-        let encoding_key = EncodingKey::from_rsa_pem(self.private_key_pem.as_bytes())
-            .map_err(|e| AppError::Internal(format!("Failed to create encoding key: {}", e)))?;
-
-        let jwt = encode(&Header::new(Algorithm::RS256), &claims, &encoding_key)
-            .map_err(|e| AppError::Internal(format!("Failed to encode JWT: {}", e)))?;
-
-        // Exchange JWT for access token
+        // Try GCP metadata server (for Cloud Run/GCE)
+        // The /email endpoint returns plain text, not JSON
         let client = reqwest::Client::new();
         let response = client
-            .post("https://oauth2.googleapis.com/token")
-            .form(&[
-                ("grant_type", "urn:ietf:params:oauth:grant-type:jwt-bearer"),
-                ("assertion", &jwt),
-            ])
+            .get("http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/email")
+            .header("Metadata-Flavor", "Google")
             .send()
             .await
-            .map_err(|e| AppError::Internal(format!("Failed to get access token: {}", e)))?;
+            .map_err(|e| {
+                AppError::Internal(format!(
+                    "Failed to get service account email. For local development, set GCP_SERVICE_ACCOUNT_EMAIL environment variable. Error: {}",
+                    e
+                ))
+            })?;
 
-        #[derive(Deserialize)]
-        struct TokenResponse {
-            access_token: String,
+        if !response.status().is_success() {
+            return Err(AppError::Internal(format!(
+                "Metadata server returned status {}: {}. For local development, set GCP_SERVICE_ACCOUNT_EMAIL environment variable.",
+                response.status(),
+                response.text().await.unwrap_or_default()
+            )));
         }
 
-        let token_response: TokenResponse = response
-            .json()
+        // The response is plain text (just the email address)
+        let email = response
+            .text()
             .await
-            .map_err(|e| AppError::Internal(format!("Failed to parse token response: {}", e)))?;
+            .map_err(|e| AppError::Internal(format!("Failed to read service account email: {}", e)))?
+            .trim()
+            .to_string();
 
-        Ok(token_response.access_token)
+        Ok(email)
+    }
+
+    /// Get OAuth2 access token using Application Default Credentials
+    async fn get_access_token(&self) -> Result<String> {
+        let scopes = &["https://www.googleapis.com/auth/devstorage.full_control"];
+        let token = self.token_provider
+            .token(scopes)
+            .await
+            .map_err(|e| AppError::Internal(format!("Failed to get token from ADC: {}", e)))?;
+        Ok(token.as_str().to_string())
     }
 
     /// Upload a file to GCS (for small files, up to 100MB)
@@ -425,23 +412,68 @@ impl GcsService {
         Ok(())
     }
 
-    /// Sign a string using RSA-SHA256 with the private key
-    fn sign_string(&self, message: &str) -> Result<String> {
-        use rsa::pkcs1v15::SigningKey;
-        use rsa::pkcs8::DecodePrivateKey;
-        use rsa::signature::{SignatureEncoding, Signer};
-        use rsa::RsaPrivateKey;
+    /// Sign a string using IAM signBlob API
+    async fn sign_string(&self, message: &str, service_account_email: &str) -> Result<String> {
+        use serde::{Deserialize, Serialize};
 
-        // Parse the PEM private key
-        let private_key = RsaPrivateKey::from_pkcs8_pem(&self.private_key_pem)
-            .map_err(|e| AppError::Internal(format!("Failed to parse private key: {}", e)))?;
+        #[derive(Serialize)]
+        struct SignBlobRequest {
+            payload: String,
+        }
 
-        let signing_key = SigningKey::<Sha256>::new(private_key);
-        let signature = signing_key
-            .sign(message.as_bytes())
-            .to_bytes();
+        #[derive(Deserialize)]
+        #[allow(dead_code)]
+        struct SignBlobResponse {
+            #[serde(rename = "keyId")]
+            key_id: String,
+            #[serde(rename = "signedBlob")]
+            signed_blob: String,
+        }
 
-        // Encode signature as hex
-        Ok(hex::encode(signature))
+        let token = self.get_access_token().await?;
+        let sign_url = format!(
+            "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/{}:signBlob",
+            service_account_email
+        );
+
+        let payload_base64 = base64::Engine::encode(
+            &base64::engine::general_purpose::STANDARD,
+            message.as_bytes()
+        );
+
+        let request_body = SignBlobRequest {
+            payload: payload_base64,
+        };
+
+        let client = reqwest::Client::new();
+        let response = client
+            .post(&sign_url)
+            .header("Authorization", format!("Bearer {}", token))
+            .json(&request_body)
+            .send()
+            .await
+            .map_err(|e| AppError::Internal(format!("Failed to call signBlob API: {}", e)))?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_default();
+            return Err(AppError::Internal(format!(
+                "signBlob API failed with status {}: {}",
+                status, error_text
+            )));
+        }
+
+        let sign_response: SignBlobResponse = response
+            .json()
+            .await
+            .map_err(|e| AppError::Internal(format!("Failed to parse signBlob response: {}", e)))?;
+
+        // Decode the base64 signature and encode as hex
+        let signature_bytes = base64::Engine::decode(
+            &base64::engine::general_purpose::STANDARD,
+            sign_response.signed_blob
+        ).map_err(|e| AppError::Internal(format!("Failed to decode signature: {}", e)))?;
+
+        Ok(hex::encode(signature_bytes))
     }
 }

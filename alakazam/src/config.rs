@@ -22,7 +22,6 @@ pub struct DatabaseConfig {
 #[derive(Debug, Clone, Deserialize)]
 pub struct GcsConfig {
     pub bucket_name: String,
-    pub service_account_path: String,
     pub signed_url_duration_secs: u32,
 }
 
@@ -47,7 +46,6 @@ impl Config {
             },
             gcs: GcsConfig {
                 bucket_name: std::env::var("GCS_BUCKET_NAME")?,
-                service_account_path: std::env::var("GCS_SERVICE_ACCOUNT_PATH")?,
                 signed_url_duration_secs: std::env::var("GCS_SIGNED_URL_DURATION_SECS")
                     .unwrap_or_else(|_| "3600".to_string())
                     .parse()?,

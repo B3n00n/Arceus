@@ -39,11 +39,10 @@ async fn main() -> anyhow::Result<()> {
     let game_repo = Arc::new(GameRepository::new(pool.clone()));
     let snorlax_repo = Arc::new(SnorlaxRepository::new(pool.clone()));
 
-    // Initialize GCS service
+    // Initialize GCS service with Application Default Credentials
     let gcs_service = Arc::new(
         GcsService::new(
             config.gcs.bucket_name.clone(),
-            config.gcs.service_account_path.clone(),
             config.gcs.signed_url_duration_secs,
         )
         .await?,
@@ -57,9 +56,13 @@ async fn main() -> anyhow::Result<()> {
     let admin_service = Arc::new(AdminService::new(arcade_repo.clone(), game_repo.clone()));
 
     // Configure CORS
+    let allowed_origins: Vec<HeaderValue> = config.cors.allowed_origin
+        .split(',')
+        .map(|s| s.trim().parse::<HeaderValue>().expect("Invalid CORS origin"))
+        .collect();
+
     let cors = CorsLayer::new()
-        .allow_origin(config.cors.allowed_origin.parse::<HeaderValue>()
-            .expect("Invalid CORS origin"))
+        .allow_origin(allowed_origins)
         .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE])
         .allow_headers([
             axum::http::header::CONTENT_TYPE,
@@ -67,7 +70,7 @@ async fn main() -> anyhow::Result<()> {
         ])
         .allow_credentials(true);
 
-    info!("CORS configured for origin: {}", config.cors.allowed_origin);
+    info!("CORS configured for origins: {}", config.cors.allowed_origin);
 
     // Build application router
     let app = axum::Router::new()
