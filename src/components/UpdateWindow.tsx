@@ -82,18 +82,18 @@ export function UpdateWindow() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen w-full bg-discord-dark-4 p-8">
+    <div className="flex flex-col items-center justify-center min-h-screen w-full bg-grey-800 p-8">
       <div className="text-center max-w-md w-full">
         {error ? (
-          <div className="text-red-400 text-base mb-4">{error}</div>
+          <div className="text-error-default text-base mb-4">{error}</div>
         ) : (
           <>
             <p className="text-white text-base mb-6">{status}</p>
 
             {progress > 0 && (
-              <div className="w-full bg-discord-dark-3 rounded-full h-3 mb-4">
+              <div className="w-full bg-grey-600 rounded-full h-3 mb-4">
                 <div
-                  className="bg-discord-blurple h-3 rounded-full transition-all duration-300"
+                  className="bg-primary-default h-3 rounded-full transition-all duration-300"
                   style={{ width: `${progress}%` }}
                 />
               </div>
