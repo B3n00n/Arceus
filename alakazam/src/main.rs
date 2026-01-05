@@ -67,6 +67,7 @@ async fn main() -> anyhow::Result<()> {
         .allow_headers([
             axum::http::header::CONTENT_TYPE,
             axum::http::header::AUTHORIZATION,
+            axum::http::HeaderName::from_static("x-goog-authenticated-user-email"),
         ])
         .allow_credentials(true);
 

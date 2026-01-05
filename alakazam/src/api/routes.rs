@@ -70,10 +70,15 @@ pub fn create_api_router(
     // Game endpoints that require GCS service
     let game_gcs_router = Router::new()
         .route("/admin/games", get(handlers::list_games))
-        .route("/admin/games/{id}/background", post(handlers::upload_game_background))
-        .route("/admin/games/{game_id}/versions/upload", post(handlers::upload_game_version))
         .route("/admin/games/{game_id}/versions/{version_id}", delete(handlers::delete_game_version))
-        .with_state((admin_service, gcs_service.clone()));
+        .route("/admin/games/{game_id}/versions/generate-upload-url", post(handlers::generate_game_version_upload_url))
+        .route("/admin/games/{game_id}/background/generate-upload-url", post(handlers::generate_background_upload_url))
+        .with_state((admin_service.clone(), gcs_service.clone()));
+
+    // Game version confirmation endpoint
+    let game_confirm_router = Router::new()
+        .route("/admin/games/{game_id}/versions/confirm-upload", post(handlers::confirm_game_version_upload))
+        .with_state(admin_service);
 
     // Snorlax admin endpoints
     let snorlax_admin_router = Router::new()
@@ -84,10 +89,14 @@ pub fn create_api_router(
         .route("/admin/snorlax/versions/{id}", delete(handlers::delete_snorlax_version))
         .with_state(snorlax_service.clone());
 
-    // Snorlax upload endpoint (requires both snorlax and GCS services)
+    // Snorlax direct upload endpoints
     let snorlax_upload_router = Router::new()
-        .route("/admin/snorlax/upload", post(handlers::upload_snorlax_apk))
-        .with_state((snorlax_service, gcs_service));
+        .route("/admin/snorlax/generate-upload-url", post(handlers::generate_snorlax_upload_url))
+        .with_state(gcs_service);
+
+    let snorlax_confirm_router = Router::new()
+        .route("/admin/snorlax/confirm-upload", post(handlers::confirm_snorlax_upload))
+        .with_state(snorlax_service);
 
     // Merge routers
     arcade_router
@@ -95,6 +104,8 @@ pub fn create_api_router(
         .merge(snorlax_router)
         .merge(admin_router)
         .merge(game_gcs_router)
+        .merge(game_confirm_router)
         .merge(snorlax_admin_router)
         .merge(snorlax_upload_router)
+        .merge(snorlax_confirm_router)
 }

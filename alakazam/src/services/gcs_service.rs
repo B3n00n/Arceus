@@ -64,10 +64,19 @@ impl GcsService {
 
     /// Generate a signed URL for downloading an object (v4 signing)
     pub async fn generate_signed_download_url(&self, object_path: &str) -> Result<String> {
+        self.generate_signed_url(object_path, "GET", self.url_duration_secs).await
+    }
+
+    /// Generate a signed URL for uploading an object (v4 signing)
+    pub async fn generate_signed_upload_url(&self, object_path: &str, duration_secs: u32) -> Result<String> {
+        self.generate_signed_url(object_path, "PUT", duration_secs).await
+    }
+
+    /// Internal method to generate signed URLs for both upload and download
+    async fn generate_signed_url(&self, object_path: &str, method: &str, expiration: u32) -> Result<String> {
         use chrono::Utc;
 
         let now = Utc::now();
-        let expiration = self.url_duration_secs;
         let timestamp = now.format("%Y%m%dT%H%M%SZ").to_string();
         let datestamp = now.format("%Y%m%d").to_string();
 
@@ -77,7 +86,6 @@ impl GcsService {
             .collect::<Vec<_>>()
             .join("/");
 
-        let method = "GET";
         let canonical_uri = format!("/{}/{}", self.bucket_name, encoded_path);
         let credential_scope = format!("{}/auto/storage/goog4_request", datestamp);
 
@@ -229,115 +237,6 @@ impl GcsService {
             .await
             .map_err(|e| AppError::Internal(format!("Failed to get token from ADC: {}", e)))?;
         Ok(token.as_str().to_string())
-    }
-
-    /// Upload a file to GCS (for small files, up to 100MB)
-    pub async fn upload_file(
-        &self,
-        object_path: &str,
-        content_type: &str,
-        data: Vec<u8>,
-    ) -> Result<()> {
-        use reqwest::Client;
-
-        let token = self.get_access_token().await?;
-        let upload_url = format!(
-            "https://storage.googleapis.com/upload/storage/v1/b/{}/o?uploadType=media&name={}",
-            self.bucket_name,
-            percent_encoding::utf8_percent_encode(object_path, &percent_encoding::NON_ALPHANUMERIC)
-        );
-
-        let client = Client::new();
-        let response = client
-            .post(&upload_url)
-            .header("Authorization", format!("Bearer {}", token))
-            .header("Content-Type", content_type)
-            .header("Content-Length", data.len())
-            .body(data)
-            .send()
-            .await
-            .map_err(|e| AppError::Internal(format!("Failed to upload to GCS: {}", e)))?;
-
-        if !response.status().is_success() {
-            let status = response.status();
-            let error_text = response.text().await.unwrap_or_default();
-            return Err(AppError::Internal(format!(
-                "GCS upload failed with status {}: {}",
-                status, error_text
-            )));
-        }
-
-        Ok(())
-    }
-
-    /// Upload a large file to GCS using resumable upload protocol
-    /// This method receives the full file data and uploads it in chunks to GCS
-    pub async fn upload_file_resumable(
-        &self,
-        object_path: &str,
-        content_type: &str,
-        data: Vec<u8>,
-    ) -> Result<()> {
-        use reqwest::Client;
-
-        // Step 1: Initiate resumable upload session
-        let token = self.get_access_token().await?;
-        let initiate_url = format!(
-            "https://storage.googleapis.com/upload/storage/v1/b/{}/o?uploadType=resumable&name={}",
-            self.bucket_name,
-            percent_encoding::utf8_percent_encode(object_path, &percent_encoding::NON_ALPHANUMERIC)
-        );
-
-        let client = Client::new();
-        let initiate_response = client
-            .post(&initiate_url)
-            .header("Authorization", format!("Bearer {}", token))
-            .header("Content-Type", "application/json")
-            .header("Content-Length", "0")
-            .header("X-Upload-Content-Type", content_type)
-            .header("X-Upload-Content-Length", data.len().to_string())
-            .send()
-            .await
-            .map_err(|e| AppError::Internal(format!("Failed to initiate resumable upload: {}", e)))?;
-
-        if !initiate_response.status().is_success() {
-            let status = initiate_response.status();
-            let error_text = initiate_response.text().await.unwrap_or_default();
-            return Err(AppError::Internal(format!(
-                "GCS resumable upload initiation failed with status {}: {}",
-                status, error_text
-            )));
-        }
-
-        // Extract session URL from Location header
-        let session_url = initiate_response
-            .headers()
-            .get("Location")
-            .ok_or_else(|| AppError::Internal("Missing Location header in resumable upload response".to_string()))?
-            .to_str()
-            .map_err(|e| AppError::Internal(format!("Invalid Location header: {}", e)))?
-            .to_string();
-
-        // Step 2: Upload the file data to the session URL
-        let upload_response = client
-            .put(&session_url)
-            .header("Content-Type", content_type)
-            .header("Content-Length", data.len())
-            .body(data)
-            .send()
-            .await
-            .map_err(|e| AppError::Internal(format!("Failed to upload data to GCS: {}", e)))?;
-
-        if !upload_response.status().is_success() {
-            let status = upload_response.status();
-            let error_text = upload_response.text().await.unwrap_or_default();
-            return Err(AppError::Internal(format!(
-                "GCS resumable upload failed with status {}: {}",
-                status, error_text
-            )));
-        }
-
-        Ok(())
     }
 
     /// Delete a file from GCS

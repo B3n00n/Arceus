@@ -5,7 +5,7 @@ use crate::{
     services::{AdminService, GcsService, SnorlaxService},
 };
 use axum::{
-    extract::{Multipart, Path, State},
+    extract::{Path, State},
     http::StatusCode,
     Json,
 };
@@ -60,6 +60,29 @@ pub struct UpdateAssignmentRequest {
 
 #[derive(Debug, Deserialize)]
 pub struct CreateSnorlaxVersionRequest {
+    pub version: String,
+    pub gcs_path: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GenerateUploadUrlRequest {
+    pub version: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct GenerateUploadUrlResponse {
+    pub upload_url: String,
+    pub gcs_path: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ConfirmGameVersionUploadRequest {
+    pub version: String,
+    pub gcs_path: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ConfirmSnorlaxUploadRequest {
     pub version: String,
     pub gcs_path: String,
 }
@@ -374,169 +397,104 @@ pub async fn delete_snorlax_version(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// POST /api/admin/snorlax/upload
-/// Upload Snorlax APK and create new version
-pub async fn upload_snorlax_apk(
-    State((snorlax_service, gcs_service)): State<(Arc<SnorlaxService>, Arc<GcsService>)>,
-    _user: IapUser,
-    mut multipart: Multipart,
-) -> Result<(StatusCode, Json<SnorlaxVersion>)> {
-    let mut file_data: Option<Vec<u8>> = None;
-    let mut version: Option<String> = None;
-
-    while let Some(field) = multipart.next_field().await.map_err(|e| {
-        AppError::BadRequest(format!("Failed to read multipart field: {}", e))
-    })? {
-        match field.name() {
-            Some("file") => {
-                file_data = Some(field.bytes().await.map_err(|e| {
-                    AppError::BadRequest(format!("Failed to read file data: {}", e))
-                })?.to_vec());
-            }
-            Some("version") => {
-                version = Some(field.text().await.map_err(|e| {
-                    AppError::BadRequest(format!("Failed to read version: {}", e))
-                })?);
-            }
-            _ => {}
-        }
-    }
-
-    let file_data = file_data.ok_or_else(|| {
-        AppError::BadRequest("No file provided".to_string())
-    })?;
-
-    let version = version.ok_or_else(|| {
-        AppError::BadRequest("Version is required".to_string())
-    })?;
-
-    if file_data.len() < 100 {
-        return Err(AppError::BadRequest("File too small".to_string()));
-    }
-
-    let gcs_path = format!("Snorlax/{}", version);
-
-    gcs_service
-        .upload_file(
-            &format!("{}/Snorlax.apk", gcs_path),
-            "application/vnd.android.package-archive",
-            file_data,
-        )
-        .await?;
-
-    let snorlax_version = snorlax_service.create_version(&version, &gcs_path).await?;
-
-    Ok((StatusCode::CREATED, Json(snorlax_version)))
-}
-
-/// POST /api/admin/games/{id}/background
-/// Upload background image for a game (JPEG only)
-pub async fn upload_game_background(
+/// POST /api/admin/games/{game_id}/versions/generate-upload-url
+/// Generate a signed URL for uploading a game version directly to GCS
+pub async fn generate_game_version_upload_url(
     State((admin_service, gcs_service)): State<(Arc<AdminService>, Arc<GcsService>)>,
     _user: IapUser,
     Path(game_id): Path<i32>,
-    mut multipart: Multipart,
-) -> Result<Json<AdminActionResponse>> {
+    Json(payload): Json<GenerateUploadUrlRequest>,
+) -> Result<Json<GenerateUploadUrlResponse>> {
     let game = admin_service.get_game(game_id).await?;
-
-    let mut file_data: Option<Vec<u8>> = None;
-
-    while let Some(field) = multipart.next_field().await.map_err(|e| {
-        AppError::BadRequest(format!("Failed to read multipart field: {}", e))
-    })? {
-        if field.name() == Some("file") {
-            file_data = Some(field.bytes().await.map_err(|e| {
-                AppError::BadRequest(format!("Failed to read file data: {}", e))
-            })?.to_vec());
-            break;
-        }
-    }
-
-    let file_data = file_data.ok_or_else(|| {
-        AppError::BadRequest("No file provided".to_string())
-    })?;
-
-    if file_data.len() < 100 {
-        return Err(AppError::BadRequest("File too small".to_string()));
-    }
-
-    let gcs_path = format!("{}/{}BG.jpg", game.name, game.name);
-
-    gcs_service
-        .upload_file(&gcs_path, "image/jpeg", file_data)
-        .await?;
-
-    Ok(Json(AdminActionResponse {
-        message: format!("Background uploaded: {}", gcs_path),
-    }))
-}
-
-/// POST /api/admin/games/{game_id}/versions/upload
-/// Upload game version ZIP file and create database record
-pub async fn upload_game_version(
-    State((admin_service, gcs_service)): State<(Arc<AdminService>, Arc<GcsService>)>,
-    _user: IapUser,
-    Path(game_id): Path<i32>,
-    mut multipart: Multipart,
-) -> Result<(StatusCode, Json<GameVersion>)> {
-    let game = admin_service.get_game(game_id).await?;
-
-    let mut file_data: Option<Vec<u8>> = None;
-    let mut version: Option<String> = None;
-
-    while let Some(field) = multipart.next_field().await.map_err(|e| {
-        AppError::BadRequest(format!("Failed to read multipart field: {}", e))
-    })? {
-        match field.name() {
-            Some("file") => {
-                file_data = Some(field.bytes().await.map_err(|e| {
-                    AppError::BadRequest(format!("Failed to read file data: {}", e))
-                })?.to_vec());
-            }
-            Some("version") => {
-                version = Some(field.text().await.map_err(|e| {
-                    AppError::BadRequest(format!("Failed to read version: {}", e))
-                })?);
-            }
-            _ => {}
-        }
-    }
-
-    let file_data = file_data.ok_or_else(|| {
-        AppError::BadRequest("No file provided".to_string())
-    })?;
-
-    let version_str = version.ok_or_else(|| {
-        AppError::BadRequest("Version is required".to_string())
-    })?;
-
-    if file_data.len() < 100 {
-        return Err(AppError::BadRequest("File too small".to_string()));
-    }
 
     // Validate version format (X.Y.Z)
-    if !version_str.split('.').all(|part| part.parse::<u32>().is_ok()) {
+    if !payload.version.split('.').all(|part| part.parse::<u32>().is_ok()) {
         return Err(AppError::BadRequest("Version must be in format X.Y.Z (e.g., 1.0.0)".to_string()));
     }
 
     // GCS path: {GameName}/{version}/game.zip
-    let gcs_folder = format!("{}/{}", game.name, version_str);
+    let gcs_folder = format!("{}/{}", game.name, payload.version);
     let gcs_path = format!("{}/game.zip", gcs_folder);
 
-    // Upload using resumable upload for large files
-    gcs_service
-        .upload_file_resumable(
-            &gcs_path,
-            "application/zip",
-            file_data,
-        )
-        .await?;
+    // Generate signed upload URL valid for 1 hour
+    let upload_url = gcs_service.generate_signed_upload_url(&gcs_path, 3600).await?;
 
-    // Create database record with folder path (not the zip path)
-    // Arceus will list files in this folder after cloud function extracts the ZIP
+    Ok(Json(GenerateUploadUrlResponse {
+        upload_url,
+        gcs_path: gcs_folder,
+    }))
+}
+
+/// POST /api/admin/games/{game_id}/versions/confirm-upload
+/// Confirm that a game version was uploaded and create database record
+pub async fn confirm_game_version_upload(
+    State(admin_service): State<Arc<AdminService>>,
+    _user: IapUser,
+    Path(game_id): Path<i32>,
+    Json(payload): Json<ConfirmGameVersionUploadRequest>,
+) -> Result<(StatusCode, Json<GameVersion>)> {
+    // Validate version format (X.Y.Z)
+    if !payload.version.split('.').all(|part| part.parse::<u32>().is_ok()) {
+        return Err(AppError::BadRequest("Version must be in format X.Y.Z (e.g., 1.0.0)".to_string()));
+    }
+
+    // Create database record with folder path
     let game_version = admin_service
-        .create_game_version(game_id, &version_str, &gcs_folder)
+        .create_game_version(game_id, &payload.version, &payload.gcs_path)
         .await?;
 
     Ok((StatusCode::CREATED, Json(game_version)))
+}
+
+/// POST /api/admin/snorlax/generate-upload-url
+/// Generate a signed URL for uploading Snorlax APK directly to GCS
+pub async fn generate_snorlax_upload_url(
+    State(gcs_service): State<Arc<GcsService>>,
+    _user: IapUser,
+    Json(payload): Json<GenerateUploadUrlRequest>,
+) -> Result<Json<GenerateUploadUrlResponse>> {
+    let gcs_path = format!("Snorlax/{}", payload.version);
+    let apk_path = format!("{}/Snorlax.apk", gcs_path);
+
+    // Generate signed upload URL valid for 1 hour
+    let upload_url = gcs_service.generate_signed_upload_url(&apk_path, 3600).await?;
+
+    Ok(Json(GenerateUploadUrlResponse {
+        upload_url,
+        gcs_path,
+    }))
+}
+
+/// POST /api/admin/snorlax/confirm-upload
+/// Confirm that Snorlax APK was uploaded and create database record
+pub async fn confirm_snorlax_upload(
+    State(snorlax_service): State<Arc<SnorlaxService>>,
+    _user: IapUser,
+    Json(payload): Json<ConfirmSnorlaxUploadRequest>,
+) -> Result<(StatusCode, Json<SnorlaxVersion>)> {
+    let snorlax_version = snorlax_service
+        .create_version(&payload.version, &payload.gcs_path)
+        .await?;
+
+    Ok((StatusCode::CREATED, Json(snorlax_version)))
+}
+
+/// POST /api/admin/games/{game_id}/background/generate-upload-url
+/// Generate a signed URL for uploading game background image directly to GCS
+pub async fn generate_background_upload_url(
+    State((admin_service, gcs_service)): State<(Arc<AdminService>, Arc<GcsService>)>,
+    _user: IapUser,
+    Path(game_id): Path<i32>,
+) -> Result<Json<GenerateUploadUrlResponse>> {
+    let game = admin_service.get_game(game_id).await?;
+
+    let gcs_path = format!("{}/{}BG.jpg", game.name, game.name);
+
+    // Generate signed upload URL valid for 30 minutes
+    let upload_url = gcs_service.generate_signed_upload_url(&gcs_path, 1800).await?;
+
+    Ok(Json(GenerateUploadUrlResponse {
+        upload_url,
+        gcs_path: gcs_path.clone(),
+    }))
 }

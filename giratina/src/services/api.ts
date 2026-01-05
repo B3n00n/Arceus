@@ -98,12 +98,12 @@ class AlakazamAPI {
     file: File,
     onProgress?: (progress: number) => void
   ): Promise<{ message: string }> {
-    const formData = new FormData();
-    formData.append('file', file);
+    const urlResponse = await this.client.post(`/api/admin/games/${gameId}/background/generate-upload-url`);
+    const { upload_url } = urlResponse.data;
 
-    const response = await this.client.post(`/api/admin/games/${gameId}/background`, formData, {
+    await axios.put(upload_url, file, {
       headers: {
-        'Content-Type': 'multipart/form-data',
+        'Content-Type': 'image/jpeg',
       },
       onUploadProgress: (progressEvent) => {
         if (onProgress && progressEvent.total) {
@@ -113,7 +113,7 @@ class AlakazamAPI {
       },
     });
 
-    return response.data;
+    return { message: 'Background uploaded successfully' };
   }
 
   // Game Version endpoints
@@ -147,30 +147,32 @@ class AlakazamAPI {
     file: File,
     onProgress?: (progress: number) => void
   ): Promise<GameVersion> {
-    const formData = new FormData();
-    formData.append('version', version);
-    formData.append('file', file);
+    const urlResponse = await this.client.post(
+      `/api/admin/games/${gameId}/versions/generate-upload-url`,
+      { version }
+    );
+    const { upload_url, gcs_path } = urlResponse.data;
 
-    const response = await this.client.post(
-      `/api/admin/games/${gameId}/versions/upload`,
-      formData,
-      {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-        onUploadProgress: (progressEvent) => {
-          if (onProgress && progressEvent.total) {
-            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-            onProgress(percentCompleted);
-          }
-        },
-      }
+    await axios.put(upload_url, file, {
+      headers: {
+        'Content-Type': 'application/zip',
+      },
+      onUploadProgress: (progressEvent) => {
+        if (onProgress && progressEvent.total) {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          onProgress(percentCompleted);
+        }
+      },
+    });
+
+    const confirmResponse = await this.client.post(
+      `/api/admin/games/${gameId}/versions/confirm-upload`,
+      { version, gcs_path }
     );
 
-    return response.data;
+    return confirmResponse.data;
   }
 
-  // Assignment endpoints
   async getAssignments(): Promise<Assignment[]> {
     const response = await this.client.get('/api/admin/assignments');
     return response.data;
@@ -190,7 +192,6 @@ class AlakazamAPI {
     await this.client.delete(`/api/admin/assignments/${id}`);
   }
 
-  // Snorlax Version endpoints
   async getSnorlaxVersions(): Promise<SnorlaxVersion[]> {
     const response = await this.client.get('/api/admin/snorlax/versions');
     return response.data;
@@ -214,13 +215,12 @@ class AlakazamAPI {
     file: File,
     onProgress?: (progress: number) => void
   ): Promise<SnorlaxVersion> {
-    const formData = new FormData();
-    formData.append('version', version);
-    formData.append('file', file);
+    const urlResponse = await this.client.post('/api/admin/snorlax/generate-upload-url', { version });
+    const { upload_url, gcs_path } = urlResponse.data;
 
-    const response = await this.client.post('/api/admin/snorlax/upload', formData, {
+    await axios.put(upload_url, file, {
       headers: {
-        'Content-Type': 'multipart/form-data',
+        'Content-Type': 'application/vnd.android.package-archive',
       },
       onUploadProgress: (progressEvent) => {
         if (onProgress && progressEvent.total) {
@@ -230,7 +230,12 @@ class AlakazamAPI {
       },
     });
 
-    return response.data;
+    const confirmResponse = await this.client.post('/api/admin/snorlax/confirm-upload', {
+      version,
+      gcs_path,
+    });
+
+    return confirmResponse.data;
   }
 }
 
