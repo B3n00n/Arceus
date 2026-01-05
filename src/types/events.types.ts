@@ -91,6 +91,12 @@ export type ArceusEvent =
       deviceId: string;
       deviceName: string;
       progress: OperationProgress;
+    }
+  | {
+      type: 'gameDownloadProgress';
+      gameId: number;
+      gameName: string;
+      percentage: number;
     };
 
 export interface OperationProgress {

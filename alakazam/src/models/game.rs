@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::types::chrono::{DateTime, Utc};
 
 /// Game entity from database
-#[derive(Debug, Clone, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, sqlx::FromRow)]
 pub struct Game {
     pub id: i32,
     pub name: String,
@@ -10,19 +10,17 @@ pub struct Game {
 }
 
 /// Game version entity from database
-#[derive(Debug, Clone, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, sqlx::FromRow)]
 pub struct GameVersion {
     pub id: i32,
     pub game_id: i32,
     pub version: String,
-    pub pc_build_path: String,
-    pub quest_apk_path: String,
-    pub data_content_path: String,
+    pub gcs_path: String,
     pub release_date: DateTime<Utc>,
 }
 
 /// Arcade game assignment entity from database
-#[derive(Debug, Clone, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, sqlx::FromRow)]
 pub struct ArcadeGameAssignment {
     pub id: i32,
     pub arcade_id: i32,
@@ -39,6 +37,7 @@ pub struct GameAssignmentResponse {
     pub game_name: String,
     pub assigned_version: VersionInfo,
     pub current_version: Option<VersionInfo>,
+    pub background_image_url: Option<String>,
 }
 
 /// Version information in response
@@ -46,9 +45,7 @@ pub struct GameAssignmentResponse {
 pub struct VersionInfo {
     pub version_id: i32,
     pub version: String,
-    pub pc_build_path: String,
-    pub quest_apk_path: String,
-    pub data_content_path: String,
+    pub gcs_path: String,
     pub release_date: DateTime<Utc>,
 }
 
@@ -57,9 +54,7 @@ impl From<GameVersion> for VersionInfo {
         Self {
             version_id: gv.id,
             version: gv.version,
-            pc_build_path: gv.pc_build_path,
-            quest_apk_path: gv.quest_apk_path,
-            data_content_path: gv.data_content_path,
+            gcs_path: gv.gcs_path,
             release_date: gv.release_date,
         }
     }

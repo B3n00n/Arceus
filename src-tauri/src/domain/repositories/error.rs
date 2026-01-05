@@ -37,8 +37,8 @@ impl From<std::io::Error> for RepositoryError {
     }
 }
 
-impl From<sled::Error> for RepositoryError {
-    fn from(err: sled::Error) -> Self {
+impl From<sqlx::Error> for RepositoryError {
+    fn from(err: sqlx::Error) -> Self {
         RepositoryError::DatabaseError(err.to_string())
     }
 }

@@ -27,7 +27,7 @@ export function ConfirmationDialog({
       <DialogWindow className="w-100">
         <DialogHeader title={title} />
         <DialogContent className="space-y-8">
-          <div className="text-md text-gray-300">{message}</div>
+          <div className="text-md text-grey-200">{message}</div>
         </DialogContent>
         <DialogFooter
           confirmText={confirmText}

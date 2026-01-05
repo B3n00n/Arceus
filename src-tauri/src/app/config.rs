@@ -1,20 +1,24 @@
-use crate::app::{error::Result, models::ServerConfig};
+use crate::app::{error::Result, models::{ServerConfig, AlakazamConfig}};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppConfig {
     pub server: ServerConfig,
+    pub alakazam: AlakazamConfig,
     pub apk_directory: PathBuf,
     pub database_path: PathBuf,
+    pub games_directory: PathBuf,
 }
 
 impl AppConfig {
-    pub fn with_paths(apk_directory: PathBuf, database_path: PathBuf) -> Self {
+    pub fn with_paths(apk_directory: PathBuf, database_path: PathBuf, games_directory: PathBuf) -> Self {
         Self {
             server: ServerConfig::default(),
+            alakazam: AlakazamConfig::default(),
             apk_directory,
             database_path,
+            games_directory,
         }
     }
 
@@ -51,18 +55,25 @@ impl Default for AppConfig {
     fn default() -> Self {
         Self {
             server: ServerConfig::default(),
+            alakazam: AlakazamConfig::default(),
             apk_directory: PathBuf::from("apks"),
             database_path: PathBuf::from("arceus.db"),
+            games_directory: PathBuf::from("C:/Combatica"),
         }
     }
 }
 
-// TODO: later move to server for authorization
-pub const CLIENT_APK_METADATA_URL: &str =
-    "https://storage.googleapis.com/combatica_test_bucket/Snorlax.json";
+/// Get the system's MAC address for authentication with Alakazam
+/// Returns the first valid non-loopback MAC address found
+pub fn get_mac_address() -> Result<String> {
+    use mac_address::get_mac_address;
 
-pub const CLIENT_APK_DOWNLOAD_URL: &str =
-    "https://storage.googleapis.com/combatica_test_bucket/Snorlax.apk";
+    let mac = get_mac_address()
+        .map_err(|e| crate::app::error::ArceusError::Config(format!("Failed to get MAC address: {}", e)))?
+        .ok_or_else(|| crate::app::error::ArceusError::Config("No MAC address found".to_string()))?;
+
+    Ok(mac.to_string())
+}
 
 pub const CLIENT_APK_FILENAME: &str = "Snorlax.apk";
 pub const CLIENT_METADATA_FILENAME: &str = "client_metadata.json";

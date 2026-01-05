@@ -31,19 +31,19 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        'fixed left-0 top-0 z-40 h-screen border-r border-discord-dark-2 transition-all duration-300 box-content',
+        'fixed left-0 top-0 z-40 h-screen border-r border-grey-700 transition-all duration-300 box-content',
         sidebarCollapsed ? 'w-16' : 'w-64'
       )}
     >
       <div className="flex h-full flex-col">
         {/* Header */}
-        <div className="flex h-16 items-center justify-between px-4 border-discord-dark-2">
+        <div className="flex h-16 items-center justify-between px-4 border-grey-700">
           {!sidebarCollapsed && (
-            <span className="text-white font-semibold text-lg">Arkeus</span>
+            <span className="text-white font-semibold text-lg text-nowrap">Combatica Hub</span>
           )}
           <button
             onClick={toggleSidebar}
-            className="p-1.5 rounded-md hover:bg-discord-dark-2 text-gray-400 hover:text-white transition-colors ml-auto"
+            className="p-1.5 rounded-md text-grey-300 hover:bg-grey-700 hover:text-white active:bg-grey-600 transition-colors ml-auto"
           >
             {sidebarCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
           </button>
@@ -63,8 +63,8 @@ export function Sidebar() {
                   'flex items-center rounded-md h-12 text-sm font-medium transition-all duration-300 group overflow-hidden px-3 gap-3',
                 
                   isActive
-                    ? 'bg-discord-dark-2 text-white'
-                    : 'text-gray-300 hover:bg-discord-dark-2 hover:text-white'
+                    ? 'bg-grey-600 text-white font-bold'
+                    : 'text-grey-200 hover:bg-grey-700 hover:text-white'
                 )}
                 title={sidebarCollapsed ? item.name : undefined}
               >
@@ -83,13 +83,13 @@ export function Sidebar() {
         </nav>
 
         {/* Footer */}
-        <div className="border-t border-discord-dark-2 p-4 h-[53px]">
+        <div className="border-t border-grey-700 p-4 h-[53px]">
           <div className={cn(
             'flex items-center justify-center',
             sidebarCollapsed && 'flex-col gap-1'
           )}>
             {!sidebarCollapsed && version && (
-              <span className="text-sm font-medium text-white whitespace-nowrap overflow-hidden">Arkeus v{version}</span>
+              <span className="text-sm font-medium text-white whitespace-nowrap overflow-hidden">Hub v{version}</span>
             )}
           </div>
         </div>

@@ -72,12 +72,12 @@ export function CommandPanel({
   return (
     <div className="sm:w-60 2xl:w-80
     min-w-[12rem] max-w-80
- border-l border-discord-dark-2 flex flex-col
+ border-l border-grey-700 flex flex-col
   transition-all duration-300">
       {/* Header */}
-      <div className="p-4 border-b border-discord-dark-2">
+      <div className="p-4 border-b border-grey-700">
         <h3 className="font-semibold text-white">Commands</h3>
-        <p className="text-xs text-gray-400 mt-1">
+        <p className="text-xs text-grey-300 mt-1">
           {hasSelection
             ? `${selectedDeviceIds.size} device${selectedDeviceIds.size > 1 ? 's' : ''} selected`
             : 'No device selected'}
@@ -88,7 +88,7 @@ export function CommandPanel({
       {!hasSelection ? (
         <div className="flex-1 flex items-center justify-center p-6">
           <div className="text-center">
-            <p className="text-gray-400 text-sm">Select a device to execute commands</p>
+            <p className="text-grey-300 text-sm">Select a device to execute commands</p>
           </div>
         </div>
       ) : (
@@ -109,7 +109,7 @@ export function CommandPanel({
               <>
                 {/* Device Info */}
                 <div>
-                  <p className="text-xs text-gray-400 mb-2 font-semibold">Device info</p>
+                  <p className="text-xs text-grey-300 mb-2 font-semibold">Device info</p>
                   <div className="space-y-2">
                     <Button
                       variant="outline"
@@ -142,7 +142,7 @@ export function CommandPanel({
 
                 {/* App Management */}
                 <div>
-                  <p className="text-xs text-gray-400 mb-2 font-semibold">App management</p>
+                  <p className="text-xs text-grey-300 mb-2 font-semibold">App management</p>
                   <div className="space-y-2">
                     <Button
                       variant="outline"
@@ -168,20 +168,20 @@ export function CommandPanel({
 
                 {/* Device Control */}
                 <div>
-                  <p className="text-xs text-gray-400 mb-2 font-semibold">Device control</p>
+                  <p className="text-xs text-grey-300 mb-2 font-semibold">Device control</p>
                   <div className="space-y-2">
                     {/* Set Volume */}
                     <div className="transition-all duration-300 ease-in-out">
                       <div
                         onClick={() => !loading && setIsVolumeExpanded((prev) => !prev)}
                         className={cn(
-                          'w-full border-2 bg-transparent',
+                          'w-full border-1 bg-transparent',
                           loading ? 'cursor-not-allowed opacity-50' : 'cursor-pointer',
-                          'rounded-md px-3 py-2 text-xs',
-                          'hover:bg-[#7289da]/20 hover:border-[#7289da] hover:text-white',
+                          'rounded-md px-3 py-2 text-xs font-medium',
+                          'transition-all duration-150 ease-in-out',
                           isVolumeExpanded
                             ? 'text-white border-white hover:bg-transparent'
-                            : 'text-gray-300 border-gray-600/50'
+                            : 'text-grey-200 border-grey-600 hover:bg-grey-700 hover:border-grey-200 hover:text-white'
                         )}
                       >
                         {/* Header row (icon + label + value) */}
@@ -225,7 +225,7 @@ export function CommandPanel({
                             </Button>
                             <Button
                               size="sm"
-                              variant="outline"
+                              variant="secondary"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setIsVolumeExpanded(false);
@@ -258,7 +258,7 @@ export function CommandPanel({
               <>
                 {/* Debug Tools */}
                 <div>
-                  <p className="text-xs text-gray-400 mb-2 font-semibold">Debug tools</p>
+                  <p className="text-xs text-grey-300 mb-2 font-semibold">Debug tools</p>
                   <div className="space-y-2">
                     <Button
                       variant="outline"
@@ -310,7 +310,7 @@ export function CommandPanel({
 
                 {/* Combatica Tools */}
                 <div>
-                  <p className="text-xs text-gray-400 mb-2 font-semibold">Combatica tools</p>
+                  <p className="text-xs text-grey-300 mb-2 font-semibold">Combatica tools</p>
                   <div className="space-y-2">
                     <Button
                       variant="outline"

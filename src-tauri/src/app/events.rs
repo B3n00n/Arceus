@@ -96,6 +96,13 @@ pub enum ArceusEvent {
         device_name: String,
         progress: OperationProgressDto,
     },
+
+    #[serde(rename_all = "camelCase")]
+    GameDownloadProgress {
+        game_id: i32,
+        game_name: String,
+        percentage: f32,
+    },
 }
 
 #[derive(Clone)]
@@ -178,6 +185,19 @@ impl EventBus {
             device_id,
             device_name,
             progress,
+        });
+    }
+
+    pub fn game_download_progress(
+        &self,
+        game_id: i32,
+        game_name: String,
+        percentage: f32,
+    ) {
+        self.emit(ArceusEvent::GameDownloadProgress {
+            game_id,
+            game_name,
+            percentage,
         });
     }
 }

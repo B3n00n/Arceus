@@ -8,8 +8,8 @@ mod routes;
 mod services;
 
 use config::Config;
-use repositories::{ArcadeRepository, GameRepository};
-use services::ArcadeService;
+use repositories::{ArcadeRepository, GameRepository, SnorlaxRepository};
+use services::{AdminService, ArcadeService, GcsService, SnorlaxService};
 use std::sync::Arc;
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use tracing::info;
@@ -32,17 +32,32 @@ async fn main() -> anyhow::Result<()> {
     // Create database pool
     let pool = db::create_pool(&config.database.url).await?;
 
-    // Initialize repositories
-    let arcade_repo = ArcadeRepository::new(pool.clone());
-    let game_repo = GameRepository::new(pool.clone());
+    // Initialize repositories (Arc-wrapped for sharing between services)
+    let arcade_repo = Arc::new(ArcadeRepository::new(pool.clone()));
+    let game_repo = Arc::new(GameRepository::new(pool.clone()));
+    let snorlax_repo = Arc::new(SnorlaxRepository::new(pool.clone()));
+
+    // Initialize GCS service
+    let gcs_service = Arc::new(
+        GcsService::new(
+            config.gcs.bucket_name.clone(),
+            config.gcs.service_account_path.clone(),
+            config.gcs.signed_url_duration_secs,
+        )
+        .await?,
+    );
+
+    info!("GCS service initialized for bucket: {}", config.gcs.bucket_name);
 
     // Initialize services
-    let arcade_service = Arc::new(ArcadeService::new(arcade_repo, game_repo));
+    let arcade_service = Arc::new(ArcadeService::new(arcade_repo.clone(), game_repo.clone(), gcs_service.clone()));
+    let snorlax_service = Arc::new(SnorlaxService::new(snorlax_repo.clone(), gcs_service.clone()));
+    let admin_service = Arc::new(AdminService::new(arcade_repo.clone(), game_repo.clone()));
 
     // Build application router
     let app = axum::Router::new()
         .merge(routes::create_router())
-        .nest("/api", api::create_api_router(arcade_service))
+        .nest("/api", api::create_api_router(arcade_service, gcs_service, snorlax_service, admin_service))
         .layer(CorsLayer::permissive())
         .layer(TraceLayer::new_for_http());
 

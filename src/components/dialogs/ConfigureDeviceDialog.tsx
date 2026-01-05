@@ -77,10 +77,10 @@ export function ConfigureDeviceDialog({
         <DialogContent className="space-y-4">
           <div className="space-y-4">
             {/* Server Configuration */}
-            <div className="space-y-3 pb-3 border-b border-discord-dark-2">
+            <div className="space-y-3 pb-3 border-b border-grey-600">
               <h4 className="text-sm font-semibold text-white">Server Connection</h4>
               <div>
-                <label className="text-sm text-gray-300 mb-2 block">Server IP</label>
+                <label className="text-sm text-grey-200 mb-2 block">Server IP</label>
                 <Input
                   value={serverIp}
                   onChange={(e) => setServerIp(e.target.value)}
@@ -89,7 +89,7 @@ export function ConfigureDeviceDialog({
                 />
               </div>
               <div>
-                <label className="text-sm text-gray-300 mb-2 block">Server Port</label>
+                <label className="text-sm text-grey-200 mb-2 block">Server Port</label>
                 <Input
                   value={serverPort}
                   onChange={(e) => setServerPort(e.target.value)}
@@ -102,20 +102,20 @@ export function ConfigureDeviceDialog({
 
             {/* WiFi Configuration */}
             <div className="space-y-3">
-              <h4 className="text-sm font-semibold text-white">WiFi Settings (Optional)</h4>
-              <p className="text-xs text-gray-400">Leave empty to only change server settings</p>
+              <h4 className="text-sm font-semibold text-white mb-0">WiFi Settings (Optional)</h4>
+              <p className="text-xs text-grey-300">Leave empty to only change server settings</p>
               <div>
-                <label className="text-sm text-gray-300 mb-2 block">WiFi SSID</label>
+                <label className="text-sm text-grey-200 mb-2 block">WiFi SSID</label>
                 <Input
                   value={wifiSsid}
                   onChange={(e) => setWifiSsid(e.target.value)}
                   placeholder="Network Name"
                   disabled={loading}
                 />
-                <p className="text-xs text-gray-500 mt-1">1-32 characters</p>
+                <p className="text-xs text-grey-300 mt-1">1-32 characters</p>
               </div>
               <div>
-                <label className="text-sm text-gray-300 mb-2 block">WiFi Password</label>
+                <label className="text-sm text-grey-200 mb-2 block">WiFi Password</label>
                 <Input
                   value={wifiPassword}
                   onChange={(e) => setWifiPassword(e.target.value)}
@@ -123,13 +123,13 @@ export function ConfigureDeviceDialog({
                   type="password"
                   disabled={loading}
                 />
-                <p className="text-xs text-gray-500 mt-1">Empty or 8-63 characters</p>
+                <p className="text-xs text-grey-300 mt-1">Empty or 8-63 characters</p>
               </div>
             </div>
 
             {/* Warning */}
-            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-md p-3">
-              <p className="text-xs text-yellow-400">
+            <div className="bg-warning-900 border border-warning-default rounded-md p-3">
+              <p className="text-xs text-warning-default">
                 The Device(s) will disconnect immediately after applying configuration!
               </p>
             </div>

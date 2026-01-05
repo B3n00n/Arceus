@@ -28,7 +28,7 @@ const Slider = React.forwardRef<HTMLInputElement, SliderProps>(
         className={cn(
           // Base track
           "w-full h-1 appearance-none cursor-pointer rounded-full",
-          "bg-gray-700",
+          "bg-grey-600",
           // Thumb (Chrome / Edge / Safari)
           "[&::-webkit-slider-thumb]:appearance-none",
           "[&::-webkit-slider-thumb]:h-3",
@@ -37,21 +37,20 @@ const Slider = React.forwardRef<HTMLInputElement, SliderProps>(
           "[&::-webkit-slider-thumb]:bg-white",
           "[&::-webkit-slider-thumb]:shadow",
           "[&::-webkit-slider-thumb]:cursor-pointer",
-          "[&::-webkit-slider-thumb]:transition-transform",
-          "[&::-webkit-slider-thumb]:hover:scale-110",
+          "[&::-webkit-slider-thumb]:transition-all",
           // Thumb (Firefox)
           "[&::-moz-range-thumb]:h-3",
           "[&::-moz-range-thumb]:w-3",
           "[&::-moz-range-thumb]:rounded-full",
           "[&::-moz-range-thumb]:bg-white",
+          "[&::-moz-range-thumb]:border-0",
           "[&::-moz-range-thumb]:shadow",
           "[&::-moz-range-thumb]:cursor-pointer",
-          "[&::-moz-range-thumb]:transition-transform",
-          "[&::-moz-range-thumb]:hover:scale-110",
+          "[&::-moz-range-thumb]:transition-all",
           className
         )}
         style={{
-          background: `linear-gradient(to right, #7289da ${fillPercent}%, #3b3b3b ${fillPercent}%)`,
+          background: `linear-gradient(to right, var(--color-primary-400) 0%, var(--color-primary-600) ${fillPercent}%, #3b3b3b ${fillPercent}%)`,
           transition: "background 0.15s ease-out",
         }}
       />

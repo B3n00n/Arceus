@@ -76,7 +76,7 @@ export function SimpleInputDialog({
         <DialogHeader title={getTitle()} subtitle={`For ${selectedCount} device(s)`} />
         <DialogContent className="space-y-4">
           <div>
-            <label className="text-sm text-gray-300 mb-2 block">{getLabel()}</label>
+            <label className="text-sm text-grey-200 mb-2 block">{getLabel()}</label>
             <Input
               value={dialogInput}
               onChange={(e) => setDialogInput(e.target.value)}

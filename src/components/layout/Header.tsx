@@ -1,58 +1,17 @@
-import { useState } from "react";
-import { Bell, Rocket } from "lucide-react";
+import { Bell, Wifi, WifiOff, RefreshCw } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { useToastHistoryStore } from "@/stores/toastHistoryStore";
-import { useGameStore } from "@/stores/gameStore";
-import { GameService } from "@/services/gameService";
-import { Button } from "@/components/ui/button";
+import { useConnectionStore } from "@/stores/connectionStore";
 import { ToastHistory } from "@/components/ToastHistory";
-import { LaunchAppDialog } from "@/components/dialogs/LaunchAppDialog";
-import { ConfirmationDialog } from "@/components/dialogs/ConfirmationDialog";
+import { gameVersionService } from "@/services/gameVersionService";
+import { toast } from "@/lib/toast";
+import { useState } from "react";
 
 export function Header() {
   const { togglePanel, unreadCount } = useToastHistoryStore();
-  const { currentGame, setCurrentGame } = useGameStore();
+  const { isOnline, setIsOnline } = useConnectionStore();
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const location = useLocation();
-
-  const [loading, setLoading] = useState(false);
-  const [showLaunchDialog, setShowLaunchDialog] = useState(false);
-  const [showStopDialog, setShowStopDialog] = useState(false);
-
-  // Example available apps (replace with actual list from backend)
-  const availableApps = [
-    { name: "Combatica Platform", packageName: "com.CombaticaLTD.CombaticaPlatform" },
-    { name: "Sample VR Training", packageName: "com.Example.SampleVR" },
-    { name: "Arena Shooter", packageName: "com.Example.ArenaShooter" },
-  ];
-
-  const handleLaunch = async (
-    app: { name: string; packageName: string },
-    _launchOnClients: boolean
-  ) => {
-    try {
-      setLoading(true);
-      await GameService.startGame({
-        name: app.name,
-        exePath: "C:\\Combatica\\Defense\\Combatica_Defense\\Combatica Platform.exe",
-        contentPath: "C:\\Combatica\\Defense\\ServerData",
-        packageName: app.packageName,
-      });
-      setCurrentGame({ gameName: app.name });
-      setShowLaunchDialog(false);
-    } catch (error) {
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleStop = async () => {
-    try {
-      await GameService.stopGame();
-      setCurrentGame(null);
-      setShowStopDialog(false);
-    } catch (error) {
-    }
-  };
 
   const pathname = location.pathname || "/";
   const title = (() => {
@@ -66,9 +25,27 @@ export function Header() {
       : "App";
   })();
 
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      const games = await gameVersionService.forceRefresh();
+      setIsOnline(games.length > 0 ? games[0].online : false);
+      toast.success('Connection Status Update', {
+        description: games[0]?.online ? 'Connected to server' : 'Failed to connect to server',
+      });
+    } catch (error) {
+      setIsOnline(false);
+      toast.error('Connection Failed', {
+        description: 'Unable to reach server',
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   return (
     <>
-      <header className="sticky top-0 z-30 h-16 border-b border-discord-dark-2 bg-dark">
+      <header className="sticky top-0 z-30 h-16 border-b border-grey-700 bg-grey-900">
         <div className="flex h-full items-center justify-between px-6">
           {/* Left — Title */}
           <div className="flex items-center gap-2">
@@ -76,49 +53,36 @@ export function Header() {
           </div>
 
           {/* Right — Controls */}
-          <div className="flex items-center gap-3">
-            {/* Game Running Status */}
-            {currentGame && (
-              <div className="px-2 py-1.5">
-                <span className="text-xs text-gray-300 font-regular">
-                  Running:{" "}
-                  <span className="text-xs text-white font-medium">
-                    {currentGame.gameName}
-                  </span>
-                </span>
-              </div>
-            )}
+          <div className="flex items-center gap-2">
+            {/* Refresh Connection Button */}
+            <button
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="p-2 rounded-lg hover:bg-grey-700 transition-colors group disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Refresh connection to server"
+            >
+              <RefreshCw className={`h-5 w-5 text-grey-300 group-hover:text-white transition-colors ${isRefreshing ? 'animate-spin' : ''}`} />
+            </button>
 
-            {/* Launch / Stop Buttons */}
-            {currentGame ? (
-              <Button
-                size="sm"
-                variant="danger-outline"
-                onClick={() => setShowStopDialog(true)}
-                disabled={loading}
-                className="flex items-center gap-2"
-              >
-                Stop
-              </Button>
-            ) : (
-              <Button
-                size="sm"
-                variant="default"
-                onClick={() => setShowLaunchDialog(true)}
-                disabled={loading}
-                className="flex items-center gap-2"
-              >
-                <Rocket className="h-4 w-4" />
-                Launch App
-              </Button>
-            )}
+            {/* WiFi Status Indicator */}
+            <div
+              className="p-2 rounded-lg"
+              title={isOnline ? 'Connected to server' : 'Offline - Not connected to server'}
+            >
+              {isOnline ? (
+                <Wifi className="h-5 w-5 text-success-default" />
+              ) : (
+                <WifiOff className="h-5 w-5 text-error-default" />
+              )}
+            </div>
 
             {/* Notifications */}
             <button
               onClick={togglePanel}
-              className="relative p-2 rounded-lg hover:bg-discord-dark-2 transition-colors group"
+              className="relative p-2 rounded-lg hover:bg-grey-700 transition-colors group"
+              title="Notifications"
             >
-              <Bell className="h-5 w-5 text-gray-400 group-hover:text-white transition-colors" />
+              <Bell className="h-5 w-5 text-grey-300 group-hover:text-white transition-colors" />
               {unreadCount > 0 && (
                 <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 rounded-full flex items-center justify-center">
                   <span className="text-xs font-semibold text-white">
@@ -130,32 +94,6 @@ export function Header() {
           </div>
         </div>
       </header>
-
-      {/* Dialogs */}
-      <LaunchAppDialog
-        isOpen={showLaunchDialog}
-        onClose={() => setShowLaunchDialog(false)}
-        availableApps={availableApps}
-        onLaunch={handleLaunch}
-      />
-
-      <ConfirmationDialog
-        isOpen={showStopDialog}
-        onClose={() => setShowStopDialog(false)}
-        onConfirm={handleStop}
-        title="Stop Running App"
-        message={
-          <>
-            Are you sure you want to stop{" "}
-            <span className="text-white font-medium">
-              {currentGame?.gameName || "the current app"}
-            </span>
-            ?
-          </>
-        }
-        confirmText="Stop App"
-        loading={loading}
-      />
 
       <ToastHistory />
     </>
