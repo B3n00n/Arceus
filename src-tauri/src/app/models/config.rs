@@ -32,7 +32,8 @@ pub struct AlakazamConfig {
 impl Default for AlakazamConfig {
     fn default() -> Self {
         Self {
-            base_url: "https://alakazam-yexfczgpca-uc.a.run.app".to_string(),
+            //base_url: "https://alakazam-yexfczgpca-uc.a.run.app".to_string(),
+            base_url: "http://localhost:43571".to_string(),
             snorlax_endpoint: "/api/arcade/snorlax/latest".to_string(),
         }
     }
