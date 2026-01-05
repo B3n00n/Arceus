@@ -8,14 +8,15 @@ import { toast } from '../../lib/toast';
 import { Loader2 } from 'lucide-react';
 import { useTauriEvent } from '../../hooks/useTauriEvent';
 import type { ArceusEvent } from '../../types/events.types';
-import { ConfirmationDialog } from '../dialogs/ConfirmationDialog';
+import { DialogOverlay } from '../dialogs/DialogOverlay';
+import { DialogWindow, DialogHeader, DialogContent, DialogFooter } from '../dialogs/DialogWindow';
 
 export function GamesSection() {
   const [games, setGames] = useState<GameStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingGameIds, setUpdatingGameIds] = useState<Set<number>>(new Set());
   const [showUpdateConfirmDialog, setShowUpdateConfirmDialog] = useState(false);
-  const [gameToUpdate, setGameToUpdate] = useState<{ id: number; name: string } | null>(null);
+  const [gameToUpdate, setGameToUpdate] = useState<{ id: number; name: string; version: string } | null>(null);
   const { currentGame, setCurrentGame } = useGameStore();
   const { setIsOnline } = useConnectionStore();
 
@@ -80,7 +81,7 @@ export function GamesSection() {
     const game = games.find((g) => g.gameId === gameId);
     if (!game) return;
 
-    setGameToUpdate({ id: gameId, name: game.gameName });
+    setGameToUpdate({ id: gameId, name: game.gameName, version: game.assignedVersion });
     setShowUpdateConfirmDialog(true);
   };
 
@@ -145,7 +146,7 @@ export function GamesSection() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+        <Loader2 className="w-8 h-8 animate-spin text-primary-default" />
       </div>
     );
   }
@@ -154,8 +155,8 @@ export function GamesSection() {
     <div className="space-y-6">
       {/* Games Grid */}
       {games.length === 0 ? (
-        <div className="text-center py-12 bg-gray-800/50 rounded-lg border border-gray-700">
-          <p className="text-gray-400">No games configured</p>
+        <div className="text-center py-12 bg-grey-800 rounded-lg border border-grey-700">
+          <p className="text-grey-300">No games configured</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -174,27 +175,44 @@ export function GamesSection() {
       )}
 
       {/* Update Confirmation Dialog */}
-      <ConfirmationDialog
-        isOpen={showUpdateConfirmDialog}
-        onClose={() => {
-          setShowUpdateConfirmDialog(false);
-          setGameToUpdate(null);
-        }}
-        onConfirm={executeUpdate}
-        title={gameToUpdate?.name && games.find(g => g.gameId === gameToUpdate.id)?.installedVersion ? "Update Game" : "Install Game"}
-        message={
-          <div className="space-y-2">
-            <p>
-              Are you sure you want to install <span className="text-white font-medium">{gameToUpdate?.name}</span>?
-            </p>
-            <p className="text-yellow-400 text-sm">
-              This will require updating the headsets as well.
-            </p>
-          </div>
-        }
-        confirmText={gameToUpdate?.name && games.find(g => g.gameId === gameToUpdate.id)?.installedVersion ? "Update" : "Install"}
-        loading={loading}
-      />
+      {showUpdateConfirmDialog && (
+        <DialogOverlay
+          onClose={() => {
+            setShowUpdateConfirmDialog(false);
+            setGameToUpdate(null);
+          }}
+        >
+          <DialogWindow className="w-120">
+            <DialogHeader
+              title={
+                gameToUpdate?.name && games.find((g) => g.gameId === gameToUpdate.id)?.installedVersion
+                  ? 'Update Game'
+                  : 'Install Game'
+              }
+            />
+            <DialogContent className="pb-6">
+              <p>
+                Installing <span className="text-white font-medium">{gameToUpdate?.name} v{gameToUpdate?.version}</span> will require you to <span className='text-warning-default'>manually update your headsets</span>.
+              </p>
+            </DialogContent>
+            <DialogFooter
+              confirmText={
+                gameToUpdate?.name && games.find((g) => g.gameId === gameToUpdate.id)?.installedVersion
+                  ? 'Update'
+                  : 'Install'
+              }
+              onConfirm={executeUpdate}
+              confirmVariant="default"
+              confirmDisabled={loading}
+              onCancel={() => {
+                setShowUpdateConfirmDialog(false);
+                setGameToUpdate(null);
+              }}
+              cancelDisabled={loading}
+            />
+          </DialogWindow>
+        </DialogOverlay>
+      )}
     </div>
   );
 }

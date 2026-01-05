@@ -45,7 +45,7 @@ export function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-30 h-16 border-b border-discord-dark-2 bg-dark">
+      <header className="sticky top-0 z-30 h-16 border-b border-grey-700 bg-grey-900">
         <div className="flex h-full items-center justify-between px-6">
           {/* Left — Title */}
           <div className="flex items-center gap-2">
@@ -58,10 +58,10 @@ export function Header() {
             <button
               onClick={handleRefresh}
               disabled={isRefreshing}
-              className="p-2 rounded-lg hover:bg-discord-dark-2 transition-colors group disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-2 rounded-lg hover:bg-grey-700 transition-colors group disabled:opacity-50 disabled:cursor-not-allowed"
               title="Refresh connection to server"
             >
-              <RefreshCw className={`h-5 w-5 text-gray-400 group-hover:text-white transition-colors ${isRefreshing ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`h-5 w-5 text-grey-300 group-hover:text-white transition-colors ${isRefreshing ? 'animate-spin' : ''}`} />
             </button>
 
             {/* WiFi Status Indicator */}
@@ -70,19 +70,19 @@ export function Header() {
               title={isOnline ? 'Connected to server' : 'Offline - Not connected to server'}
             >
               {isOnline ? (
-                <Wifi className="h-5 w-5 text-green-400" />
+                <Wifi className="h-5 w-5 text-success-default" />
               ) : (
-                <WifiOff className="h-5 w-5 text-orange-400" />
+                <WifiOff className="h-5 w-5 text-error-default" />
               )}
             </div>
 
             {/* Notifications */}
             <button
               onClick={togglePanel}
-              className="relative p-2 rounded-lg hover:bg-discord-dark-2 transition-colors group"
+              className="relative p-2 rounded-lg hover:bg-grey-700 transition-colors group"
               title="Notifications"
             >
-              <Bell className="h-5 w-5 text-gray-400 group-hover:text-white transition-colors" />
+              <Bell className="h-5 w-5 text-grey-300 group-hover:text-white transition-colors" />
               {unreadCount > 0 && (
                 <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 rounded-full flex items-center justify-center">
                   <span className="text-xs font-semibold text-white">

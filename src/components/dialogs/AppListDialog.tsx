@@ -78,7 +78,7 @@ export function AppListDialog({
               disabled={loading}
             />
           ) : (
-            <div className="text-center text-gray-400 py-3">
+            <div className="text-center text-grey-300 py-3">
               {loading ? 'Loading apps...' : 'No CombaticaLTD apps found'}
             </div>
           )}

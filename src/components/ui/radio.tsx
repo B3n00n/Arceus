@@ -31,8 +31,8 @@ export function Radio({
         'relative h-5 w-5 rounded-full border-2 transition-all duration-200',
         'focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
         checked
-          ? 'border-white'
-          : 'border-gray-400 bg-transparent hover:border-gray-300',
+          ? 'border-primary-default'
+          : 'border-grey-300 bg-transparent hover:border-primary-default hover:bg-primary-800',
         disabled && 'cursor-not-allowed opacity-50',
         !disabled && 'cursor-pointer',
         className
@@ -45,17 +45,8 @@ export function Radio({
           checked ? 'scale-100' : 'scale-0'
         )}
       >
-        <span className="h-2 w-2 rounded-full bg-white" />
+        <span className="h-2 w-2 rounded-full bg-primary-default" />
       </span>
-
-      {/* Ripple effect on click */}
-      <span
-        className={cn(
-          'absolute inset-0 -m-2 rounded-full transition-opacity duration-300',
-          'bg-discord-blurple/20',
-          checked ? 'animate-ping opacity-0' : 'opacity-0'
-        )}
-      />
     </button>
   );
 }
