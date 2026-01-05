@@ -97,20 +97,21 @@ export function InstallApkDialog({
           <DialogContent scrollable className="p-4">
             <div>
               {filteredApks.length > 0 && (
-                <p className="text-sm font-medium text-grey-200 mb-2">Available APKs</p>
+                <p className="text-sm font-medium text-gray-300 mb-2">Available APKs</p>
               )}
             <div className={cn(
-              "divide-y divide-grey-700",
-              filteredApks.length > 0 && "border-t border-t-grey-700"
+              "divide-y divide-discord-dark",
+              filteredApks.length > 0 && "border-t border-t-discord-dark"
             )}>
               {filteredApks.map((apk) => (
                 <label
                   key={apk.filename}
                   className={cn(
-                    'w-full pr-4 py-3 flex items-center gap-3 cursor-pointer transition-colors hover:text-white',
+                    'w-full pl-[14px] pr-4 py-3 border-l-2 flex items-center gap-3 cursor-pointer transition-colors',
+                    'hover:bg-discord-dark-3',
                     selectedApk?.filename === apk.filename
-                      ? 'text-white'
-                      : 'text-grey-200'
+                      ? 'bg-discord-blurple/20 border-l-discord-blurple'
+                      : 'border-l-transparent'
                   )}
                 >
                   <Radio
@@ -119,15 +120,15 @@ export function InstallApkDialog({
                     disabled={loading}
                   />
                   <div className="flex-1 flex items-center justify-between">
-                    <p className="text-sm">{apk.filename}</p>
-                    <Badge variant="secondary" className="text-xs text-grey-300">
+                    <p className="text-sm text-white font-medium">{apk.filename}</p>
+                    <Badge variant="secondary" className="text-xs">
                       {formatFileSize(apk.size_bytes)}
                     </Badge>
                   </div>
                 </label>
               ))}
               {filteredApks.length === 0 && (
-                <div className="p-6 text-center text-grey-300">
+                <div className="p-6 text-center text-gray-400">
                   <Package className="h-12 w-12 mx-auto mb-2 opacity-50" />
                   <p>No APK files found</p>
                 </div>
@@ -138,12 +139,12 @@ export function InstallApkDialog({
         ) : (
           <DialogContent className="p-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-grey-200">APK URL</label>
+              <label className="text-sm font-medium text-gray-300">APK URL</label>
               <Input
                 value={remoteUrl}
                 onChange={(e) => setRemoteUrl(e.target.value)}
                 placeholder="https://example.com/app.apk"
-                className="w-full mt-2"
+                className="w-full"
                 disabled={loading}
               />
             </div>

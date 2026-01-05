@@ -387,7 +387,7 @@ export function DevicesPage() {
 
   const getSortIcon = (field: SortField) => {
     if (sortField !== field) {
-      return <ChevronsUpDown className="h-3.5 w-3.5 text-grey-400 group-hover:text-grey-300 -mb-0.5" />;
+      return <ChevronsUpDown className="h-3.5 w-3.5 text-gray-500 group-hover:text-gray-400 -mb-0.5" />;
     }
     return sortDirection === 'asc'
       ? <ArrowUp className="h-3.5 w-3.5 text-white -mb-0.5" />
@@ -402,7 +402,7 @@ export function DevicesPage() {
         <div className="pl-4">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <p className="text-sm text-grey-300 mt-1">
+              <p className="text-sm text-gray-400 mt-1">
                 {sortedDevices.length} device{sortedDevices.length !== 1 ? 's' : ''}
                 {hasSelection && ` • ${selectedDeviceIds.size} selected`}
               </p>
@@ -437,7 +437,7 @@ export function DevicesPage() {
           {sortedDevices.length > 0 && (
             <div
               className="
-        px-4 py-2 text-grey-300 text-sm
+        px-4 py-2 text-gray-400 text-sm
         min-w-[720px] flex items-center w-full gap-6 outline-offset-[-1px]
       "
             >
@@ -448,7 +448,7 @@ export function DevicesPage() {
                   onCheckedChange={() =>
                     allSelected ? clearSelection() : selectAll()
                   }
-                  className="border-grey-600"
+                  className="border-discord-dark-3"
                 />
               </div>
 
@@ -456,7 +456,7 @@ export function DevicesPage() {
               <button
                 onClick={() => handleSort('name')}
                 className={cn(
-                  "group flex-[2] min-w-[8rem] cursor-pointer flex justify-start items-center gap-2 px-2 py-1.5 rounded-md hover:text-white hover:bg-grey-700 transition-colors",
+                  "group flex-[2] min-w-[8rem] cursor-pointer flex justify-start items-center gap-2 px-2 py-1.5 rounded-md hover:text-gray-300 hover:bg-gray-300/10 transition-colors",
                   sortField === 'name' && "text-white"
                 )}
               >
@@ -468,7 +468,7 @@ export function DevicesPage() {
       <button
         onClick={() => handleSort('runningApp')}
         className={cn(
-          "group flex-[1.5] min-w-[8rem] cursor-pointer flex justify-start items-center gap-2 px-2 py-1.5 rounded-md hover:text-white hover:bg-grey-700 transition-colors",
+          "group flex-[1.5] min-w-[8rem] cursor-pointer flex justify-start items-center gap-2 px-2 py-1.5 rounded-md hover:text-gray-300 hover:bg-gray-300/10 transition-colors",
           sortField === 'runningApp' && "text-white"
         )}
       >
@@ -480,7 +480,7 @@ export function DevicesPage() {
       <button
         onClick={() => handleSort('version')}
         className={cn(
-          "group flex-[1.5] min-w-[7rem] cursor-pointer flex justify-start items-center gap-2 px-2 py-1.5 rounded-md hover:text-white hover:bg-grey-700 transition-colors",
+          "group flex-[1.5] min-w-[7rem] cursor-pointer flex justify-start items-center gap-2 px-2 py-1.5 rounded-md hover:text-gray-300 hover:bg-gray-300/10 transition-colors",
           sortField === 'version' && "text-white"
         )}
       >
@@ -492,7 +492,7 @@ export function DevicesPage() {
               <button
                 onClick={() => handleSort('volume')}
                 className={cn(
-                  "group flex-[0.75] min-w-[6rem] cursor-pointer flex justify-start items-center gap-2 px-2 py-1.5 rounded-md hover:text-white hover:bg-grey-700 transition-colors",
+                  "group flex-[0.75] min-w-[6rem] cursor-pointer flex justify-start items-center gap-2 px-2 py-1.5 rounded-md hover:text-gray-300 hover:bg-gray-300/10 transition-colors",
                   sortField === 'volume' && "text-white"
                 )}
               >
@@ -504,7 +504,7 @@ export function DevicesPage() {
               <button
                 onClick={() => handleSort('battery')}
                 className={cn(
-                  "group flex-[0.75] min-w-[5rem] cursor-pointer flex justify-start items-center gap-2 px-2 py-1.5 rounded-md hover:text-white hover:bg-grey-700 transition-colors",
+                  "group flex-[0.75] min-w-[5rem] cursor-pointer flex justify-start items-center gap-2 px-2 py-1.5 rounded-md hover:text-gray-300 hover:bg-gray-300/10 transition-colors",
                   sortField === 'battery' && "text-white"
                 )}
               >

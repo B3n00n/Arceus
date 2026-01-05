@@ -17,7 +17,7 @@ export const useGameStore = create<GameStoreState>((set) => ({
   clearCurrentGame: () => set({ currentGame: null }),
 }));
 
-const unsubscribeGameEvents = eventService.subscribe((event) => {
+eventService.subscribe((event) => {
   const store = useGameStore.getState();
 
   switch (event.type) {
@@ -32,7 +32,3 @@ const unsubscribeGameEvents = eventService.subscribe((event) => {
       break;
   }
 });
-
-export const cleanupGameStore = () => {
-  unsubscribeGameEvents();
-};

@@ -51,9 +51,7 @@ impl PackageName {
                 ));
             }
 
-            let first_char = segment.chars().next()
-                .expect("segment is not empty, verified above");
-            if !first_char.is_ascii_alphabetic() {
+            if !segment.chars().next().unwrap().is_ascii_alphabetic() {
                 return Err(PackageNameError::InvalidSegment(
                     segment.to_string(),
                     "must start with a letter".to_string(),

@@ -1,34 +1,30 @@
 use crate::{
     error::{AppError, Result},
-    models::{ArcadeConfigResponse, GameAssignmentResponse},
+    models::{ArcadeConfigResponse, GameAssignmentResponse, VersionInfo},
     repositories::{ArcadeRepository, GameRepository},
-    services::GcsService,
 };
-use std::sync::Arc;
 
 pub struct ArcadeService {
-    arcade_repo: Arc<ArcadeRepository>,
-    game_repo: Arc<GameRepository>,
-    gcs_service: Arc<GcsService>,
+    arcade_repo: ArcadeRepository,
+    game_repo: GameRepository,
 }
 
 impl ArcadeService {
-    pub fn new(arcade_repo: Arc<ArcadeRepository>, game_repo: Arc<GameRepository>, gcs_service: Arc<GcsService>) -> Self {
+    pub fn new(arcade_repo: ArcadeRepository, game_repo: GameRepository) -> Self {
         Self {
             arcade_repo,
             game_repo,
-            gcs_service,
         }
     }
 
     /// Authenticate and get arcade configuration
-    pub async fn get_arcade_config(&self, mac_address: &str) -> Result<ArcadeConfigResponse> {
-        // Find arcade by MAC address
+    pub async fn get_arcade_config(&self, api_key: &str) -> Result<ArcadeConfigResponse> {
+        // Find arcade by API key
         let arcade = self
             .arcade_repo
-            .find_by_mac_address(mac_address)
+            .find_by_api_key(api_key)
             .await?
-            .ok_or(AppError::InvalidMacAddress)?;
+            .ok_or(AppError::InvalidApiKey)?;
 
         // Update last seen
         self.arcade_repo.update_last_seen(arcade.id).await?;
@@ -37,13 +33,13 @@ impl ArcadeService {
     }
 
     /// Get all game assignments for an arcade
-    pub async fn get_arcade_games(&self, mac_address: &str) -> Result<Vec<GameAssignmentResponse>> {
+    pub async fn get_arcade_games(&self, api_key: &str) -> Result<Vec<GameAssignmentResponse>> {
         // Authenticate arcade
         let arcade = self
             .arcade_repo
-            .find_by_mac_address(mac_address)
+            .find_by_api_key(api_key)
             .await?
-            .ok_or(AppError::InvalidMacAddress)?;
+            .ok_or(AppError::InvalidApiKey)?;
 
         // Update last seen
         self.arcade_repo.update_last_seen(arcade.id).await?;
@@ -79,22 +75,11 @@ impl ArcadeService {
                 None
             };
 
-            // Generate signed URL for background image
-            // Background image path for games: <GameName>/<GameName>BG.jpg
-            let background_image_url = {
-                let bg_path = format!("{}/{}BG.jpg", game.name, game.name);
-                self.gcs_service
-                    .generate_signed_download_url(&bg_path)
-                    .await
-                    .ok()
-            };
-
             responses.push(GameAssignmentResponse {
                 game_id: game.id,
-                game_name: game.name.clone(),
+                game_name: game.name,
                 assigned_version: assigned_version.into(),
                 current_version,
-                background_image_url,
             });
         }
 
@@ -104,16 +89,16 @@ impl ArcadeService {
     /// Update current version status for a game
     pub async fn update_game_status(
         &self,
-        mac_address: &str,
+        api_key: &str,
         game_id: i32,
         current_version_id: Option<i32>,
     ) -> Result<()> {
         // Authenticate arcade
         let arcade = self
             .arcade_repo
-            .find_by_mac_address(mac_address)
+            .find_by_api_key(api_key)
             .await?
-            .ok_or(AppError::InvalidMacAddress)?;
+            .ok_or(AppError::InvalidApiKey)?;
 
         // Verify the version exists if provided
         if let Some(version_id) = current_version_id {

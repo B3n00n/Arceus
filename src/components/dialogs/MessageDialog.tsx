@@ -40,7 +40,7 @@ export function MessageDialog({
         <DialogHeader title="Send Message" subtitle={`To ${selectedCount} device(s)`} />
         <DialogContent className="space-y-4">
           <div>
-            <label className="text-sm text-grey-200 mb-2 block">Quick Presets</label>
+            <label className="text-sm text-gray-300 mb-2 block">Quick Presets</label>
             <div className="grid grid-cols-2 gap-2">
               {MESSAGE_PRESETS.map((preset, index) => (
                 <Button
@@ -57,7 +57,7 @@ export function MessageDialog({
             </div>
           </div>
           <div>
-            <label className="text-sm text-grey-200 mb-2 block">Message</label>
+            <label className="text-sm text-gray-300 mb-2 block">Message</label>
             <textarea
               value={message}
               onChange={(e) => setMessage(e.target.value)}
@@ -67,7 +67,7 @@ export function MessageDialog({
               onKeyDown={(e) => {
                 if (e.key === 'Escape') onClose();
               }}
-              className="w-full bg-grey-800 border border-grey-600 rounded-md px-3 py-2 text-white text-sm focus:outline-none focus:border-primary-default disabled:opacity-50 resize-none"
+              className="w-full bg-discord-dark-1 border border-gray-600 rounded-md px-3 py-2 text-white text-sm focus:outline-none focus:border-[#7289da] disabled:opacity-50 resize-none"
             />
           </div>
         </DialogContent>

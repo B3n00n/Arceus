@@ -1,4 +1,4 @@
-use crate::application::services::{GameApplicationService, GameVersionService, GameStatus};
+use crate::application::services::GameApplicationService;
 use crate::domain::models::{GameConfig, PackageName};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -73,52 +73,4 @@ pub async fn stop_game(
         .stop_game()
         .await
         .map_err(|e| format!("Failed to stop game: {}", e))
-}
-
-/// Get list of all games with their version status
-#[tauri::command]
-pub async fn get_game_list(
-    game_version_service: State<'_, Arc<GameVersionService>>,
-) -> Result<Vec<GameStatus>, String> {
-    tracing::debug!("Fetching game list");
-    game_version_service
-        .get_game_statuses()
-        .await
-        .map_err(|e| format!("Failed to fetch game list: {}", e))
-}
-
-/// Download and install a game (or update it)
-#[tauri::command]
-pub async fn download_game(
-    game_id: i32,
-    game_version_service: State<'_, Arc<GameVersionService>>,
-) -> Result<(), String> {
-    tracing::info!("Starting download for game {}", game_id);
-    game_version_service
-        .download_and_install_game(game_id)
-        .await
-        .map_err(|e| format!("Failed to download game: {}", e))
-}
-
-/// Cancel an ongoing download
-#[tauri::command]
-pub async fn cancel_download(
-    game_id: i32,
-    game_version_service: State<'_, Arc<GameVersionService>>,
-) -> Result<(), String> {
-    tracing::info!("Cancelling download for game {}", game_id);
-    game_version_service.cancel_download(game_id).await;
-    Ok(())
-}
-
-/// Force refresh games from server (requires internet connection)
-#[tauri::command]
-pub async fn force_refresh_games(
-    game_version_service: State<'_, Arc<GameVersionService>>,
-) -> Result<Vec<GameStatus>, String> {
-    tracing::info!("Force refresh requested");
-    game_version_service
-        .force_refresh()
-        .await
-        .map_err(|e| format!("Failed to refresh games: {}", e))
 }

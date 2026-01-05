@@ -10,14 +10,14 @@ impl ArcadeRepository {
         Self { pool }
     }
 
-    /// Find arcade by MAC address
-    pub async fn find_by_mac_address(&self, mac_address: &str) -> Result<Option<Arcade>> {
+    /// Find arcade by API key
+    pub async fn find_by_api_key(&self, api_key: &str) -> Result<Option<Arcade>> {
         let arcade = sqlx::query_as::<_, Arcade>(
-            "SELECT id, name, mac_address, status, last_seen_at, created_at
+            "SELECT id, name, api_key, status, last_seen_at, created_at
              FROM arcades
-             WHERE mac_address = $1"
+             WHERE api_key = $1"
         )
-        .bind(mac_address)
+        .bind(api_key)
         .fetch_optional(&self.pool)
         .await?;
 
@@ -34,76 +34,6 @@ impl ArcadeRepository {
         .bind(arcade_id)
         .execute(&self.pool)
         .await?;
-
-        Ok(())
-    }
-
-    /// Create new arcade
-    pub async fn create(&self, name: &str, mac_address: &str, status: &str) -> Result<Arcade> {
-        let arcade = sqlx::query_as::<_, Arcade>(
-            "INSERT INTO arcades (name, mac_address, status)
-             VALUES ($1, $2, $3)
-             RETURNING id, name, mac_address, status, last_seen_at, created_at"
-        )
-        .bind(name)
-        .bind(mac_address)
-        .bind(status)
-        .fetch_one(&self.pool)
-        .await?;
-
-        Ok(arcade)
-    }
-
-    /// List all arcades
-    pub async fn list_all(&self) -> Result<Vec<Arcade>> {
-        let arcades = sqlx::query_as::<_, Arcade>(
-            "SELECT id, name, mac_address, status, last_seen_at, created_at
-             FROM arcades
-             ORDER BY created_at DESC"
-        )
-        .fetch_all(&self.pool)
-        .await?;
-
-        Ok(arcades)
-    }
-
-    /// Get arcade by ID
-    pub async fn get_by_id(&self, id: i32) -> Result<Option<Arcade>> {
-        let arcade = sqlx::query_as::<_, Arcade>(
-            "SELECT id, name, mac_address, status, last_seen_at, created_at
-             FROM arcades
-             WHERE id = $1"
-        )
-        .bind(id)
-        .fetch_optional(&self.pool)
-        .await?;
-
-        Ok(arcade)
-    }
-
-    /// Update arcade
-    pub async fn update(&self, id: i32, name: &str, status: &str) -> Result<Arcade> {
-        let arcade = sqlx::query_as::<_, Arcade>(
-            "UPDATE arcades
-             SET name = $2, status = $3
-             WHERE id = $1
-             RETURNING id, name, mac_address, status, last_seen_at, created_at"
-        )
-        .bind(id)
-        .bind(name)
-        .bind(status)
-        .fetch_one(&self.pool)
-        .await?;
-
-        Ok(arcade)
-    }
-
-    /// Delete arcade
-    pub async fn delete(&self, id: i32) -> Result<()> {
-        sqlx::query("DELETE FROM arcades WHERE id = $1")
-            .bind(id)
-            .execute(&self.pool)
-            .await?;
 
         Ok(())
     }

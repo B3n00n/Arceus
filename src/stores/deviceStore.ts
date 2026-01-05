@@ -94,16 +94,7 @@ export const useDeviceStore = create<DeviceStoreState>((set, get) => ({
   },
 }));
 
-// Helper to update device fields
-const updateDeviceField = (deviceId: string, updater: (device: DeviceState) => DeviceState) => {
-  const store = useDeviceStore.getState();
-  const device = store.devices.find((d) => d.info.id === deviceId);
-  if (device) {
-    store.updateDevice(updater(device));
-  }
-};
-
-const unsubscribeDeviceEvents = eventService.subscribe((event) => {
+eventService.subscribe((event) => {
   const store = useDeviceStore.getState();
 
   switch (event.type) {
@@ -120,48 +111,67 @@ const unsubscribeDeviceEvents = eventService.subscribe((event) => {
       break;
 
     case 'deviceNameChanged':
-      updateDeviceField(event.deviceId, (device) => ({
-        ...device,
-        info: { ...device.info, customName: event.newName },
-      }));
+      const device = store.devices.find(d => d.info.id === event.deviceId);
+      if (device) {
+        store.updateDevice({
+          ...device,
+          info: {
+            ...device.info,
+            customName: event.newName,
+          }
+        });
+      }
       break;
 
     case 'batteryUpdated':
-      updateDeviceField(event.deviceId, (device) => ({
-        ...device,
-        battery: event.batteryInfo,
-      }));
+      const deviceForBattery = store.devices.find(d => d.info.id === event.deviceId);
+      if (deviceForBattery) {
+        store.updateDevice({
+          ...deviceForBattery,
+          battery: event.batteryInfo,
+        });
+      }
       break;
 
     case 'volumeUpdated':
-      updateDeviceField(event.deviceId, (device) => ({
-        ...device,
-        volume: event.volumeInfo,
-      }));
+      const deviceForVolume = store.devices.find(d => d.info.id === event.deviceId);
+      if (deviceForVolume) {
+        store.updateDevice({
+          ...deviceForVolume,
+          volume: event.volumeInfo,
+        });
+      }
       break;
 
     case 'operationProgress':
-      updateDeviceField(event.deviceId, (device) => ({
-        ...device,
-        operationProgress: event.progress,
-      }));
+      const deviceForProgress = store.devices.find(d => d.info.id === event.deviceId);
+      if (deviceForProgress) {
+        const shouldAutoHide =
+          event.progress.operationType === 'install' &&
+          (event.progress.stage === 'completed' || event.progress.stage === 'failed');
 
-      // Auto-hide install completion/failure after delay
-      if (
-        event.progress.operationType === 'install' &&
-        (event.progress.stage === 'completed' || event.progress.stage === 'failed')
-      ) {
-        setTimeout(() => {
-          const device = store.devices.find((d) => d.info.id === event.deviceId);
-          if (device?.operationProgress?.operationId === event.progress.operationId) {
-            updateDeviceField(event.deviceId, (d) => ({ ...d, operationProgress: null }));
-          }
-        }, 2000);
+        if (shouldAutoHide) {
+          store.updateDevice({
+            ...deviceForProgress,
+            operationProgress: event.progress,
+          });
+
+          setTimeout(() => {
+            const currentDevice = store.devices.find(d => d.info.id === event.deviceId);
+            if (currentDevice?.operationProgress?.operationId === event.progress.operationId) {
+              store.updateDevice({
+                ...currentDevice,
+                operationProgress: null,
+              });
+            }
+          }, 2000);
+        } else {
+          store.updateDevice({
+            ...deviceForProgress,
+            operationProgress: event.progress,
+          });
+        }
       }
       break;
   }
 });
-
-export const cleanupDeviceStore = () => {
-  unsubscribeDeviceEvents();
-};

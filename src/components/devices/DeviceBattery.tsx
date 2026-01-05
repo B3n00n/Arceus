@@ -27,7 +27,7 @@ export function DeviceBattery({ level, isCharging = false, showLabel = true, cla
     <div className={cn('flex items-center gap-2', className)}>
       {/* Battery outline using lucide-react icon */}
       <div className="relative w-6 h-6">
-        <BatteryIcon className="absolute inset-0 z-0 w-6 h-6 text-grey-100" />
+        <BatteryIcon className="absolute inset-0 z-0 w-6 h-6 text-white/90" />
 
         {/* Inner fill area positioned by paddings; only the fill changes color */}
         <div
@@ -56,7 +56,7 @@ export function DeviceBattery({ level, isCharging = false, showLabel = true, cla
       </div>
 
       {showLabel && (
-        <span className="text-sm text-grey-200">{safeLevel}%</span>
+        <span className="text-sm text-gray-300">{safeLevel}%</span>
       )}
     </div>
   );

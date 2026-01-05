@@ -1,7 +1,7 @@
 use semver::Version;
 use std::sync::Arc;
 
-use crate::app::config::CLIENT_APK_FILENAME;
+use crate::app::config::{CLIENT_APK_DOWNLOAD_URL, CLIENT_APK_FILENAME};
 use crate::application::dto::ClientApkMetadata;
 use crate::domain::repositories::{ClientApkError, ClientApkRepository};
 
@@ -41,7 +41,7 @@ impl ClientApkService {
             Some(ref metadata) => Version::parse(&metadata.version)?,
             None => {
                 tracing::info!("No cached APK found");
-                Version::new(0, 0, 0)
+                Version::parse("0.0.0").unwrap()
             }
         };
 
@@ -58,14 +58,15 @@ impl ClientApkService {
                 remote_version
             );
 
-            // Download APK from the signed URL provided by Alakazam
-            let apk_data = self.repository.download_apk(&remote_metadata.download_url).await?;
+            // Download APK
+            let apk_data = self.repository.download_apk().await?;
 
             // Save to disk
             self.repository.save_apk(&apk_data).await?;
 
             // Update metadata
-            let new_metadata = ClientApkMetadata::new(remote_metadata.version.clone());
+            let new_metadata =
+                ClientApkMetadata::new(remote_metadata.version, CLIENT_APK_DOWNLOAD_URL.to_string());
             self.repository.save_metadata(&new_metadata).await?;
 
             tracing::info!(

@@ -37,7 +37,7 @@ export function LaunchAppDialog({
         <DialogContent className="space-y-5">
           {/* Dropdown */}
           <div>
-            <label className="text-sm text-grey-200 mb-2 block">
+            <label className="text-sm text-gray-300 mb-2 block">
               Choose an app to launch on the server
             </label>
             <Dropdown
@@ -56,7 +56,7 @@ export function LaunchAppDialog({
               onCheckedChange={() => setLaunchOnClients(!launchOnClients)}
               disabled={loading}
             />
-            <span className="text-sm text-grey-200">
+            <span className="text-sm text-gray-300">
               Also launch on connected devices
             </span>
           </div>

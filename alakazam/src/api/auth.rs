@@ -4,58 +4,29 @@ use axum::{
     http::request::Parts,
 };
 
-pub struct MacKey(pub String);
+/// Extractor for API key from X-API-Key header
+pub struct ApiKey(pub String);
 
-impl<S> FromRequestParts<S> for MacKey
+impl<S> FromRequestParts<S> for ApiKey
 where
     S: Send + Sync,
 {
     type Rejection = AppError;
 
     async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
-        let mac_address = parts
+        let api_key = parts
             .headers
-            .get("X-MAC-Address")
+            .get("X-API-Key")
             .and_then(|value| value.to_str().ok())
-            .ok_or(AppError::InvalidMacAddress)?;
+            .ok_or(AppError::InvalidApiKey)?;
 
-        Ok(MacKey(mac_address.to_string()))
+        Ok(ApiKey(api_key.to_string()))
     }
 }
 
 // Allow extracting the inner String directly
-impl From<MacKey> for String {
-    fn from(key: MacKey) -> Self {
+impl From<ApiKey> for String {
+    fn from(key: ApiKey) -> Self {
         key.0
-    }
-}
-
-/// IAP (Identity-Aware Proxy) authenticated user
-/// Extracts user email from Google Cloud IAP headers
-pub struct IapUser {
-    pub email: String,
-}
-
-impl<S> FromRequestParts<S> for IapUser
-where
-    S: Send + Sync,
-{
-    type Rejection = AppError;
-
-    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
-        // Extract email from IAP header
-        let email = parts
-            .headers
-            .get("X-Goog-Authenticated-User-Email")
-            .and_then(|value| value.to_str().ok())
-            .ok_or(AppError::Unauthorized)?;
-
-        // IAP prefixes emails with "accounts.google.com:" - strip it
-        let email = email
-            .strip_prefix("accounts.google.com:")
-            .unwrap_or(email)
-            .to_string();
-
-        Ok(IapUser { email })
     }
 }

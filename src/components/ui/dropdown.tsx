@@ -1,5 +1,5 @@
 import * as React from "react"
-import { ChevronDown, ChevronUp } from "lucide-react"
+import { ChevronDown } from "lucide-react"
 import { cn } from "@/lib/cn"
 
 interface DropdownProps {
@@ -49,35 +49,33 @@ export function Dropdown({
         type="button"
         onClick={toggleOpen}
         disabled={disabled}
-        data-state={isOpen ? "active" : "default"}
         className={cn(
-           "w-full flex justify-between items-center rounded-md px-3 py-2 text-sm transition-colors",
-          "bg-grey-900 outline outline-grey-600 text-grey-200 hover:outline-primary-default focus:outline-none focus:ring-2 focus:ring-primary-default",
+          "w-full flex justify-between items-center rounded-md px-3 py-2 text-sm transition-colors",
+          "bg-discord-dark-2 border border-discord-dark-2 text-gray-200 hover:border-[#7289da] focus:outline-none focus:ring-2 focus:ring-[#7289da]",
           disabled && "opacity-50 cursor-not-allowed"
         )}
       >
-        <span className="text-white">
-          {value || placeholder}
-        </span>
-        {isOpen ? (
-          <ChevronUp className="w-4 h-4 text-white" />
-        ) : (
-          <ChevronDown className="w-4 h-4 text-grey-200" />
-        )}
+        <span>{value || placeholder}</span>
+        <ChevronDown
+          className={cn(
+            "h-4 w-4 ml-2 transition-transform",
+            isOpen && "rotate-180"
+          )}
+        />
       </button>
 
       {/* Menu */}
       {isOpen && (
         <div
-          className="absolute z-50 mt-1 w-full rounded-md border border-grey-500 bg-grey-800 shadow-lg"
+          className="absolute z-50 mt-2 w-full rounded-md border border-discord-dark-2 bg-discord-dark-3 shadow-lg"
         >
-          <ul className="max-h-36 overflow-y-auto space-y-0 py-2 text-sm">
+          <ul className="max-h-36 overflow-y-auto space-y-1 p-2 text-sm">
             {options.map((option) => (
               <li key={option}>
                 <button
                   className={cn(
-                    "w-full text-left px-3 py-2 hover:bg-grey-700 text-grey-200 hover:text-white",
-                    option === value && "bg-primary-800 text-white hover:bg-primary-700"
+                    "w-full rounded-sm text-left px-3 py-2 hover:bg-[#7289da]/20 text-gray-200 hover:text-white",
+                    option === value && "bg-[#7289da]/30 text-white"
                   )}
                   onClick={() => handleSelect(option)}
                 >

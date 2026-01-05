@@ -9,7 +9,7 @@ export function MainLayout() {
   const sidebarCollapsed = useUIStore((state) => state.sidebarCollapsed);
 
   return (
-    <div className="min-h-screen bg-grey-900">
+    <div className="min-h-screen bg-discord-dark-4">
       <Sidebar />
       <div
         className={cn(

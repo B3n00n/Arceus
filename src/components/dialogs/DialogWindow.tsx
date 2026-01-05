@@ -14,13 +14,20 @@ interface DialogWindowProps {
 
 /**
  * DialogWindow - The base container for all dialog content
+ *
+ * Provides consistent styling for dialogs including:
+ * - Background color (discord-dark-4)
+ * - Border and shadow
+ * - Rounded corners
+ * - Proper spacing
+ *
  * Should be used inside DialogOverlay
  */
 export function DialogWindow({ children, className, maxHeight }: DialogWindowProps) {
   return (
     <div
       className={cn(
-        "rounded-lg border bg-grey-800 border-grey-600 shadow flex flex-col",
+        "rounded-lg border bg-discord-dark-4 border-discord-dark shadow flex flex-col",
         maxHeight && maxHeight,
         className
       )}
@@ -45,8 +52,8 @@ interface DialogHeaderProps {
 export function DialogHeader({ title, subtitle, className }: DialogHeaderProps) {
   return (
     <div className={cn("flex flex-col space-y-1.5 p-4", subtitle && "pb-3", className)}>
-      <h3 className="text-xl font-semibold text-white">{title}</h3>
-      {subtitle && <p className="text-sm text-grey-300">{subtitle}</p>}
+      <h3 className="text-lg font-semibold text-white">{title}</h3>
+      {subtitle && <p className="text-sm text-gray-400">{subtitle}</p>}
     </div>
   );
 }
@@ -70,7 +77,7 @@ export function DialogContent({ children, className, scrollable = false }: Dialo
   return (
     <div
       className={cn(
-        "p-4 pt-0 text-grey-200",
+        "p-4 pt-0",
         scrollable && "flex-1 overflow-y-auto",
         className
       )}
@@ -93,7 +100,7 @@ interface DialogFooterProps {
    * Confirm button variant
    * @default "default"
    */
-  confirmVariant?: "default" | "outline" | "secondary" | "ghost" | "link" | "danger" | "danger-outline";
+  confirmVariant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link" | "danger" | "danger-outline";
   /**
    * Whether the confirm button should be disabled
    */
@@ -129,7 +136,7 @@ export function DialogFooter({
 }: DialogFooterProps) {
   return (
     <div className={cn(
-      "p-4 border-t border-grey-600 flex gap-2",
+      "p-4 border-t border-discord-dark flex gap-2",
       onCancel ? "flex-row-reverse justify-between" : "flex-row-reverse",
       className
     )}>
@@ -137,7 +144,7 @@ export function DialogFooter({
         {confirmText}
       </Button>
       {onCancel && (
-        <Button variant="secondary" onClick={onCancel} disabled={cancelDisabled}>
+        <Button variant="outline" onClick={onCancel} disabled={cancelDisabled}>
           Cancel
         </Button>
       )}

@@ -13,11 +13,8 @@ pub enum AppError {
     #[error("Arcade not found")]
     ArcadeNotFound,
 
-    #[error("Invalid MAC address")]
-    InvalidMacAddress,
-
-    #[error("Unauthorized")]
-    Unauthorized,
+    #[error("Invalid API key")]
+    InvalidApiKey,
 
     #[error("Game not found")]
     GameNotFound,
@@ -27,12 +24,6 @@ pub enum AppError {
 
     #[error("No assignment found for this arcade and game")]
     NoAssignment,
-
-    #[error("Snorlax version not found")]
-    SnorlaxVersionNotFound,
-
-    #[error("No current Snorlax version set")]
-    NoCurrentSnorlaxVersion,
 
     #[error("Internal server error: {0}")]
     Internal(String),
@@ -46,13 +37,10 @@ impl IntoResponse for AppError {
                 (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error")
             }
             AppError::ArcadeNotFound => (StatusCode::NOT_FOUND, "Arcade not found"),
-            AppError::InvalidMacAddress => (StatusCode::UNAUTHORIZED, "Invalid MAC address"),
-            AppError::Unauthorized => (StatusCode::UNAUTHORIZED, "Unauthorized"),
+            AppError::InvalidApiKey => (StatusCode::UNAUTHORIZED, "Invalid API key"),
             AppError::GameNotFound => (StatusCode::NOT_FOUND, "Game not found"),
             AppError::GameVersionNotFound => (StatusCode::NOT_FOUND, "Game version not found"),
             AppError::NoAssignment => (StatusCode::NOT_FOUND, "No assignment found"),
-            AppError::SnorlaxVersionNotFound => (StatusCode::NOT_FOUND, "Snorlax version not found"),
-            AppError::NoCurrentSnorlaxVersion => (StatusCode::NOT_FOUND, "No current Snorlax version set"),
             AppError::Internal(ref msg) => {
                 tracing::error!("Internal error: {}", msg);
                 (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error")

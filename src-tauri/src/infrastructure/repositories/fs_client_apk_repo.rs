@@ -9,32 +9,27 @@ use reqwest::Client;
 use std::path::PathBuf;
 
 use crate::app::config::{
-    get_mac_address, CLIENT_APK_FILENAME, CLIENT_METADATA_FILENAME,
+    CLIENT_APK_DOWNLOAD_URL, CLIENT_APK_FILENAME, CLIENT_APK_METADATA_URL,
+    CLIENT_METADATA_FILENAME,
 };
-use crate::app::models::AlakazamConfig;
 use crate::application::dto::{ClientApkMetadata, RemoteApkMetadata};
 use crate::domain::repositories::{ClientApkError, ClientApkRepository};
 
 pub struct FsClientApkRepository {
     /// Directory where APK files and metadata are stored
     apk_directory: PathBuf,
-    /// HTTP client for downloading APKs (configured with 1h timeout)
+    /// HTTP client for downloading APKs (configured with 5-minute timeout)
     http_client: Client,
-    /// Alakazam server configuration
-    alakazam_config: AlakazamConfig,
 }
 
 impl FsClientApkRepository {
-    pub fn new(apk_directory: PathBuf, alakazam_config: AlakazamConfig) -> Self {
-        let http_client = Client::builder()
-            .timeout(std::time::Duration::from_secs(3600)) // 1h timeout for large APK downloads
-            .build()
-            .expect("Failed to create HTTP client - TLS initialization may have failed");
-
+    pub fn new(apk_directory: PathBuf) -> Self {
         Self {
             apk_directory,
-            http_client,
-            alakazam_config,
+            http_client: Client::builder()
+                .timeout(std::time::Duration::from_secs(300)) // 5 min timeout for large APK downloads
+                .build()
+                .expect("Failed to create HTTP client"),
         }
     }
 
@@ -47,22 +42,11 @@ impl FsClientApkRepository {
 #[async_trait]
 impl ClientApkRepository for FsClientApkRepository {
     async fn fetch_remote_metadata(&self) -> Result<RemoteApkMetadata, ClientApkError> {
-        let url = format!(
-            "{}{}",
-            self.alakazam_config.base_url, self.alakazam_config.snorlax_endpoint
-        );
-        tracing::debug!("Fetching Snorlax APK info from Alakazam: {}", url);
-
-        // Get MAC address for authentication
-        let mac_address = get_mac_address()
-            .map_err(|e| ClientApkError::Network(format!("Failed to get MAC address: {}", e)))?;
-
-        tracing::info!("Authenticating with MAC address: {}", mac_address);
+        tracing::debug!("Fetching remote APK metadata from {}", CLIENT_APK_METADATA_URL);
 
         let response = self
             .http_client
-            .get(&url)
-            .header("X-MAC-Address", mac_address)
+            .get(CLIENT_APK_METADATA_URL)
             .header("Cache-Control", "no-cache, no-store, must-revalidate")
             .header("Pragma", "no-cache")
             .header("Expires", "0")
@@ -72,7 +56,7 @@ impl ClientApkRepository for FsClientApkRepository {
 
         if !response.status().is_success() {
             return Err(ClientApkError::Network(format!(
-                "HTTP {}: Failed to fetch Snorlax APK info from Alakazam",
+                "HTTP {}: Failed to fetch metadata",
                 response.status()
             )));
         }
@@ -82,27 +66,23 @@ impl ClientApkRepository for FsClientApkRepository {
             .await
             .map_err(|e| ClientApkError::InvalidMetadata(e.to_string()))?;
 
-        tracing::debug!(
-            "Snorlax APK version from Alakazam: {}, expires at: {}",
-            metadata.version,
-            metadata.expires_at
-        );
+        tracing::debug!("Remote APK version: {}", metadata.version);
         Ok(metadata)
     }
 
-    async fn download_apk(&self, download_url: &str) -> Result<Vec<u8>, ClientApkError> {
-        tracing::info!("Downloading APK from signed URL");
+    async fn download_apk(&self) -> Result<Vec<u8>, ClientApkError> {
+        tracing::info!("Downloading APK from {}", CLIENT_APK_DOWNLOAD_URL);
 
         let response = self
             .http_client
-            .get(download_url)
+            .get(CLIENT_APK_DOWNLOAD_URL)
             .send()
             .await
             .map_err(|e| ClientApkError::Network(e.to_string()))?;
 
         if !response.status().is_success() {
             return Err(ClientApkError::Network(format!(
-                "HTTP {}: Failed to download APK from signed URL",
+                "HTTP {}: Failed to download APK",
                 response.status()
             )));
         }
