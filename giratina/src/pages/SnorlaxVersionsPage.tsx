@@ -10,7 +10,6 @@ import {
   Tooltip,
   Flex,
   Tag,
-  Badge,
   message,
   Progress,
   App,
@@ -153,18 +152,32 @@ export const SnorlaxVersionsPage = () => {
       key: 'id',
       width: 80,
       sorter: (a, b) => a.id - b.id,
+      render: (id: number) => (
+        <span style={{ color: '#94a3b8', fontWeight: 500, fontSize: 13 }}>#{id}</span>
+      ),
     },
     {
       title: 'Version',
       dataIndex: 'version',
       key: 'version',
-      width: 150,
+      width: 180,
       sorter: (a, b) => a.version.localeCompare(b.version),
       render: (version: string, record: SnorlaxVersion) => (
-        <Space>
-          <strong>{version}</strong>
+        <Space size={8}>
+          <Tag color="blue" style={{ fontSize: 13, padding: '4px 12px', borderRadius: 6, fontWeight: 600 }}>
+            v{version}
+          </Tag>
           {record.is_current && (
-            <Tag icon={<CheckCircleOutlined />} color="success">
+            <Tag
+              icon={<CheckCircleOutlined />}
+              color="success"
+              style={{
+                fontSize: 12,
+                padding: '4px 12px',
+                borderRadius: 6,
+                fontWeight: 600,
+              }}
+            >
               CURRENT
             </Tag>
           )}
@@ -177,7 +190,18 @@ export const SnorlaxVersionsPage = () => {
       key: 'gcs_path',
       render: (path: string) => (
         <Tooltip title={`Full path: ${path}/Snorlax.apk`}>
-          <code style={{ fontSize: 12 }}>{path}</code>
+          <code
+            style={{
+              fontSize: 12,
+              padding: '4px 8px',
+              backgroundColor: '#0f172a',
+              borderRadius: 4,
+              color: '#06b6d4',
+              border: '1px solid #334155',
+            }}
+          >
+            {path}
+          </code>
         </Tooltip>
       ),
     },
@@ -208,25 +232,40 @@ export const SnorlaxVersionsPage = () => {
     {
       title: 'Actions',
       key: 'actions',
-      width: 150,
+      width: 170,
       fixed: 'right',
+      align: 'center',
       render: (_, record) => (
-        <Space size="small">
+        <Space size={8}>
           {!record.is_current && (
-            <Tooltip title="Set as Current">
+            <Tooltip title="Set as Current Version">
               <Button
-                type="text"
+                type="default"
                 icon={<StarOutlined />}
                 onClick={() => handleSetCurrent(record.id)}
                 loading={setCurrentMutation.isPending}
-                size="small"
-                style={{ color: '#f59e0b' }}
+                size="middle"
+                style={{
+                  borderRadius: 6,
+                  borderColor: '#f59e0b',
+                  color: '#f59e0b',
+                }}
               />
             </Tooltip>
           )}
           {record.is_current && (
             <Tooltip title="Currently Active">
-              <StarFilled style={{ color: '#f59e0b', fontSize: 16 }} />
+              <Button
+                type="default"
+                icon={<StarFilled />}
+                size="middle"
+                disabled
+                style={{
+                  borderRadius: 6,
+                  borderColor: '#f59e0b',
+                  color: '#f59e0b',
+                }}
+              />
             </Tooltip>
           )}
           <Popconfirm
@@ -242,13 +281,15 @@ export const SnorlaxVersionsPage = () => {
             cancelText="Cancel"
             disabled={record.is_current}
           >
-            <Tooltip title={record.is_current ? "Cannot delete current version" : "Delete"}>
+            <Tooltip title={record.is_current ? "Cannot delete current version" : "Delete Version"}>
               <Button
-                type="text"
                 danger
                 icon={<DeleteOutlined />}
-                size="small"
+                size="middle"
                 disabled={record.is_current}
+                style={{
+                  borderRadius: 6,
+                }}
               />
             </Tooltip>
           </Popconfirm>
@@ -260,49 +301,75 @@ export const SnorlaxVersionsPage = () => {
   const currentVersion = versions.find(v => v.is_current);
 
   return (
-    <div>
-      <Flex justify="space-between" align="center" style={{ marginBottom: 24 }}>
+    <div style={{ padding: '8px 0' }}>
+      {/* Header Section */}
+      <Flex justify="space-between" align="flex-start" style={{ marginBottom: 24 }} wrap="wrap" gap={16}>
         <div>
-          <Title level={2} style={{ margin: 0, marginBottom: 8 }}>
+          <Title level={2} style={{ margin: 0, marginBottom: 12, fontSize: 28, fontWeight: 600 }}>
             Snorlax Versions
           </Title>
-          {currentVersion && (
-            <Badge
-              status="processing"
-              text={`Current version: ${currentVersion.version}`}
-              style={{ fontSize: 14 }}
-            />
-          )}
+          <Flex gap={12} wrap="wrap" align="center">
+            <div style={{ color: '#94a3b8', fontSize: 14 }}>
+              {filteredVersions.length} version{filteredVersions.length !== 1 ? 's' : ''} total
+            </div>
+            {currentVersion && (
+              <Tag
+                icon={<CheckCircleOutlined />}
+                color="success"
+                style={{
+                  fontSize: 13,
+                  padding: '4px 12px',
+                  borderRadius: 6,
+                  fontWeight: 500,
+                }}
+              >
+                Current: v{currentVersion.version}
+              </Tag>
+            )}
+          </Flex>
         </div>
         <Button
           type="primary"
           icon={<PlusOutlined />}
           onClick={handleCreate}
           size="large"
+          style={{ minHeight: 42 }}
         >
-          Create Version
+          Upload Version
         </Button>
       </Flex>
 
-      <Card>
-        <Flex gap="middle" style={{ marginBottom: 16 }} wrap="wrap">
+      {/* Main Content Card */}
+      <Card
+        style={{
+          borderRadius: 12,
+          boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.2), 0 2px 4px -2px rgb(0 0 0 / 0.2)',
+        }}
+      >
+        {/* Search Bar */}
+        <Flex gap={12} style={{ marginBottom: 20 }} wrap="wrap" align="center">
           <Input
-            placeholder="Search versions..."
-            prefix={<SearchOutlined />}
+            placeholder="Search versions, paths..."
+            prefix={<SearchOutlined style={{ color: '#64748b' }} />}
             allowClear
-            style={{ width: 300 }}
+            style={{ maxWidth: 400, flex: 1 }}
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
+            size="large"
           />
-          <Tooltip title="Refresh">
+          <Tooltip title="Refresh Data">
             <Button
               icon={<ReloadOutlined />}
               onClick={() => refetch()}
               loading={isLoading}
-            />
+              size="large"
+            >
+              Refresh
+            </Button>
           </Tooltip>
         </Flex>
 
+        {/* Data Table */}
         <Table
           columns={columns}
           dataSource={filteredVersions}
@@ -310,13 +377,13 @@ export const SnorlaxVersionsPage = () => {
           rowKey="id"
           pagination={{
             pageSize: 10,
-            showTotal: (total) => `Total ${total} versions`,
+            showTotal: (total) => `${total} version${total !== 1 ? 's' : ''} total`,
             showSizeChanger: true,
             pageSizeOptions: ['10', '20', '50'],
+            style: { marginTop: 16 },
           }}
-          rowClassName={(record) =>
-            record.is_current ? 'current-version-row' : ''
-          }
+          scroll={{ x: 1000 }}
+          style={{ borderRadius: 8, overflow: 'hidden' }}
         />
       </Card>
 
@@ -327,14 +394,6 @@ export const SnorlaxVersionsPage = () => {
         loading={isUploading}
       />
 
-      <style>{`
-        .current-version-row {
-          background-color: rgba(234, 88, 12, 0.05) !important;
-        }
-        .current-version-row:hover > td {
-          background-color: rgba(234, 88, 12, 0.08) !important;
-        }
-      `}</style>
     </div>
   );
 };

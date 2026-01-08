@@ -96,6 +96,9 @@ export const GamesPage = () => {
       key: 'id',
       width: 80,
       sorter: (a, b) => a.id - b.id,
+      render: (id: number) => (
+        <span style={{ color: '#94a3b8', fontWeight: 500, fontSize: 13 }}>#{id}</span>
+      ),
     },
     {
       title: 'Image',
@@ -108,25 +111,26 @@ export const GamesPage = () => {
             src={url}
             alt="Game background"
             style={{
-              width: 60,
-              height: 40,
+              width: 80,
+              height: 48,
               objectFit: 'cover',
-              borderRadius: 4,
-              border: '1px solid #424242'
+              borderRadius: 6,
+              border: '1px solid #475569',
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.3)'
             }}
           />
         ) : (
           <div style={{
-            width: 60,
-            height: 40,
-            backgroundColor: '#1a1a1a',
-            borderRadius: 4,
-            border: '1px solid #424242',
+            width: 80,
+            height: 48,
+            backgroundColor: '#0f172a',
+            borderRadius: 6,
+            border: '1px solid #475569',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: 10,
-            color: '#666'
+            fontSize: 11,
+            color: '#64748b'
           }}>
             No image
           </div>
@@ -154,16 +158,21 @@ export const GamesPage = () => {
     {
       title: 'Actions',
       key: 'actions',
-      width: 120,
+      width: 140,
       fixed: 'right',
+      align: 'center',
       render: (_, record) => (
-        <Space size="small">
-          <Tooltip title="Edit">
+        <Space size={8}>
+          <Tooltip title="Edit Game">
             <Button
-              type="text"
+              type="default"
               icon={<EditOutlined />}
               onClick={() => handleEdit(record)}
-              size="small"
+              size="middle"
+              style={{
+                borderRadius: 6,
+                borderColor: '#475569',
+              }}
             />
           </Tooltip>
           <Popconfirm
@@ -174,12 +183,14 @@ export const GamesPage = () => {
             okButtonProps={{ danger: true }}
             cancelText="Cancel"
           >
-            <Tooltip title="Delete">
+            <Tooltip title="Delete Game">
               <Button
-                type="text"
                 danger
                 icon={<DeleteOutlined />}
-                size="small"
+                size="middle"
+                style={{
+                  borderRadius: 6,
+                }}
               />
             </Tooltip>
           </Popconfirm>
@@ -189,40 +200,59 @@ export const GamesPage = () => {
   ];
 
   return (
-    <div>
-      <Flex justify="space-between" align="center" style={{ marginBottom: 24 }}>
-        <Title level={2} style={{ margin: 0 }}>
-          Games
-        </Title>
+    <div style={{ padding: '8px 0' }}>
+      {/* Header Section */}
+      <Flex justify="space-between" align="center" style={{ marginBottom: 24 }} wrap="wrap" gap={16}>
+        <div>
+          <Title level={2} style={{ margin: 0, fontSize: 28, fontWeight: 600 }}>
+            Games
+          </Title>
+          <div style={{ marginTop: 8, color: '#94a3b8', fontSize: 14 }}>
+            {filteredGames.length} game{filteredGames.length !== 1 ? 's' : ''} total
+          </div>
+        </div>
         <Button
           type="primary"
           icon={<PlusOutlined />}
           onClick={handleCreate}
           size="large"
+          style={{ minHeight: 42 }}
         >
           Create Game
         </Button>
       </Flex>
 
-      <Card>
-        <Flex gap="middle" style={{ marginBottom: 16 }} wrap="wrap">
+      {/* Main Content Card */}
+      <Card
+        style={{
+          borderRadius: 12,
+          boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.2), 0 2px 4px -2px rgb(0 0 0 / 0.2)',
+        }}
+      >
+        {/* Search Bar */}
+        <Flex gap={12} style={{ marginBottom: 20 }} wrap="wrap" align="center">
           <Input
-            placeholder="Search games..."
-            prefix={<SearchOutlined />}
+            placeholder="Search games by name..."
+            prefix={<SearchOutlined style={{ color: '#64748b' }} />}
             allowClear
-            style={{ width: 300 }}
+            style={{ maxWidth: 400, flex: 1 }}
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
+            size="large"
           />
-          <Tooltip title="Refresh">
+          <Tooltip title="Refresh Data">
             <Button
               icon={<ReloadOutlined />}
               onClick={() => refetch()}
               loading={isLoading}
-            />
+              size="large"
+            >
+              Refresh
+            </Button>
           </Tooltip>
         </Flex>
 
+        {/* Data Table */}
         <Table
           columns={columns}
           dataSource={filteredGames}
@@ -230,10 +260,13 @@ export const GamesPage = () => {
           rowKey="id"
           pagination={{
             pageSize: 10,
-            showTotal: (total) => `Total ${total} games`,
+            showTotal: (total) => `${total} game${total !== 1 ? 's' : ''} total`,
             showSizeChanger: true,
             pageSizeOptions: ['10', '20', '50', '100'],
+            style: { marginTop: 16 },
           }}
+          scroll={{ x: 800 }}
+          style={{ borderRadius: 8, overflow: 'hidden' }}
         />
       </Card>
 

@@ -10,7 +10,6 @@ import {
   Tooltip,
   Flex,
   Tag,
-  Badge,
 } from 'antd';
 import {
   PlusOutlined,
@@ -30,15 +29,19 @@ import {
 } from '../hooks/useAssignments';
 import { useArcades } from '../hooks/useArcades';
 import { useGames } from '../hooks/useGames';
+import { useAllGameVersions } from '../hooks/useGameVersions';
 import { AssignmentModal } from '../components/AssignmentModal';
 import type { Assignment } from '../types';
+import { useResponsive } from '../hooks/useResponsive';
 
 const { Title } = Typography;
 
-// Extended type to include names
+// Extended type to include names and version strings
 interface AssignmentWithDetails extends Assignment {
   arcade_name?: string;
   game_name?: string;
+  assigned_version_string?: string;
+  current_version_string?: string;
 }
 
 export const AssignmentsPage = () => {
@@ -46,6 +49,7 @@ export const AssignmentsPage = () => {
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [selectedAssignment, setSelectedAssignment] = useState<Assignment | undefined>();
   const [searchText, setSearchText] = useState('');
+  const { isMobile } = useResponsive();
 
   const { data: assignments = [], isLoading, refetch } = useAssignments();
   const { data: arcades = [] } = useArcades();
@@ -54,14 +58,26 @@ export const AssignmentsPage = () => {
   const updateMutation = useUpdateAssignment();
   const deleteMutation = useDeleteAssignment();
 
-  // Enrich assignments with names
+  // Get unique game IDs from assignments to fetch their versions
+  const gameIds = useMemo(() => {
+    return Array.from(new Set(assignments.map((a) => a.game_id)));
+  }, [assignments]);
+
+  const { data: allVersions = [] } = useAllGameVersions(gameIds);
+
+  // Enrich assignments with names and version strings
   const enrichedAssignments: AssignmentWithDetails[] = useMemo(() => {
     return assignments.map((assignment) => ({
       ...assignment,
       arcade_name: arcades.find((a) => a.id === assignment.arcade_id)?.name || 'Unknown',
       game_name: games.find((g) => g.id === assignment.game_id)?.name || 'Unknown',
+      assigned_version_string:
+        allVersions.find((v) => v.id === assignment.assigned_version_id)?.version || 'Unknown',
+      current_version_string: assignment.current_version_id
+        ? allVersions.find((v) => v.id === assignment.current_version_id)?.version
+        : undefined,
     }));
-  }, [assignments, arcades, games]);
+  }, [assignments, arcades, games, allVersions]);
 
   const filteredAssignments = useMemo(() => {
     return enrichedAssignments.filter(
@@ -117,13 +133,28 @@ export const AssignmentsPage = () => {
       key: 'id',
       width: 80,
       sorter: (a, b) => a.id - b.id,
+      render: (id: number) => (
+        <span style={{ color: '#94a3b8', fontWeight: 500, fontSize: 13 }}>#{id}</span>
+      ),
     },
     {
       title: 'Arcade',
       dataIndex: 'arcade_name',
       key: 'arcade_name',
       width: 200,
-      render: (name: string) => <Tag color="blue">{name}</Tag>,
+      render: (name: string) => (
+        <Tag
+          color="blue"
+          style={{
+            fontSize: 13,
+            padding: '4px 12px',
+            borderRadius: 6,
+            fontWeight: 500,
+          }}
+        >
+          {name}
+        </Tag>
+      ),
       sorter: (a, b) => (a.arcade_name || '').localeCompare(b.arcade_name || ''),
     },
     {
@@ -131,7 +162,19 @@ export const AssignmentsPage = () => {
       dataIndex: 'game_name',
       key: 'game_name',
       width: 200,
-      render: (name: string) => <Tag color="purple">{name}</Tag>,
+      render: (name: string) => (
+        <Tag
+          color="purple"
+          style={{
+            fontSize: 13,
+            padding: '4px 12px',
+            borderRadius: 6,
+            fontWeight: 500,
+          }}
+        >
+          {name}
+        </Tag>
+      ),
       sorter: (a, b) => (a.game_name || '').localeCompare(b.game_name || ''),
     },
     {
@@ -139,26 +182,28 @@ export const AssignmentsPage = () => {
       key: 'version_status',
       width: 200,
       render: (_, record) => {
-        const isSynced = record.current_version_id === record.assigned_version_id;
         return (
-          <Space orientation="vertical" size="small">
-            <div>
-              <strong>Assigned:</strong> Version ID {record.assigned_version_id}
+          <Space orientation="vertical" size={4} style={{ width: '100%' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ color: '#666', fontSize: '12px', minWidth: '65px' }}>Assigned:</span>
+              <Tag color="blue" style={{ margin: 0, fontWeight: 500, fontSize: '12px', padding: '2px 8px' }}>
+                v{record.assigned_version_string}
+              </Tag>
             </div>
-            {record.current_version_id && (
-              <div>
-                <strong>Current:</strong> Version ID {record.current_version_id}
+            {record.current_version_string ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ color: '#666', fontSize: '12px', minWidth: '65px' }}>Current:</span>
+                <Tag color="green" style={{ margin: 0, fontWeight: 500, fontSize: '12px', padding: '2px 8px' }}>
+                  v{record.current_version_string}
+                </Tag>
               </div>
-            )}
-            {!record.current_version_id && (
-              <div style={{ color: '#999' }}>
-                <strong>Current:</strong> Not installed
-              </div>
-            )}
-            {isSynced ? (
-              <Badge status="success" text="Synced" />
             ) : (
-              <Badge status="processing" text="Pending Update" />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ color: '#666', fontSize: '12px', minWidth: '65px' }}>Current:</span>
+                <Tag color="default" style={{ margin: 0, fontSize: '12px', padding: '2px 8px' }}>
+                  Not installed
+                </Tag>
+              </div>
             )}
           </Space>
         );
@@ -186,16 +231,21 @@ export const AssignmentsPage = () => {
     {
       title: 'Actions',
       key: 'actions',
-      width: 120,
+      width: 140,
       fixed: 'right',
+      align: 'center',
       render: (_, record) => (
-        <Space size="small">
+        <Space size={8}>
           <Tooltip title="Edit Assignment">
             <Button
-              type="text"
+              type="default"
               icon={<EditOutlined />}
               onClick={() => handleEdit(record)}
-              size="small"
+              size="middle"
+              style={{
+                borderRadius: 6,
+                borderColor: '#1e3a8a',
+              }}
             />
           </Tooltip>
           <Popconfirm
@@ -206,12 +256,14 @@ export const AssignmentsPage = () => {
             okButtonProps={{ danger: true }}
             cancelText="Cancel"
           >
-            <Tooltip title="Delete">
+            <Tooltip title="Delete Assignment">
               <Button
-                type="text"
                 danger
                 icon={<DeleteOutlined />}
-                size="small"
+                size="middle"
+                style={{
+                  borderRadius: 6,
+                }}
               />
             </Tooltip>
           </Popconfirm>
@@ -229,49 +281,122 @@ export const AssignmentsPage = () => {
   }, [enrichedAssignments]);
 
   return (
-    <div>
-      <Flex justify="space-between" align="center" style={{ marginBottom: 24 }}>
-        <div>
-          <Title level={2} style={{ margin: 0, marginBottom: 8 }}>
+    <div style={{ padding: '8px 0' }}>
+      {/* Header Section */}
+      <Flex
+        justify="space-between"
+        align="flex-start"
+        style={{ marginBottom: 24 }}
+        wrap="wrap"
+        gap={16}
+        vertical={isMobile}
+      >
+        <div style={{ width: isMobile ? '100%' : 'auto' }}>
+          <Title
+            level={2}
+            style={{
+              margin: 0,
+              marginBottom: 12,
+              fontSize: isMobile ? 22 : 28,
+              fontWeight: 600,
+            }}
+          >
             Game Assignments
           </Title>
-          <Space size="large">
-            <span>
-              Total: <strong>{stats.total}</strong>
-            </span>
-            <Badge status="success" text={`Synced: ${stats.synced}`} />
-            <Badge status="processing" text={`Pending: ${stats.pending}`} />
-          </Space>
+          <Flex gap={12} wrap="wrap">
+            <Card
+              size="small"
+              style={{
+                minWidth: 90,
+                background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%)',
+                borderColor: '#1e3a8a',
+                boxShadow: '0 2px 8px rgba(30, 58, 138, 0.15)',
+              }}
+              styles={{ body: { padding: '12px' } }}
+            >
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 18, fontWeight: 700, color: '#3b82f6' }}>{stats.total}</div>
+                <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>Total</div>
+              </div>
+            </Card>
+            <Card
+              size="small"
+              style={{
+                minWidth: 90,
+                background: 'linear-gradient(135deg, #0a0a0a 0%, #1a2e1a 100%)',
+                borderColor: '#10b981',
+                boxShadow: '0 2px 8px rgba(16, 185, 129, 0.15)',
+              }}
+              styles={{ body: { padding: '12px' } }}
+            >
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 18, fontWeight: 700, color: '#10b981' }}>{stats.synced}</div>
+                <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>Synced</div>
+              </div>
+            </Card>
+            <Card
+              size="small"
+              style={{
+                minWidth: 90,
+                background: 'linear-gradient(135deg, #0a0a0a 0%, #2e1f0a 100%)',
+                borderColor: '#f59e0b',
+                boxShadow: '0 2px 8px rgba(245, 158, 11, 0.15)',
+              }}
+              styles={{ body: { padding: '12px' } }}
+            >
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 18, fontWeight: 700, color: '#f59e0b' }}>{stats.pending}</div>
+                <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>Pending</div>
+              </div>
+            </Card>
+          </Flex>
         </div>
         <Button
           type="primary"
           icon={<PlusOutlined />}
           onClick={handleCreate}
           size="large"
+          style={{
+            minHeight: 42,
+            width: isMobile ? '100%' : 'auto',
+          }}
         >
           Create Assignment
         </Button>
       </Flex>
 
-      <Card>
-        <Flex gap="middle" style={{ marginBottom: 16 }} wrap="wrap">
+      {/* Main Content Card */}
+      <Card
+        style={{
+          borderRadius: 12,
+          boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.2), 0 2px 4px -2px rgb(0 0 0 / 0.2)',
+        }}
+      >
+        {/* Search Bar */}
+        <Flex gap={12} style={{ marginBottom: 20 }} wrap="wrap" align="center">
           <Input
-            placeholder="Search by arcade or game..."
-            prefix={<SearchOutlined />}
+            placeholder="Search by arcade or game name..."
+            prefix={<SearchOutlined style={{ color: '#3b82f6' }} />}
             allowClear
-            style={{ width: 300 }}
+            style={{ maxWidth: isMobile ? '100%' : 400, flex: 1 }}
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
+            size="large"
           />
-          <Tooltip title="Refresh">
+          <Tooltip title="Refresh Data">
             <Button
               icon={<ReloadOutlined />}
               onClick={() => refetch()}
               loading={isLoading}
-            />
+              size="large"
+              style={{ width: isMobile ? '100%' : 'auto' }}
+            >
+              Refresh
+            </Button>
           </Tooltip>
         </Flex>
 
+        {/* Data Table */}
         <Table
           columns={columns}
           dataSource={filteredAssignments}
@@ -279,10 +404,14 @@ export const AssignmentsPage = () => {
           rowKey="id"
           pagination={{
             pageSize: 10,
-            showTotal: (total) => `Total ${total} assignments`,
-            showSizeChanger: true,
+            showTotal: (total) => `${total} assignment${total !== 1 ? 's' : ''} total`,
+            showSizeChanger: !isMobile,
             pageSizeOptions: ['10', '20', '50', '100'],
+            style: { marginTop: 16 },
+            simple: isMobile,
           }}
+          scroll={{ x: isMobile ? 800 : 1000 }}
+          style={{ borderRadius: 8, overflow: 'hidden' }}
         />
       </Card>
 

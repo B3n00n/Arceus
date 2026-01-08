@@ -3,7 +3,6 @@ import {
   Typography,
   Button,
   Table,
-  Space,
   Input,
   Card,
   Popconfirm,
@@ -16,7 +15,6 @@ import {
 } from 'antd';
 import {
   PlusOutlined,
-  EditOutlined,
   DeleteOutlined,
   SearchOutlined,
   ReloadOutlined,
@@ -27,7 +25,6 @@ import relativeTime from 'dayjs/plugin/relativeTime';
 import {
   useGameVersions,
   useAllGameVersions,
-  useUpdateGameVersion,
   useDeleteGameVersion,
 } from '../hooks/useGameVersions';
 import { useGames } from '../hooks/useGames';
@@ -45,8 +42,6 @@ interface GameVersionWithGame extends GameVersion {
 
 export const GameVersionsPage = () => {
   const [modalOpen, setModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
-  const [selectedVersion, setSelectedVersion] = useState<GameVersion | undefined>();
   const [searchText, setSearchText] = useState('');
   const [selectedGameFilter, setSelectedGameFilter] = useState<number | 'all'>('all');
   const [isUploading, setIsUploading] = useState(false);
@@ -64,7 +59,6 @@ export const GameVersionsPage = () => {
   const refetch = selectedGameFilter === 'all' ? refetchAll : refetchSingle;
 
   const { message, modal } = App.useApp();
-  const updateMutation = useUpdateGameVersion();
   const deleteMutation = useDeleteGameVersion();
 
   const enrichedVersions: GameVersionWithGame[] = useMemo(() => {
@@ -83,14 +77,6 @@ export const GameVersionsPage = () => {
   }, [enrichedVersions, searchText]);
 
   const handleCreate = () => {
-    setModalMode('create');
-    setSelectedVersion(undefined);
-    setModalOpen(true);
-  };
-
-  const handleEdit = (version: GameVersion) => {
-    setModalMode('edit');
-    setSelectedVersion(version);
     setModalOpen(true);
   };
 
@@ -103,74 +89,62 @@ export const GameVersionsPage = () => {
 
   const handleModalSubmit = async (values: any) => {
     try {
-      if (modalMode === 'create') {
-        const { game_id, version, file } = values;
+      const { game_id, version, file } = values;
 
-        if (!file) {
-          message.error('Please select a ZIP file');
-          return;
-        }
+      if (!file) {
+        message.error('Please select a ZIP file');
+        return;
+      }
 
-        setIsUploading(true);
-        setModalOpen(false);
+      setIsUploading(true);
+      setModalOpen(false);
 
-        // Show progress modal
-        const progressModal = modal.info({
-          title: 'Uploading Game Version',
-          content: (
-            <div>
-              <p>Uploading {file.name}...</p>
-              <Progress percent={0} status="active" />
-              <p style={{ marginTop: 16, color: '#666', fontSize: 12 }}>
-                This may take several minutes for large files. Do not close this window.
-              </p>
-            </div>
-          ),
-          okButtonProps: { style: { display: 'none' } },
-          closable: false,
-          maskClosable: false,
-        });
+      // Show progress modal
+      const progressModal = modal.info({
+        title: 'Uploading Game Version',
+        content: (
+          <div>
+            <p>Uploading {file.name}...</p>
+            <Progress percent={0} status="active" />
+            <p style={{ marginTop: 16, color: '#666', fontSize: 12 }}>
+              This may take several minutes for large files. Do not close this window.
+            </p>
+          </div>
+        ),
+        okButtonProps: { style: { display: 'none' } },
+        closable: false,
+        maskClosable: false,
+      });
 
-        try {
-          await api.uploadGameVersion(game_id, version, file, (progress) => {
-            progressModal.update({
-              content: (
-                <div>
-                  <p>Uploading {file.name}...</p>
-                  <Progress percent={progress} status="active" />
-                  <p style={{ marginTop: 16, color: '#666', fontSize: 12 }}>
-                    {progress < 100
-                      ? 'This may take several minutes for large files. Do not close this window.'
-                      : 'Processing... The ZIP will be extracted automatically.'}
-                  </p>
-                </div>
-              ),
-            });
+      try {
+        await api.uploadGameVersion(game_id, version, file, (progress) => {
+          progressModal.update({
+            content: (
+              <div>
+                <p>Uploading {file.name}...</p>
+                <Progress percent={progress} status="active" />
+                <p style={{ marginTop: 16, color: '#666', fontSize: 12 }}>
+                  {progress < 100
+                    ? 'This may take several minutes for large files. Do not close this window.'
+                    : 'Processing... The ZIP will be extracted automatically.'}
+                </p>
+              </div>
+            ),
           });
-
-          progressModal.destroy();
-          message.success(`Version ${version} uploaded successfully! Files will be extracted shortly.`);
-          refetch();
-          setSelectedVersion(undefined);
-        } catch (error: any) {
-          progressModal.destroy();
-          const errorMessage = error.response?.data?.error || error.message || 'Upload failed';
-          message.error(errorMessage);
-        } finally {
-          setIsUploading(false);
-        }
-      } else if (selectedVersion) {
-        const { game_id, ...versionData } = values;
-        await updateMutation.mutateAsync({
-          gameId: selectedVersion.game_id,
-          versionId: selectedVersion.id,
-          data: versionData,
         });
-        setModalOpen(false);
-        setSelectedVersion(undefined);
+
+        progressModal.destroy();
+        message.success(`Version ${version} uploaded successfully! Files will be extracted shortly.`);
+        refetch();
+      } catch (error: any) {
+        progressModal.destroy();
+        const errorMessage = error.response?.data?.error || error.message || 'Upload failed';
+        message.error(errorMessage);
+      } finally {
+        setIsUploading(false);
       }
     } catch (error) {
-      // Mutation error already handled by hook
+      // Error already handled above
     }
   };
 
@@ -181,13 +155,11 @@ export const GameVersionsPage = () => {
         content: 'Are you sure you want to cancel? The upload will be interrupted.',
         onOk: () => {
           setModalOpen(false);
-          setSelectedVersion(undefined);
           setIsUploading(false);
         },
       });
     } else {
       setModalOpen(false);
-      setSelectedVersion(undefined);
     }
   };
 
@@ -198,13 +170,28 @@ export const GameVersionsPage = () => {
       key: 'id',
       width: 80,
       sorter: (a, b) => a.id - b.id,
+      render: (id: number) => (
+        <span style={{ color: '#94a3b8', fontWeight: 500, fontSize: 13 }}>#{id}</span>
+      ),
     },
     {
       title: 'Game',
       dataIndex: 'game_name',
       key: 'game_name',
       width: 200,
-      render: (name: string) => <Tag color="purple">{name}</Tag>,
+      render: (name: string) => (
+        <Tag
+          color="purple"
+          style={{
+            fontSize: 13,
+            padding: '4px 12px',
+            borderRadius: 6,
+            fontWeight: 500,
+          }}
+        >
+          {name}
+        </Tag>
+      ),
       sorter: (a, b) => (a.game_name || '').localeCompare(b.game_name || ''),
     },
     {
@@ -213,13 +200,41 @@ export const GameVersionsPage = () => {
       key: 'version',
       width: 120,
       sorter: (a, b) => a.version.localeCompare(b.version),
-      render: (version: string) => <strong>{version}</strong>,
+      render: (version: string) => (
+        <Tag color="blue" style={{ fontSize: 13, padding: '4px 12px', borderRadius: 6, fontWeight: 600 }}>
+          v{version}
+        </Tag>
+      ),
     },
     {
       title: 'GCS Path',
       dataIndex: 'gcs_path',
       key: 'gcs_path',
-      render: (path: string) => <code style={{ fontSize: 12 }}>{path}</code>,
+      width: 250,
+      ellipsis: {
+        showTitle: false,
+      },
+      render: (path: string) => (
+        <Tooltip title={`Full path: ${path}`}>
+          <code
+            style={{
+              fontSize: 12,
+              padding: '4px 8px',
+              backgroundColor: '#0f172a',
+              borderRadius: 4,
+              color: '#06b6d4',
+              border: '1px solid #334155',
+              display: 'inline-block',
+              maxWidth: '100%',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {path}
+          </code>
+        </Tooltip>
+      ),
     },
     {
       title: 'Release Date',
@@ -236,61 +251,68 @@ export const GameVersionsPage = () => {
     {
       title: 'Actions',
       key: 'actions',
-      width: 120,
+      width: 80,
       fixed: 'right',
+      align: 'center',
       render: (_, record) => (
-        <Space size="small">
-          <Tooltip title="Edit">
+        <Popconfirm
+          title="Delete version?"
+          description="This will also remove assignments using this version."
+          onConfirm={() => handleDelete(record)}
+          okText="Delete"
+          okButtonProps={{ danger: true }}
+          cancelText="Cancel"
+        >
+          <Tooltip title="Delete Version">
             <Button
-              type="text"
-              icon={<EditOutlined />}
-              onClick={() => handleEdit(record)}
-              size="small"
+              danger
+              icon={<DeleteOutlined />}
+              size="middle"
+              style={{
+                borderRadius: 6,
+              }}
             />
           </Tooltip>
-          <Popconfirm
-            title="Delete version?"
-            description="This will also remove assignments using this version."
-            onConfirm={() => handleDelete(record)}
-            okText="Delete"
-            okButtonProps={{ danger: true }}
-            cancelText="Cancel"
-          >
-            <Tooltip title="Delete">
-              <Button
-                type="text"
-                danger
-                icon={<DeleteOutlined />}
-                size="small"
-              />
-            </Tooltip>
-          </Popconfirm>
-        </Space>
+        </Popconfirm>
       ),
     },
   ];
 
   return (
-    <div>
-      <Flex justify="space-between" align="center" style={{ marginBottom: 24 }}>
-        <Title level={2} style={{ margin: 0 }}>
-          Game Versions
-        </Title>
+    <div style={{ padding: '8px 0' }}>
+      {/* Header Section */}
+      <Flex justify="space-between" align="center" style={{ marginBottom: 24 }} wrap="wrap" gap={16}>
+        <div>
+          <Title level={2} style={{ margin: 0, fontSize: 28, fontWeight: 600 }}>
+            Game Versions
+          </Title>
+          <div style={{ marginTop: 8, color: '#94a3b8', fontSize: 14 }}>
+            {filteredVersions.length} version{filteredVersions.length !== 1 ? 's' : ''} total
+          </div>
+        </div>
         <Button
           type="primary"
           icon={<PlusOutlined />}
           onClick={handleCreate}
           size="large"
+          style={{ minHeight: 42 }}
         >
-          Create Version
+          Upload Version
         </Button>
       </Flex>
 
-      <Card>
-        <Flex gap="middle" style={{ marginBottom: 16 }} wrap="wrap">
+      {/* Main Content Card */}
+      <Card
+        style={{
+          borderRadius: 12,
+          boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.2), 0 2px 4px -2px rgb(0 0 0 / 0.2)',
+        }}
+      >
+        {/* Filters and Search Bar */}
+        <Flex gap={12} style={{ marginBottom: 20 }} wrap="wrap" align="center">
           <Select
             placeholder="Filter by game"
-            style={{ width: 200 }}
+            style={{ minWidth: 200 }}
             value={selectedGameFilter}
             onChange={setSelectedGameFilter}
             options={[
@@ -301,27 +323,33 @@ export const GameVersionsPage = () => {
               })),
             ]}
             showSearch
+            size="large"
             filterOption={(input, option) =>
               (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
             }
           />
           <Input
-            placeholder="Search versions..."
-            prefix={<SearchOutlined />}
+            placeholder="Search versions, paths..."
+            prefix={<SearchOutlined style={{ color: '#64748b' }} />}
             allowClear
-            style={{ width: 300 }}
+            style={{ maxWidth: 400, flex: 1 }}
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
+            size="large"
           />
-          <Tooltip title="Refresh">
+          <Tooltip title="Refresh Data">
             <Button
               icon={<ReloadOutlined />}
               onClick={() => refetch()}
               loading={isLoading}
-            />
+              size="large"
+            >
+              Refresh
+            </Button>
           </Tooltip>
         </Flex>
 
+        {/* Data Table */}
         <Table
           columns={columns}
           dataSource={filteredVersions}
@@ -329,20 +357,23 @@ export const GameVersionsPage = () => {
           rowKey="id"
           pagination={{
             pageSize: 10,
-            showTotal: (total) => `Total ${total} versions`,
+            showTotal: (total) => `${total} version${total !== 1 ? 's' : ''} total`,
             showSizeChanger: true,
             pageSizeOptions: ['10', '20', '50', '100'],
+            style: { marginTop: 16 },
           }}
+          scroll={{ x: 1000 }}
+          style={{ borderRadius: 8, overflow: 'hidden' }}
         />
       </Card>
 
       <GameVersionModal
         open={modalOpen}
-        mode={modalMode}
-        version={selectedVersion}
+        mode="create"
+        version={undefined}
         onSubmit={handleModalSubmit}
         onCancel={handleModalCancel}
-        loading={isUploading || updateMutation.isPending}
+        loading={isUploading}
       />
     </div>
   );
