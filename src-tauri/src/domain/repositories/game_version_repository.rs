@@ -66,9 +66,6 @@ pub enum GameVersionError {
     #[error("Version parse error: {0}")]
     VersionParse(#[from] semver::Error),
 
-    #[error("Game not found")]
-    GameNotFound,
-
     #[error("Download failed for file {file}: {error}")]
     DownloadFailed { file: String, error: String },
 }

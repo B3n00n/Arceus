@@ -12,48 +12,6 @@ impl SqliteGameCacheRepository {
         Self { pool }
     }
 
-    /// Get a cached game entry by ID
-    pub async fn get_entry(&self, game_id: i32) -> Result<Option<CachedGameEntry>, RepositoryError> {
-        let row = sqlx::query(
-            r#"
-            SELECT
-                game_id, game_name, assigned_version_id, assigned_version,
-                installed_version_id, installed_version, installed_at
-            FROM game_cache
-            WHERE game_id = ?
-            "#,
-        )
-        .bind(game_id)
-        .fetch_optional(&self.pool)
-        .await?;
-
-        match row {
-            Some(r) => Ok(Some(Self::row_to_entry(r)?)),
-            None => Ok(None),
-        }
-    }
-
-    /// Get a cached game entry by name using the name index
-    pub async fn get_entry_by_name(&self, game_name: &str) -> Result<Option<CachedGameEntry>, RepositoryError> {
-        let row = sqlx::query(
-            r#"
-            SELECT
-                game_id, game_name, assigned_version_id, assigned_version,
-                installed_version_id, installed_version, installed_at
-            FROM game_cache
-            WHERE game_name = ?
-            "#,
-        )
-        .bind(game_name)
-        .fetch_optional(&self.pool)
-        .await?;
-
-        match row {
-            Some(r) => Ok(Some(Self::row_to_entry(r)?)),
-            None => Ok(None),
-        }
-    }
-
     /// Get all cached game entries
     pub async fn get_all_entries(&self) -> Result<Vec<CachedGameEntry>, RepositoryError> {
         let rows = sqlx::query(
@@ -185,23 +143,6 @@ impl SqliteGameCacheRepository {
             .await?;
 
         Ok(count == 0)
-    }
-
-    /// Clear all cached entries (for recovery)
-    pub async fn clear_all(&self) -> Result<(), RepositoryError> {
-        sqlx::query("DELETE FROM game_cache")
-            .execute(&self.pool)
-            .await?;
-        Ok(())
-    }
-
-    /// Remove a cached entry and its name index
-    pub async fn remove_entry(&self, game_id: i32) -> Result<(), RepositoryError> {
-        sqlx::query("DELETE FROM game_cache WHERE game_id = ?")
-            .bind(game_id)
-            .execute(&self.pool)
-            .await?;
-        Ok(())
     }
 
     /// Helper function to convert database row to CachedGameEntry

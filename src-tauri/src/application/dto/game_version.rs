@@ -7,8 +7,8 @@ pub struct GameAssignment {
     pub game_id: i32,
     pub game_name: String,
     pub assigned_version: VersionInfo,
-    pub current_version: Option<VersionInfo>,
-    pub background_image_url: Option<String>,
+    pub _current_version: Option<VersionInfo>,
+    pub _background_image_url: Option<String>,
 }
 
 /// Version information for a game
@@ -23,14 +23,14 @@ pub struct VersionInfo {
 /// Response from Alakazam server for game download
 #[derive(Debug, Deserialize)]
 pub struct GameDownloadResponse {
-    pub game_id: i32,
+    pub _game_id: i32,
     pub game_name: String,
     pub version: String,
     pub version_id: i32,
-    pub gcs_path: String,
+    pub _gcs_path: String,
     pub files: Vec<GameFile>,
     pub background_image_url: Option<String>,
-    pub expires_at: DateTime<Utc>,
+    pub _expires_at: DateTime<Utc>,
 }
 
 /// Individual file to download from GCS
