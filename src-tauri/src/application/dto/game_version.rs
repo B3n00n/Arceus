@@ -7,7 +7,9 @@ pub struct GameAssignment {
     pub game_id: i32,
     pub game_name: String,
     pub assigned_version: VersionInfo,
+    #[serde(rename = "current_version")]
     pub _current_version: Option<VersionInfo>,
+    #[serde(rename = "background_image_url")]
     pub _background_image_url: Option<String>,
 }
 
@@ -23,13 +25,16 @@ pub struct VersionInfo {
 /// Response from Alakazam server for game download
 #[derive(Debug, Deserialize)]
 pub struct GameDownloadResponse {
+    #[serde(rename = "game_id")]
     pub _game_id: i32,
     pub game_name: String,
     pub version: String,
     pub version_id: i32,
+    #[serde(rename = "gcs_path")]
     pub _gcs_path: String,
     pub files: Vec<GameFile>,
     pub background_image_url: Option<String>,
+    #[serde(rename = "expires_at")]
     pub _expires_at: DateTime<Utc>,
 }
 
