@@ -1,13 +1,15 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { ConfigProvider, theme, App as AntApp } from 'antd';
+import { ConfigProvider, theme, App as AntApp, Spin } from 'antd';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { MainLayout } from './layouts/MainLayout';
-import { ArcadesPage } from './pages/ArcadesPage';
-import { GamesPage } from './pages/GamesPage';
-import { GameVersionsPage } from './pages/GameVersionsPage';
-import { AssignmentsPage } from './pages/AssignmentsPage';
-import { SnorlaxVersionsPage } from './pages/SnorlaxVersionsPage';
+
+const ArcadesPage = lazy(() => import('./pages/ArcadesPage').then(m => ({ default: m.ArcadesPage })));
+const GamesPage = lazy(() => import('./pages/GamesPage').then(m => ({ default: m.GamesPage })));
+const GameVersionsPage = lazy(() => import('./pages/GameVersionsPage').then(m => ({ default: m.GameVersionsPage })));
+const AssignmentsPage = lazy(() => import('./pages/AssignmentsPage').then(m => ({ default: m.AssignmentsPage })));
+const SnorlaxVersionsPage = lazy(() => import('./pages/SnorlaxVersionsPage').then(m => ({ default: m.SnorlaxVersionsPage })));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -111,16 +113,18 @@ function App() {
       >
         <AntApp>
           <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<MainLayout />}>
-                <Route index element={<Navigate to="/arcades" replace />} />
-                <Route path="arcades" element={<ArcadesPage />} />
-                <Route path="games" element={<GamesPage />} />
-                <Route path="versions" element={<GameVersionsPage />} />
-                <Route path="assignments" element={<AssignmentsPage />} />
-                <Route path="snorlax" element={<SnorlaxVersionsPage />} />
-              </Route>
-            </Routes>
+            <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}><Spin size="large" /></div>}>
+              <Routes>
+                <Route path="/" element={<MainLayout />}>
+                  <Route index element={<Navigate to="/arcades" replace />} />
+                  <Route path="arcades" element={<ArcadesPage />} />
+                  <Route path="games" element={<GamesPage />} />
+                  <Route path="versions" element={<GameVersionsPage />} />
+                  <Route path="assignments" element={<AssignmentsPage />} />
+                  <Route path="snorlax" element={<SnorlaxVersionsPage />} />
+                </Route>
+              </Routes>
+            </Suspense>
           </BrowserRouter>
         </AntApp>
       </ConfigProvider>
