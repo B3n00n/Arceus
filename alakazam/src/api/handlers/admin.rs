@@ -1,8 +1,8 @@
 use crate::{
     api::IapUser,
     error::{AppError, Result},
-    models::{Arcade, ArcadeGameAssignment, Game, GameVersion, SnorlaxVersion},
-    services::{AdminService, GcsService, SnorlaxService},
+    models::{Arcade, ArcadeGameAssignment, Game, GameVersion, GyrosVersion, SnorlaxVersion},
+    services::{AdminService, GcsService, GyrosService, SnorlaxService},
 };
 use axum::{
     extract::{Path, State},
@@ -83,6 +83,18 @@ pub struct ConfirmGameVersionUploadRequest {
 
 #[derive(Debug, Deserialize)]
 pub struct ConfirmSnorlaxUploadRequest {
+    pub version: String,
+    pub gcs_path: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CreateGyrosVersionRequest {
+    pub version: String,
+    pub gcs_path: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ConfirmGyrosUploadRequest {
     pub version: String,
     pub gcs_path: String,
 }
@@ -477,6 +489,84 @@ pub async fn confirm_snorlax_upload(
         .await?;
 
     Ok((StatusCode::CREATED, Json(snorlax_version)))
+}
+
+/// GET /api/admin/gyros/versions
+/// List all Gyros versions
+pub async fn list_gyros_versions(
+    State(service): State<Arc<GyrosService>>,
+    _user: IapUser,
+) -> Result<Json<Vec<GyrosVersion>>> {
+    let versions = service.get_all_versions().await?;
+    Ok(Json(versions))
+}
+
+/// POST /api/admin/gyros/versions
+/// Create new Gyros version
+pub async fn create_gyros_version(
+    State(service): State<Arc<GyrosService>>,
+    _user: IapUser,
+    Json(payload): Json<CreateGyrosVersionRequest>,
+) -> Result<(StatusCode, Json<GyrosVersion>)> {
+    let version = service.create_version(&payload.version, &payload.gcs_path).await?;
+    Ok((StatusCode::CREATED, Json(version)))
+}
+
+/// PUT /api/admin/gyros/versions/{id}/set-current
+/// Set version as current
+pub async fn set_current_gyros_version(
+    State(service): State<Arc<GyrosService>>,
+    _user: IapUser,
+    Path(id): Path<i32>,
+) -> Result<Json<AdminActionResponse>> {
+    service.set_current_version(id).await?;
+    Ok(Json(AdminActionResponse {
+        message: format!("Version {} set as current", id),
+    }))
+}
+
+/// DELETE /api/admin/gyros/versions/{id}
+/// Delete Gyros version
+pub async fn delete_gyros_version(
+    State(service): State<Arc<GyrosService>>,
+    _user: IapUser,
+    Path(id): Path<i32>,
+) -> Result<StatusCode> {
+    service.delete_version(id).await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// POST /api/admin/gyros/generate-upload-url
+/// Generate a signed URL for uploading Gyros firmware directly to GCS
+pub async fn generate_gyros_upload_url(
+    State(gcs_service): State<Arc<GcsService>>,
+    _user: IapUser,
+    Json(payload): Json<GenerateUploadUrlRequest>,
+) -> Result<Json<GenerateUploadUrlResponse>> {
+    let gcs_path = format!("Gyros/{}", payload.version);
+    let firmware_path = format!("{}/Gyros.bin", gcs_path);
+
+    // Generate signed upload URL valid for 1 hour
+    let upload_url = gcs_service.generate_signed_upload_url(&firmware_path, 3600).await?;
+
+    Ok(Json(GenerateUploadUrlResponse {
+        upload_url,
+        gcs_path,
+    }))
+}
+
+/// POST /api/admin/gyros/confirm-upload
+/// Confirm that Gyros firmware was uploaded and create database record
+pub async fn confirm_gyros_upload(
+    State(gyros_service): State<Arc<GyrosService>>,
+    _user: IapUser,
+    Json(payload): Json<ConfirmGyrosUploadRequest>,
+) -> Result<(StatusCode, Json<GyrosVersion>)> {
+    let gyros_version = gyros_service
+        .create_version(&payload.version, &payload.gcs_path)
+        .await?;
+
+    Ok((StatusCode::CREATED, Json(gyros_version)))
 }
 
 /// POST /api/admin/games/{game_id}/background/generate-upload-url

@@ -1,4 +1,4 @@
-use crate::{api::handlers, services::{AdminService, ArcadeService, GcsService, SnorlaxService}};
+use crate::{api::handlers, services::{AdminService, ArcadeService, GcsService, GyrosService, SnorlaxService}};
 use axum::{
     routing::{delete, get, post, put},
     Router,
@@ -9,6 +9,7 @@ pub fn create_api_router(
     arcade_service: Arc<ArcadeService>,
     gcs_service: Arc<GcsService>,
     snorlax_service: Arc<SnorlaxService>,
+    gyros_service: Arc<GyrosService>,
     admin_service: Arc<AdminService>,
 ) -> Router {
     // Arcade endpoints
@@ -92,11 +93,29 @@ pub fn create_api_router(
     // Snorlax direct upload endpoints
     let snorlax_upload_router = Router::new()
         .route("/admin/snorlax/generate-upload-url", post(handlers::generate_snorlax_upload_url))
-        .with_state(gcs_service);
+        .with_state(gcs_service.clone());
 
     let snorlax_confirm_router = Router::new()
         .route("/admin/snorlax/confirm-upload", post(handlers::confirm_snorlax_upload))
         .with_state(snorlax_service);
+
+    // Gyros admin endpoints
+    let gyros_admin_router = Router::new()
+        .route("/admin/gyros/versions",
+            get(handlers::list_gyros_versions)
+                .post(handlers::create_gyros_version))
+        .route("/admin/gyros/versions/{id}/set-current", put(handlers::set_current_gyros_version))
+        .route("/admin/gyros/versions/{id}", delete(handlers::delete_gyros_version))
+        .with_state(gyros_service.clone());
+
+    // Gyros direct upload endpoints
+    let gyros_upload_router = Router::new()
+        .route("/admin/gyros/generate-upload-url", post(handlers::generate_gyros_upload_url))
+        .with_state(gcs_service.clone());
+
+    let gyros_confirm_router = Router::new()
+        .route("/admin/gyros/confirm-upload", post(handlers::confirm_gyros_upload))
+        .with_state(gyros_service);
 
     // Merge routers
     arcade_router
@@ -108,4 +127,7 @@ pub fn create_api_router(
         .merge(snorlax_admin_router)
         .merge(snorlax_upload_router)
         .merge(snorlax_confirm_router)
+        .merge(gyros_admin_router)
+        .merge(gyros_upload_router)
+        .merge(gyros_confirm_router)
 }

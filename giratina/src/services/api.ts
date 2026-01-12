@@ -15,6 +15,8 @@ import type {
   UpdateAssignmentRequest,
   SnorlaxVersion,
   CreateSnorlaxVersionRequest,
+  GyrosVersion,
+  CreateGyrosVersionRequest,
 } from '../types';
 
 class AlakazamAPI {
@@ -231,6 +233,52 @@ class AlakazamAPI {
     });
 
     const confirmResponse = await this.client.post('/api/admin/snorlax/confirm-upload', {
+      version,
+      gcs_path,
+    });
+
+    return confirmResponse.data;
+  }
+
+  async getGyrosVersions(): Promise<GyrosVersion[]> {
+    const response = await this.client.get('/api/admin/gyros/versions');
+    return response.data;
+  }
+
+  async createGyrosVersion(data: CreateGyrosVersionRequest): Promise<GyrosVersion> {
+    const response = await this.client.post('/api/admin/gyros/versions', data);
+    return response.data;
+  }
+
+  async setGyrosVersionCurrent(id: number): Promise<void> {
+    await this.client.put(`/api/admin/gyros/versions/${id}/set-current`);
+  }
+
+  async deleteGyrosVersion(id: number): Promise<void> {
+    await this.client.delete(`/api/admin/gyros/versions/${id}`);
+  }
+
+  async uploadGyrosBinary(
+    version: string,
+    file: File,
+    onProgress?: (progress: number) => void
+  ): Promise<GyrosVersion> {
+    const urlResponse = await this.client.post('/api/admin/gyros/generate-upload-url', { version });
+    const { upload_url, gcs_path } = urlResponse.data;
+
+    await axios.put(upload_url, file, {
+      headers: {
+        'Content-Type': 'application/octet-stream',
+      },
+      onUploadProgress: (progressEvent) => {
+        if (onProgress && progressEvent.total) {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          onProgress(percentCompleted);
+        }
+      },
+    });
+
+    const confirmResponse = await this.client.post('/api/admin/gyros/confirm-upload', {
       version,
       gcs_path,
     });

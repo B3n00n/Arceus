@@ -37,6 +37,12 @@ pub enum AppError {
     #[error("No current Snorlax version set")]
     NoCurrentSnorlaxVersion,
 
+    #[error("Gyros version not found")]
+    GyrosVersionNotFound,
+
+    #[error("No current Gyros version set")]
+    NoCurrentGyrosVersion,
+
     #[error("Internal server error: {0}")]
     Internal(String),
 }
@@ -57,6 +63,8 @@ impl IntoResponse for AppError {
             AppError::NoAssignment => (StatusCode::NOT_FOUND, "No assignment found".to_string()),
             AppError::SnorlaxVersionNotFound => (StatusCode::NOT_FOUND, "Snorlax version not found".to_string()),
             AppError::NoCurrentSnorlaxVersion => (StatusCode::NOT_FOUND, "No current Snorlax version set".to_string()),
+            AppError::GyrosVersionNotFound => (StatusCode::NOT_FOUND, "Gyros version not found".to_string()),
+            AppError::NoCurrentGyrosVersion => (StatusCode::NOT_FOUND, "No current Gyros version set".to_string()),
             AppError::Internal(msg) => {
                 tracing::error!("Internal error: {}", msg);
                 (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error".to_string())

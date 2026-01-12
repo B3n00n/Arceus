@@ -53,6 +53,15 @@ export interface SnorlaxVersion {
   created_at: string;
 }
 
+export interface GyrosVersion {
+  id: number;
+  version: string;
+  gcs_path: string;
+  release_date: string;
+  is_current: boolean;
+  created_at: string;
+}
+
 // API Request types
 export interface CreateArcadeRequest {
   name: string;
@@ -95,6 +104,12 @@ export interface UpdateAssignmentRequest {
 }
 
 export interface CreateSnorlaxVersionRequest {
+  version: string;
+  gcs_path: string;
+  release_date: string;
+}
+
+export interface CreateGyrosVersionRequest {
   version: string;
   gcs_path: string;
   release_date: string;

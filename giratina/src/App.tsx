@@ -10,6 +10,7 @@ const GamesPage = lazy(() => import('./pages/GamesPage').then(m => ({ default: m
 const GameVersionsPage = lazy(() => import('./pages/GameVersionsPage').then(m => ({ default: m.GameVersionsPage })));
 const AssignmentsPage = lazy(() => import('./pages/AssignmentsPage').then(m => ({ default: m.AssignmentsPage })));
 const SnorlaxVersionsPage = lazy(() => import('./pages/SnorlaxVersionsPage').then(m => ({ default: m.SnorlaxVersionsPage })));
+const GyrosVersionsPage = lazy(() => import('./pages/GyrosVersionsPage').then(m => ({ default: m.GyrosVersionsPage })));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -122,6 +123,7 @@ function App() {
                   <Route path="versions" element={<GameVersionsPage />} />
                   <Route path="assignments" element={<AssignmentsPage />} />
                   <Route path="snorlax" element={<SnorlaxVersionsPage />} />
+                  <Route path="gyros" element={<GyrosVersionsPage />} />
                 </Route>
               </Routes>
             </Suspense>

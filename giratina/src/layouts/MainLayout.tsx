@@ -7,6 +7,7 @@ import {
   TagsOutlined,
   LinkOutlined,
   AndroidOutlined,
+  ToolOutlined,
   LeftOutlined,
   RightOutlined,
   MenuOutlined,
@@ -63,6 +64,11 @@ export const MainLayout = () => {
       key: '/snorlax',
       icon: <AndroidOutlined />,
       label: 'Snorlax Versions',
+    },
+    {
+      key: '/gyros',
+      icon: <ToolOutlined />,
+      label: 'Gyros Versions',
     },
   ];
 
