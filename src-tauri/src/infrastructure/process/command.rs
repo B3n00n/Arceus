@@ -64,7 +64,7 @@ pub struct HiddenCommandSync {
 
 impl HiddenCommandSync {
     pub fn new<S: AsRef<OsStr>>(program: S) -> Self {
-        let cmd = std::process::Command::new(program);
+        let mut cmd = std::process::Command::new(program);
         #[cfg(windows)]
         cmd.creation_flags(CREATE_NO_WINDOW);
 
