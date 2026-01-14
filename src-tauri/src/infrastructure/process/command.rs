@@ -1,8 +1,10 @@
 use std::ffi::OsStr;
+#[cfg(windows)]
 use std::os::windows::process::CommandExt;
 use std::path::Path;
 use std::process::Stdio;
 
+#[cfg(windows)]
 const CREATE_NO_WINDOW: u32 = 0x08000000;
 
 pub struct HiddenCommand {
@@ -12,6 +14,7 @@ pub struct HiddenCommand {
 impl HiddenCommand {
     pub fn new<S: AsRef<OsStr>>(program: S) -> Self {
         let mut cmd = tokio::process::Command::new(program);
+        #[cfg(windows)]
         cmd.creation_flags(CREATE_NO_WINDOW);
 
         Self { inner: cmd }
@@ -62,6 +65,7 @@ pub struct HiddenCommandSync {
 impl HiddenCommandSync {
     pub fn new<S: AsRef<OsStr>>(program: S) -> Self {
         let mut cmd = std::process::Command::new(program);
+        #[cfg(windows)]
         cmd.creation_flags(CREATE_NO_WINDOW);
 
         Self { inner: cmd }

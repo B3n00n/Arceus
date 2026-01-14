@@ -49,10 +49,22 @@ pub fn run() {
             std::fs::create_dir_all(&app_data_dir)
                 .map_err(|e| format!("Failed to create app data directory: {}", e))?;
 
+            // Get platform-specific games directory
+            #[cfg(target_os = "windows")]
+            let games_directory = PathBuf::from("C:/Combatica");
+
+            #[cfg(not(target_os = "windows"))]
+            let games_directory = {
+                let home_dir = std::env::var("HOME")
+                    .map(PathBuf::from)
+                    .unwrap_or_else(|_| PathBuf::from("/tmp"));
+                home_dir.join("Combatica")
+            };
+
             let config = AppConfig::with_paths(
                 app_data_dir.join("apks"),
                 app_data_dir.join("arceus.db"),
-                PathBuf::from("C:/Combatica"),
+                games_directory,
             );
             config.validate()
                 .map_err(|e| format!("Invalid configuration: {}", e))?;

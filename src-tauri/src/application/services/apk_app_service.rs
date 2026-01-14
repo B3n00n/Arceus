@@ -84,7 +84,16 @@ impl ApkApplicationService {
     pub fn open_apk_folder(&self) -> Result<()> {
         let path = self.apk_repo.get_storage_directory();
 
-        std::process::Command::new("explorer")
+        #[cfg(target_os = "windows")]
+        let command = "explorer";
+
+        #[cfg(target_os = "linux")]
+        let command = "xdg-open";
+
+        #[cfg(target_os = "macos")]
+        let command = "open";
+
+        std::process::Command::new(command)
             .arg(path)
             .spawn()
             .map_err(|e| ApkServiceError::OperationFailed(format!("Failed to open folder: {}", e)))?;
