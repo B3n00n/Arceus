@@ -12,11 +12,3 @@ pub struct GyrosVersion {
     pub is_current: bool,
     pub created_at: DateTime<Utc>,
 }
-
-/// Response for Gyros firmware download
-#[derive(Debug, Serialize)]
-pub struct GyrosResponse {
-    pub download_url: String,
-    pub expires_at: DateTime<Utc>,
-    pub version: String,
-}

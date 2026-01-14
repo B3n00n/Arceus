@@ -1,10 +1,9 @@
 use crate::{
     error::{AppError, Result},
-    models::{GyrosResponse, GyrosVersion},
+    models::GyrosVersion,
     repositories::GyrosRepository,
     services::GcsService,
 };
-use chrono::Utc;
 use std::sync::Arc;
 
 pub struct GyrosService {
@@ -18,38 +17,6 @@ impl GyrosService {
             repository,
             gcs_service,
         }
-    }
-
-    /// Get the current Gyros version that arcades should download
-    pub async fn get_current_version(&self) -> Result<GyrosVersion> {
-        self.repository
-            .get_current_version()
-            .await?
-            .ok_or(AppError::NoCurrentGyrosVersion)
-    }
-
-    /// Get download URL for the current Gyros firmware
-    pub async fn get_latest_firmware_response(&self) -> Result<GyrosResponse> {
-        let current_version = self.get_current_version().await?;
-
-        // Construct full GCS path: {folder}/Gyros.bin
-        let full_gcs_path = format!("{}/Gyros.bin", current_version.gcs_path);
-
-        // Generate signed download URL
-        let download_url = self
-            .gcs_service
-            .generate_signed_download_url(&full_gcs_path)
-            .await?;
-
-        // Calculate expiration time
-        let duration_secs = self.gcs_service.get_url_duration_secs();
-        let expires_at = Utc::now() + chrono::Duration::seconds(duration_secs as i64);
-
-        Ok(GyrosResponse {
-            download_url,
-            expires_at,
-            version: current_version.version,
-        })
     }
 
     /// Get all Gyros versions (for admin)

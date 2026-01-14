@@ -10,20 +10,6 @@ impl GyrosRepository {
         Self { pool }
     }
 
-    /// Get the current Gyros version (is_current = true)
-    pub async fn get_current_version(&self) -> Result<Option<GyrosVersion>> {
-        let version = sqlx::query_as::<_, GyrosVersion>(
-            "SELECT id, version, gcs_path, release_date, is_current, created_at
-             FROM gyros_versions
-             WHERE is_current = true
-             LIMIT 1"
-        )
-        .fetch_optional(&self.pool)
-        .await?;
-
-        Ok(version)
-    }
-
     /// Get all Gyros versions
     pub async fn get_all_versions(&self) -> Result<Vec<GyrosVersion>> {
         let versions = sqlx::query_as::<_, GyrosVersion>(
