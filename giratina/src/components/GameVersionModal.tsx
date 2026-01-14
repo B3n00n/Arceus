@@ -60,7 +60,7 @@ export const GameVersionModal = ({
         ...values,
         file: zipFile,
       });
-    } catch (error) {
+    } catch {
       // Validation failed
     }
   };

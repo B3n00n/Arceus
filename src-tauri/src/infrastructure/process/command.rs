@@ -13,6 +13,7 @@ pub struct HiddenCommand {
 
 impl HiddenCommand {
     pub fn new<S: AsRef<OsStr>>(program: S) -> Self {
+        #[cfg_attr(not(windows), allow(unused_mut))]
         let mut cmd = tokio::process::Command::new(program);
         #[cfg(windows)]
         cmd.creation_flags(CREATE_NO_WINDOW);
@@ -64,6 +65,7 @@ pub struct HiddenCommandSync {
 
 impl HiddenCommandSync {
     pub fn new<S: AsRef<OsStr>>(program: S) -> Self {
+        #[cfg_attr(not(windows), allow(unused_mut))]
         let mut cmd = std::process::Command::new(program);
         #[cfg(windows)]
         cmd.creation_flags(CREATE_NO_WINDOW);

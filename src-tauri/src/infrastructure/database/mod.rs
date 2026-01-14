@@ -1,6 +1,5 @@
 use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePool, SqlitePoolOptions, SqliteSynchronous};
 use std::path::Path;
-use std::str::FromStr;
 
 pub struct Database {
     pool: SqlitePool,

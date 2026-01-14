@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Modal, Form, Input, Upload, message } from 'antd';
 import { InboxOutlined } from '@ant-design/icons';
 import type { UploadFile, UploadProps } from 'antd';
@@ -27,6 +27,15 @@ export const GameModal = ({
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
+  const resetUpload = useCallback(() => {
+    setBackgroundFile(null);
+    setFileList([]);
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(null);
+    }
+  }, [previewUrl]);
+
   useEffect(() => {
     if (open) {
       if (mode === 'edit' && game) {
@@ -36,16 +45,7 @@ export const GameModal = ({
       }
       resetUpload();
     }
-  }, [open, mode, game, form]);
-
-  const resetUpload = () => {
-    setBackgroundFile(null);
-    setFileList([]);
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
-      setPreviewUrl(null);
-    }
-  };
+  }, [open, mode, game, form, resetUpload]);
 
   const handleOk = async () => {
     try {
@@ -67,7 +67,7 @@ export const GameModal = ({
       }
 
       onSubmit(values);
-    } catch (error) {
+    } catch {
       // Validation failed
     }
   };

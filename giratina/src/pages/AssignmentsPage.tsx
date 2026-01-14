@@ -116,7 +116,7 @@ export const AssignmentsPage = () => {
       }
       setModalOpen(false);
       setSelectedAssignment(undefined);
-    } catch (error) {
+    } catch {
       // Error handling is done in the mutation hooks
     }
   };

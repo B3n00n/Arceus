@@ -41,7 +41,7 @@ export const GyrosModal = ({
 
       values.binaryFile = binaryFile;
       onSubmit(values);
-    } catch (error) {
+    } catch {
       // Validation failed
     }
   };

@@ -41,7 +41,7 @@ export const SnorlaxModal = ({
 
       values.apkFile = apkFile;
       onSubmit(values);
-    } catch (error) {
+    } catch {
       // Validation failed
     }
   };

@@ -86,7 +86,7 @@ export const ArcadesPage = () => {
       }
       setModalOpen(false);
       setSelectedArcade(undefined);
-    } catch (error) {
+    } catch {
       // Error handling is done in the mutation hooks
     }
   };

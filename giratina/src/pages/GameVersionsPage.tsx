@@ -143,7 +143,7 @@ export const GameVersionsPage = () => {
       } finally {
         setIsUploading(false);
       }
-    } catch (error) {
+    } catch {
       // Error already handled above
     }
   };
