@@ -8,12 +8,10 @@ pub struct Database {
 
 impl Database {
     pub async fn new<P: AsRef<Path>>(path: P) -> Result<Self, sqlx::Error> {
-        let path_str = path.as_ref().to_string_lossy();
-        let db_url = format!("sqlite://{}?mode=rwc", path_str);
-
-        let options = SqliteConnectOptions::from_str(&db_url)?
+        let options = SqliteConnectOptions::new()
+            .filename(path)
             .create_if_missing(true)
-            .journal_mode(SqliteJournalMode::Wal) 
+            .journal_mode(SqliteJournalMode::Wal)
             .synchronous(SqliteSynchronous::Normal); 
 
         let pool = SqlitePoolOptions::new()
