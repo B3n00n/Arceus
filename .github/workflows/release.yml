@@ -1,0 +1,145 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: 'ubuntu-22.04'
+            args: ''
+          - platform: 'windows-latest'
+            args: ''
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install dependencies (Ubuntu only)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Setup signing key
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          echo "Key configured from secrets"
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: 'Arceus ${{ github.ref_name }}'
+          releaseBody: 'See the assets to download and install this version.'
+          releaseDraft: false
+          prerelease: false
+
+  update-manifest:
+    needs: release
+    permissions:
+      contents: write
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Generate update manifest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Extract version from tag
+          VERSION="${GITHUB_REF#refs/tags/v}"
+
+          # Get release assets
+          gh release view "v${VERSION}" --json assets -q '.assets[] | "\(.name) \(.url)"' > assets.txt
+
+          # Find signatures for each platform
+          WIN_SIG=$(grep "\.exe\.sig" assets.txt | head -1 | awk '{print $1}')
+          LINUX_SIG=$(grep "\.AppImage\.sig" assets.txt | head -1 | awk '{print $1}')
+
+          # Download signatures
+          if [ ! -z "$WIN_SIG" ]; then
+            gh release download "v${VERSION}" -p "$WIN_SIG"
+            WIN_SIG_CONTENT=$(cat "$WIN_SIG")
+          fi
+
+          if [ ! -z "$LINUX_SIG" ]; then
+            gh release download "v${VERSION}" -p "$LINUX_SIG"
+            LINUX_SIG_CONTENT=$(cat "$LINUX_SIG")
+          fi
+
+          # Generate manifest JSON
+          cat > update-manifest.json <<EOF
+          {
+            "version": "${VERSION}",
+            "notes": "Release ${VERSION}",
+            "pub_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "platforms": {
+          EOF
+
+          # Add Windows platform if signature exists
+          if [ ! -z "$WIN_SIG_CONTENT" ]; then
+            cat >> update-manifest.json <<EOF
+              "windows-x86_64": {
+                "signature": "${WIN_SIG_CONTENT}",
+                "url": "https://github.com/B3n00n/Arceus/releases/download/v${VERSION}/arceus_${VERSION}_x64-setup.exe"
+              }
+          EOF
+          fi
+
+          # Add comma if both platforms exist
+          if [ ! -z "$WIN_SIG_CONTENT" ] && [ ! -z "$LINUX_SIG_CONTENT" ]; then
+            echo "," >> update-manifest.json
+          fi
+
+          # Add Linux platform if signature exists
+          if [ ! -z "$LINUX_SIG_CONTENT" ]; then
+            cat >> update-manifest.json <<EOF
+              "linux-x86_64": {
+                "signature": "${LINUX_SIG_CONTENT}",
+                "url": "https://github.com/B3n00n/Arceus/releases/download/v${VERSION}/arceus_${VERSION}_amd64.AppImage"
+              }
+          EOF
+          fi
+
+          # Close JSON
+          cat >> update-manifest.json <<EOF
+            }
+          }
+          EOF
+
+          # Upload manifest to release
+          gh release upload "v${VERSION}" update-manifest.json --clobber
+
+          echo "✅ Update manifest generated and uploaded"
