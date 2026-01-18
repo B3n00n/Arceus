@@ -2,18 +2,17 @@ import { Settings as SettingsIcon } from 'lucide-react';
 
 export function SettingsPage() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       <div>
-        <h1 className="text-3xl font-bold text-white">Settings</h1>
-        <p className="text-gray-400 mt-1">Configure application preferences</p>
+        <p className="text-grey-300 mt-1">Configure application preferences</p>
       </div>
 
-      <div className="rounded-lg border bg-discord-dark-2 border-discord-dark shadow p-12 text-center">
-        <SettingsIcon className="h-12 w-12 mx-auto text-gray-600 mb-4" />
+      <div className="rounded-lg border bg-grey-800 border-grey-600 shadow p-12 text-center">
+        <SettingsIcon className="h-12 w-12 mx-auto text-grey-400 mb-4" />
         <h3 className="text-lg font-semibold text-white mb-2">
           Settings - Coming Soon
         </h3>
-        <p className="text-gray-400">
+        <p className="text-grey-300">
           This feature is under development
         </p>
       </div>

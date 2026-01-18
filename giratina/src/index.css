@@ -1,0 +1,76 @@
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  /* Ensure tables scroll horizontally on mobile */
+  .ant-table-wrapper {
+    overflow-x: auto;
+  }
+
+  /* Make cards stack vertically on mobile */
+  .ant-card {
+    margin-bottom: 16px;
+  }
+
+  /* Adjust typography for mobile */
+  h2.ant-typography {
+    font-size: 22px !important;
+  }
+
+  /* Make buttons full width on mobile */
+  .mobile-full-width {
+    width: 100% !important;
+  }
+
+  /* Adjust padding for mobile */
+  .ant-layout-content {
+    margin: 16px 8px !important;
+  }
+
+  /* Hide sidebar on mobile by default */
+  .ant-layout-sider {
+    position: fixed !important;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 1000;
+    transition: transform 0.3s ease;
+  }
+
+  /* Adjust header for mobile */
+  .ant-layout-header {
+    padding: 0 16px !important;
+  }
+
+  .ant-layout-header h2 {
+    font-size: 18px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Extra small devices */
+  h2.ant-typography {
+    font-size: 20px !important;
+  }
+
+  .ant-btn-lg {
+    height: 38px !important;
+    font-size: 14px !important;
+  }
+
+  .ant-input-lg {
+    height: 38px !important;
+    font-size: 14px !important;
+  }
+}

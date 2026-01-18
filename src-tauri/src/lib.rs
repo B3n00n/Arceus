@@ -5,17 +5,20 @@ mod domain;
 mod infrastructure;
 mod net;
 
+use std::path::PathBuf;
+
 use api::*;
 use app::{AppConfig, AppState, EventBus, ServerManager, setup_signal_handlers};
 use application::services::{
     ApkApplicationService, BatteryMonitor, ClientApkService,
-    DeviceApplicationService, GameApplicationService,
+    DeviceApplicationService, GameApplicationService, GameVersionService,
     update_service::create_update_service,
 };
 use infrastructure::repositories::{
-    FsApkRepository, FsClientApkRepository, InMemoryDeviceRepository,
-    SledDeviceNameRepository,
+    FsApkRepository, FsClientApkRepository, FsGameVersionRepository, InMemoryDeviceRepository,
+    SqliteDeviceNameRepository, SqliteGameCacheRepository,
 };
+use infrastructure::database::Database;
 use infrastructure::network::TcpServer;
 use std::sync::Arc;
 use tauri::Manager;
@@ -41,25 +44,52 @@ pub fn run() {
             let app_data_dir = app
                 .path()
                 .app_data_dir()
-                .expect("Failed to get app data directory");
+                .map_err(|e| format!("Failed to get app data directory: {}", e))?;
 
             std::fs::create_dir_all(&app_data_dir)
-                .expect("Failed to create app data directory");
+                .map_err(|e| format!("Failed to create app data directory: {}", e))?;
+
+            // Get platform-specific games directory
+            #[cfg(target_os = "windows")]
+            let games_directory = PathBuf::from("C:/Combatica");
+
+            #[cfg(not(target_os = "windows"))]
+            let games_directory = {
+                let home_dir = std::env::var("HOME")
+                    .map(PathBuf::from)
+                    .unwrap_or_else(|_| PathBuf::from("/tmp"));
+                home_dir.join("Combatica")
+            };
 
             let config = AppConfig::with_paths(
                 app_data_dir.join("apks"),
                 app_data_dir.join("arceus.db"),
+                games_directory,
             );
-            config.validate().expect("Invalid configuration");
+            config.validate()
+                .map_err(|e| format!("Invalid configuration: {}", e))?;
             std::fs::create_dir_all(&config.apk_directory)
-                .expect("Failed to create APK directory");
+                .map_err(|e| format!("Failed to create APK directory at {:?}: {}", config.apk_directory, e))?;
+            std::fs::create_dir_all(&config.games_directory)
+                .map_err(|e| format!("Failed to create games directory at {:?}: {}", config.games_directory, e))?;
 
             let event_bus = Arc::new(EventBus::new(app.handle().clone()));
             let device_repo = Arc::new(InMemoryDeviceRepository::new());
-            let device_name_repo = Arc::new(
-                SledDeviceNameRepository::new(&config.database_path)
-                    .expect("Failed to initialize device name repository"),
-            );
+
+            // Initialize SQLite database
+            let (device_name_repo, game_cache_repo) = tauri::async_runtime::block_on(async {
+                let database = Database::new(&config.database_path)
+                    .await
+                    .map_err(|e| format!("Failed to initialize database at {:?}: {}", config.database_path, e))?;
+
+                let db_pool = database.pool().clone();
+
+                // Create repositories sharing the same database pool
+                let device_name_repo = Arc::new(SqliteDeviceNameRepository::new(db_pool.clone()));
+                let game_cache_repo = Arc::new(SqliteGameCacheRepository::new(db_pool.clone()));
+
+                Ok::<_, String>((device_name_repo, game_cache_repo))
+            })?;
 
             let http_host = if config.server.tcp_host == "0.0.0.0" {
                 local_ip_address::local_ip()
@@ -80,6 +110,7 @@ pub fn run() {
             // Initialize client APK repository and service
             let client_apk_repo = Arc::new(FsClientApkRepository::new(
                 config.apk_directory.clone(),
+                config.alakazam.clone(),
             ));
             let client_apk_service = Arc::new(ClientApkService::new(
                 client_apk_repo.clone() as Arc<dyn crate::domain::repositories::ClientApkRepository>,
@@ -109,6 +140,26 @@ pub fn run() {
             let apk_service = Arc::new(ApkApplicationService::new(apk_repo.clone()));
             let game_service = Arc::new(GameApplicationService::new(event_bus.clone()));
 
+            // Initialize game version repository and service
+            let game_version_repo = Arc::new(FsGameVersionRepository::new(
+                config.games_directory.clone(),
+                config.alakazam.clone(),
+            ));
+            let game_version_service = Arc::new(GameVersionService::new(
+                game_version_repo as Arc<dyn crate::domain::repositories::GameVersionRepository>,
+                game_cache_repo,
+                event_bus.clone(),
+                config.games_directory.clone(),
+            ));
+
+            // Initialize cache from filesystem on first run
+            let game_version_service_init = game_version_service.clone();
+            tauri::async_runtime::spawn(async move {
+                if let Err(e) = game_version_service_init.initialize_cache_if_empty().await {
+                    tracing::error!("Failed to initialize game cache: {}", e);
+                }
+            });
+
             let battery_interval = std::time::Duration::from_secs(config.server.battery_update_interval);
             let battery_monitor = Arc::new(BatteryMonitor::new(
                 device_repo.clone(),
@@ -129,8 +180,27 @@ pub fn run() {
             app.manage(apk_service);
             app.manage(game_service);
             app.manage(client_apk_service.clone());
+            app.manage(game_version_service.clone());
             app.manage(app_state.clone());
             app.manage(server_manager);
+
+            let game_version_service_startup = game_version_service.clone();
+            tauri::async_runtime::spawn(async move {
+                match game_version_service_startup.check_for_updates().await {
+                    Ok(statuses) => {
+                        let updates: Vec<_> = statuses.iter().filter(|s| s.update_available).collect();
+                        if !updates.is_empty() {
+                            tracing::info!(
+                                "Found {} game(s) with available updates",
+                                updates.len()
+                            );
+                        }
+                    }
+                    Err(e) => {
+                        tracing::error!("Failed to check for game updates: {}", e);
+                    }
+                }
+            });
 
             setup_signal_handlers(app_state.clone());
 
@@ -182,6 +252,10 @@ pub fn run() {
             start_game,
             get_current_game,
             stop_game,
+            get_game_list,
+            download_game,
+            cancel_download,
+            force_refresh_games,
         ])
         .build(tauri::generate_context!())
         .expect("Failed to build Tauri application");

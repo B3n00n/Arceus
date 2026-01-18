@@ -1,5 +1,5 @@
 use crate::{
-    api::ApiKey,
+    api::MacKey,
     error::Result,
     models::{ArcadeConfigResponse, GameAssignmentResponse, UpdateStatusRequest},
     services::ArcadeService,
@@ -15,9 +15,9 @@ use std::sync::Arc;
 /// Returns arcade configuration (authenticated by API key header)
 pub async fn get_arcade_config(
     State(service): State<Arc<ArcadeService>>,
-    ApiKey(api_key): ApiKey,
+    MacKey(mac_key): MacKey,
 ) -> Result<Json<ArcadeConfigResponse>> {
-    let config = service.get_arcade_config(&api_key).await?;
+    let config = service.get_arcade_config(&mac_key).await?;
     Ok(Json(config))
 }
 
@@ -25,9 +25,9 @@ pub async fn get_arcade_config(
 /// Returns all game assignments for the arcade
 pub async fn get_arcade_games(
     State(service): State<Arc<ArcadeService>>,
-    ApiKey(api_key): ApiKey,
+    MacKey(mac_key): MacKey,
 ) -> Result<Json<Vec<GameAssignmentResponse>>> {
-    let games = service.get_arcade_games(&api_key).await?;
+    let games = service.get_arcade_games(&mac_key).await?;
     Ok(Json(games))
 }
 
@@ -36,11 +36,11 @@ pub async fn get_arcade_games(
 pub async fn update_game_status(
     State(service): State<Arc<ArcadeService>>,
     Path(game_id): Path<i32>,
-    ApiKey(api_key): ApiKey,
+    MacKey(mac_key): MacKey,
     Json(payload): Json<UpdateStatusRequest>,
 ) -> Result<StatusCode> {
     service
-        .update_game_status(&api_key, game_id, payload.current_version_id)
+        .update_game_status(&mac_key, game_id, payload.current_version_id)
         .await?;
 
     Ok(StatusCode::OK)

@@ -9,28 +9,24 @@ use serde::{Deserialize, Serialize};
 pub struct ClientApkMetadata {
     /// Semantic version of the cached APK (e.g., "1.2.0")
     pub version: String,
-    /// Timestamp when the APK was downloaded
-    pub downloaded_at: DateTime<Utc>,
-    /// Source URL the APK was downloaded from
-    pub source_url: String,
 }
 
 impl ClientApkMetadata {
-    pub fn new(version: String, source_url: String) -> Self {
-        Self {
-            version,
-            downloaded_at: Utc::now(),
-            source_url,
-        }
+    pub fn new(version: String) -> Self {
+        Self { version }
     }
 }
 
-/// Metadata fetched from remote storage (e.g., GCS)
+/// Response from Alakazam server for Snorlax APK download
 ///
-/// This represents the version information of the latest
-/// available client APK stored in cloud storage.
+/// This represents the signed download URL, version, and expiration
+/// received from the Alakazam central server.
 #[derive(Debug, Deserialize)]
 pub struct RemoteApkMetadata {
-    /// Semantic version of the latest available 
+    /// Signed download URL for the APK (from GCS via Alakazam)
+    pub download_url: String,
+    /// Expiration time of the signed URL
+    pub expires_at: DateTime<Utc>,
+    /// Current version of the Snorlax APK
     pub version: String,
 }

@@ -3,22 +3,22 @@ import { cn } from "@/lib/cn"
 
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link" | "danger" | "danger-outline"
+  variant?: "default" | "outline" | "outline_yellow" | "secondary" | "ghost" | "link" | "danger" | "danger-outline"
   size?: "default" | "sm" | "lg" | "icon"
 }
 
 const buttonVariants = {
-  default: "bg-discord-blurple text-white shadow hover:bg-discord-blurple/80 active:bg-discord-blurple/70",
-  destructive: "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/80 active:bg-destructive/70",
-  outline: "border-2 border-gray-600/50 bg-transparent text-gray-300 hover:bg-[#7289da]/20 hover:border-[#7289da] hover:text-white active:bg-[#7289da]/30",
-  secondary: "bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/70 active:bg-secondary/60",
+  default: "bg-primary-default text-grey-900 uppercase shadow hover:bg-primary-400 hover:shadow-primary-glow active:bg-primary-300 active:sshadow-primary-glow",
+  outline: "border-1 border-grey-600 bg-transparent text-grey-200 font-medium hover:bg-grey-700 hover:border-grey-200 hover:text-white active:bg-grey-600",
+  outline_yellow: "border-1 border-primary-default bg-transparent text-primary-default uppercase hover:bg-primary-800 hover:text-primary-400  hover:border-primary-400 active:bg-primary-700 disabled:opacity-50",
+  secondary: "border-1 border-grey-500 bg-grey-800 text-grey-100 uppercase shadow-sm hover:bg-grey-700 hover:text-white active:bg-grey-600",
   ghost: "hover:bg-accent hover:text-accent-foreground active:bg-accent/70",
-  link: "text-discord-blurple underline-offset-4 hover:underline",
+  link: "text-primary-default underline-offset-4 hover:underline",
   danger:
-    "bg-system-critical text-white shadow hover:bg-system-critical/80 active:bg-system-critical/70",
+    "bg-error-default text-white shadow uppercase hover:bg-error-600 active:bg-error-700",
   "danger-outline":
-    "border-2 border-[#8e3f42] text-system-critical bg-transparent " +
-    "hover:border-system-error hover:bg-system-error/15 active:bg-system-error/25 transition-colors",
+    "border-1 border-error-default text-error-default uppercase bg-transparent" +
+    "hover:border-error-400 hover:text-error-400 hover:bg-error-900 active:bg-error-800 transition-colors",
 }
 
 const buttonSizes = {
@@ -33,7 +33,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     return (
       <button
         className={cn(
-          "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium cursor-pointer",
+          "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-bold cursor-pointer",
           "transition-all duration-150 ease-in-out",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7289da] focus-visible:ring-offset-2 focus-visible:ring-offset-[#1e2124]",
           "disabled:pointer-events-none disabled:opacity-50",

@@ -132,7 +132,7 @@ impl Command for PingCommand {
         // Send current timestamp in milliseconds as u64
         let timestamp_ms = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
+            .expect("System clock is set before Unix epoch")
             .as_millis() as u64;
 
         let mut buf = Vec::new();
