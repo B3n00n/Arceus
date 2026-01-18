@@ -95,7 +95,7 @@ export const ArcadeModal = ({
           rules={[{ validator: validateMachineId }]}
         >
           <Input
-            placeholder="255e5a8c9f58486db542b3263c94fb2c"
+            placeholder="32 character hex (no '-')"
             disabled={mode === 'edit'}
             style={{ fontFamily: 'monospace', textTransform: 'lowercase' }}
             maxLength={32}
