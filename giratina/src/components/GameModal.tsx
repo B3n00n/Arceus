@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Modal, Form, Input, Upload, message } from 'antd';
+import { Modal, Form, Input, Upload, message, Button } from 'antd';
 import { InboxOutlined } from '@ant-design/icons';
 import type { UploadFile, UploadProps } from 'antd';
 import type { Game } from '../types';
@@ -43,9 +43,11 @@ export const GameModal = ({
       } else {
         form.resetFields();
       }
-      resetUpload();
+      setBackgroundFile(null);
+      setFileList([]);
+      setPreviewUrl(null);
     }
-  }, [open, mode, game, form, resetUpload]);
+  }, [open, mode, game, form]);
 
   const handleOk = async () => {
     try {
@@ -160,22 +162,18 @@ export const GameModal = ({
                   border: '1px solid #424242',
                 }}
               />
-              <button
-                type="button"
-                onClick={resetUpload}
-                style={{
-                  marginTop: 12,
-                  padding: '6px 16px',
-                  backgroundColor: 'transparent',
-                  color: '#999',
-                  border: '1px solid #424242',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontSize: '13px',
-                }}
-              >
-                Change Image
-              </button>
+              <div style={{ marginTop: 12 }}>
+                <Button
+                  type="default"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    resetUpload();
+                  }}
+                >
+                  Change Image
+                </Button>
+              </div>
             </div>
           )}
         </Form.Item>
