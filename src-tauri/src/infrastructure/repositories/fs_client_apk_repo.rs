@@ -9,7 +9,7 @@ use reqwest::Client;
 use std::path::PathBuf;
 
 use crate::app::config::{
-    get_mac_address, CLIENT_APK_FILENAME, CLIENT_METADATA_FILENAME,
+    get_machine_id, CLIENT_APK_FILENAME, CLIENT_METADATA_FILENAME,
 };
 use crate::app::models::AlakazamConfig;
 use crate::application::dto::{ClientApkMetadata, RemoteApkMetadata};
@@ -53,16 +53,16 @@ impl ClientApkRepository for FsClientApkRepository {
         );
         tracing::debug!("Fetching Snorlax APK info from Alakazam: {}", url);
 
-        // Get MAC address for authentication
-        let mac_address = get_mac_address()
-            .map_err(|e| ClientApkError::Network(format!("Failed to get MAC address: {}", e)))?;
+        // Get machine ID for authentication
+        let machine_id = get_machine_id()
+            .map_err(|e| ClientApkError::Network(format!("Failed to get machine ID: {}", e)))?;
 
-        tracing::info!("Authenticating with MAC address: {}", mac_address);
+        tracing::info!("Authenticating with machine ID: {}", machine_id);
 
         let response = self
             .http_client
             .get(&url)
-            .header("X-MAC-Address", mac_address)
+            .header("X-Machine-ID", machine_id)
             .header("Cache-Control", "no-cache, no-store, must-revalidate")
             .header("Pragma", "no-cache")
             .header("Expires", "0")

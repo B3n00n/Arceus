@@ -4,29 +4,29 @@ use axum::{
     http::request::Parts,
 };
 
-pub struct MacKey(pub String);
+pub struct MachineId(pub String);
 
-impl<S> FromRequestParts<S> for MacKey
+impl<S> FromRequestParts<S> for MachineId
 where
     S: Send + Sync,
 {
     type Rejection = AppError;
 
     async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
-        let mac_address = parts
+        let machine_id = parts
             .headers
-            .get("X-MAC-Address")
+            .get("X-Machine-ID")
             .and_then(|value| value.to_str().ok())
-            .ok_or(AppError::InvalidMacAddress)?;
+            .ok_or(AppError::InvalidMachineId)?;
 
-        Ok(MacKey(mac_address.to_string()))
+        Ok(MachineId(machine_id.to_string()))
     }
 }
 
 // Allow extracting the inner String directly
-impl From<MacKey> for String {
-    fn from(key: MacKey) -> Self {
-        key.0
+impl From<MachineId> for String {
+    fn from(id: MachineId) -> Self {
+        id.0
     }
 }
 

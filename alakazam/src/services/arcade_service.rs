@@ -22,13 +22,13 @@ impl ArcadeService {
     }
 
     /// Authenticate and get arcade configuration
-    pub async fn get_arcade_config(&self, mac_address: &str) -> Result<ArcadeConfigResponse> {
-        // Find arcade by MAC address
+    pub async fn get_arcade_config(&self, machine_id: &str) -> Result<ArcadeConfigResponse> {
+        // Find arcade by machine ID
         let arcade = self
             .arcade_repo
-            .find_by_mac_address(mac_address)
+            .find_by_machine_id(machine_id)
             .await?
-            .ok_or(AppError::InvalidMacAddress)?;
+            .ok_or(AppError::InvalidMachineId)?;
 
         // Update last seen
         self.arcade_repo.update_last_seen(arcade.id).await?;
@@ -37,13 +37,13 @@ impl ArcadeService {
     }
 
     /// Get all game assignments for an arcade
-    pub async fn get_arcade_games(&self, mac_address: &str) -> Result<Vec<GameAssignmentResponse>> {
+    pub async fn get_arcade_games(&self, machine_id: &str) -> Result<Vec<GameAssignmentResponse>> {
         // Authenticate arcade
         let arcade = self
             .arcade_repo
-            .find_by_mac_address(mac_address)
+            .find_by_machine_id(machine_id)
             .await?
-            .ok_or(AppError::InvalidMacAddress)?;
+            .ok_or(AppError::InvalidMachineId)?;
 
         // Update last seen
         self.arcade_repo.update_last_seen(arcade.id).await?;
@@ -104,16 +104,16 @@ impl ArcadeService {
     /// Update current version status for a game
     pub async fn update_game_status(
         &self,
-        mac_address: &str,
+        machine_id: &str,
         game_id: i32,
         current_version_id: Option<i32>,
     ) -> Result<()> {
         // Authenticate arcade
         let arcade = self
             .arcade_repo
-            .find_by_mac_address(mac_address)
+            .find_by_machine_id(machine_id)
             .await?
-            .ok_or(AppError::InvalidMacAddress)?;
+            .ok_or(AppError::InvalidMachineId)?;
 
         // Verify the version exists if provided
         if let Some(version_id) = current_version_id {

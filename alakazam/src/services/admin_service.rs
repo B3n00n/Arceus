@@ -18,12 +18,8 @@ impl AdminService {
         }
     }
 
-    pub async fn create_arcade(&self, name: &str, mac_address: &str) -> Result<Arcade> {
-        if !Self::is_valid_mac_address(mac_address) {
-            return Err(AppError::InvalidMacAddress);
-        }
-
-        self.arcade_repo.create(name, mac_address, "active").await
+    pub async fn create_arcade(&self, name: &str, machine_id: &str) -> Result<Arcade> {
+        self.arcade_repo.create(name, machine_id, "active").await
     }
 
     pub async fn list_arcades(&self) -> Result<Vec<Arcade>> {
@@ -193,17 +189,5 @@ impl AdminService {
 
     pub async fn list_all_assignments(&self) -> Result<Vec<ArcadeGameAssignment>> {
         self.game_repo.list_all_assignments().await
-    }
-
-    fn is_valid_mac_address(mac: &str) -> bool {
-        // Basic MAC address validation: XX:XX:XX:XX:XX:XX
-        let parts: Vec<&str> = mac.split(':').collect();
-        if parts.len() != 6 {
-            return false;
-        }
-
-        parts.iter().all(|part| {
-            part.len() == 2 && part.chars().all(|c| c.is_ascii_hexdigit())
-        })
     }
 }

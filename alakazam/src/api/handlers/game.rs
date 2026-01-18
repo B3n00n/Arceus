@@ -1,5 +1,5 @@
 use crate::{
-    api::MacKey,
+    api::MachineId,
     error::{AppError, Result},
     services::{ArcadeService, GcsService},
 };
@@ -33,13 +33,13 @@ pub struct GameFile {
 pub async fn get_game_download_urls(
     State((arcade_service, gcs_service)): State<(Arc<ArcadeService>, Arc<GcsService>)>,
     Path(game_id): Path<i32>,
-    MacKey(mac_key): MacKey,
+    MachineId(machine_id): MachineId,
 ) -> Result<Json<GameDownloadResponse>> {
     // Authenticate the arcade
-    let _arcade = arcade_service.get_arcade_config(&mac_key).await?;
+    let _arcade = arcade_service.get_arcade_config(&machine_id).await?;
 
     // Get the arcade's game assignments
-    let games = arcade_service.get_arcade_games(&mac_key).await?;
+    let games = arcade_service.get_arcade_games(&machine_id).await?;
 
     // Find the requested game
     let game_assignment = games

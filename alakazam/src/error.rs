@@ -13,8 +13,8 @@ pub enum AppError {
     #[error("Arcade not found")]
     ArcadeNotFound,
 
-    #[error("Invalid MAC address")]
-    InvalidMacAddress,
+    #[error("Invalid machine ID")]
+    InvalidMachineId,
 
     #[error("Unauthorized")]
     Unauthorized,
@@ -55,7 +55,7 @@ impl IntoResponse for AppError {
                 (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error".to_string())
             }
             AppError::ArcadeNotFound => (StatusCode::NOT_FOUND, "Arcade not found".to_string()),
-            AppError::InvalidMacAddress => (StatusCode::UNAUTHORIZED, "Invalid MAC address".to_string()),
+            AppError::InvalidMachineId => (StatusCode::UNAUTHORIZED, "Invalid machine ID".to_string()),
             AppError::Unauthorized => (StatusCode::UNAUTHORIZED, "Unauthorized".to_string()),
             AppError::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg.clone()),
             AppError::GameNotFound => (StatusCode::NOT_FOUND, "Game not found".to_string()),

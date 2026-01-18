@@ -32,7 +32,7 @@ export const ArcadeModal = ({
       if (mode === 'edit' && arcade) {
         form.setFieldsValue({
           name: arcade.name,
-          mac_address: arcade.mac_address,
+          machine_id: arcade.machine_id,
           status: arcade.status,
         });
       } else {
@@ -50,13 +50,14 @@ export const ArcadeModal = ({
     }
   };
 
-  const validateMacAddress = (_: any, value: string) => {
+  const validateMachineId = (_: any, value: string) => {
     if (!value) {
-      return Promise.reject(new Error('MAC address is required'));
+      return Promise.reject(new Error('Machine ID is required'));
     }
-    const macRegex = /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/;
-    if (!macRegex.test(value)) {
-      return Promise.reject(new Error('Invalid MAC address format (e.g., AA:BB:CC:DD:EE:FF)'));
+    // Machine ID is a 32-character hexadecimal string
+    const machineIdRegex = /^[0-9a-fA-F]{32}$/;
+    if (!machineIdRegex.test(value)) {
+      return Promise.reject(new Error('Invalid machine ID format (must be 32 hexadecimal characters)'));
     }
     return Promise.resolve();
   };
@@ -89,14 +90,15 @@ export const ArcadeModal = ({
         </Form.Item>
 
         <Form.Item
-          name="mac_address"
-          label="MAC Address"
-          rules={[{ validator: validateMacAddress }]}
+          name="machine_id"
+          label="Machine ID"
+          rules={[{ validator: validateMachineId }]}
         >
           <Input
-            placeholder="AA:BB:CC:DD:EE:FF"
+            placeholder="255e5a8c9f58486db542b3263c94fb2c"
             disabled={mode === 'edit'}
-            style={{ textTransform: 'uppercase' }}
+            style={{ fontFamily: 'monospace', textTransform: 'lowercase' }}
+            maxLength={32}
           />
         </Form.Item>
 

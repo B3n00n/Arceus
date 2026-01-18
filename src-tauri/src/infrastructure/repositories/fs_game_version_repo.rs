@@ -9,7 +9,7 @@ use std::collections::HashSet;
 use std::path::PathBuf;
 use tokio::fs;
 
-use crate::app::config::{get_mac_address};
+use crate::app::config::get_machine_id;
 use crate::app::models::AlakazamConfig;
 use crate::application::dto::{GameAssignment, GameDownloadResponse, GameFile, LocalGameMetadata};
 use crate::domain::repositories::{GameVersionError, GameVersionRepository};
@@ -83,15 +83,15 @@ impl GameVersionRepository for FsGameVersionRepository {
     async fn fetch_game_assignments(&self) -> Result<Vec<GameAssignment>, GameVersionError> {
         let url = format!("{}/api/arcade/games", self.alakazam_config.base_url);
 
-        // Get MAC address for authentication
-        let mac_address = get_mac_address().map_err(|e| {
-            GameVersionError::Network(format!("Failed to get MAC address: {}", e))
+        // Get machine ID for authentication
+        let machine_id = get_machine_id().map_err(|e| {
+            GameVersionError::Network(format!("Failed to get machine ID: {}", e))
         })?;
 
         let response = self
             .http_client
             .get(&url)
-            .header("X-MAC-Address", mac_address)
+            .header("X-Machine-ID", machine_id)
             .send()
             .await
             .map_err(|e| GameVersionError::Network(e.to_string()))?;
@@ -122,15 +122,15 @@ impl GameVersionRepository for FsGameVersionRepository {
         );
         tracing::info!("Fetching download URLs for game {}", game_id);
 
-        // Get MAC address for authentication
-        let mac_address = get_mac_address().map_err(|e| {
-            GameVersionError::Network(format!("Failed to get MAC address: {}", e))
+        // Get machine ID for authentication
+        let machine_id = get_machine_id().map_err(|e| {
+            GameVersionError::Network(format!("Failed to get machine ID: {}", e))
         })?;
 
         let response = self
             .http_client
             .get(&url)
-            .header("X-MAC-Address", mac_address)
+            .header("X-Machine-ID", machine_id)
             .send()
             .await
             .map_err(|e| GameVersionError::Network(e.to_string()))?;
@@ -329,15 +329,15 @@ impl GameVersionRepository for FsGameVersionRepository {
         );
         tracing::info!("Reporting version status for game {}", game_id);
 
-        // Get MAC address for authentication
-        let mac_address = get_mac_address().map_err(|e| {
-            GameVersionError::Network(format!("Failed to get MAC address: {}", e))
+        // Get machine ID for authentication
+        let machine_id = get_machine_id().map_err(|e| {
+            GameVersionError::Network(format!("Failed to get machine ID: {}", e))
         })?;
 
         let response = self
             .http_client
             .post(&url)
-            .header("X-MAC-Address", mac_address)
+            .header("X-Machine-ID", machine_id)
             .json(&serde_json::json!({
                 "current_version_id": version_id
             }))

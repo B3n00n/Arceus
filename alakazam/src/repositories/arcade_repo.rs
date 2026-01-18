@@ -10,14 +10,14 @@ impl ArcadeRepository {
         Self { pool }
     }
 
-    /// Find arcade by MAC address
-    pub async fn find_by_mac_address(&self, mac_address: &str) -> Result<Option<Arcade>> {
+    /// Find arcade by machine ID
+    pub async fn find_by_machine_id(&self, machine_id: &str) -> Result<Option<Arcade>> {
         let arcade = sqlx::query_as::<_, Arcade>(
-            "SELECT id, name, mac_address, status, last_seen_at, created_at
+            "SELECT id, name, machine_id, status, last_seen_at, created_at
              FROM arcades
-             WHERE mac_address = $1"
+             WHERE machine_id = $1"
         )
-        .bind(mac_address)
+        .bind(machine_id)
         .fetch_optional(&self.pool)
         .await?;
 
@@ -39,14 +39,14 @@ impl ArcadeRepository {
     }
 
     /// Create new arcade
-    pub async fn create(&self, name: &str, mac_address: &str, status: &str) -> Result<Arcade> {
+    pub async fn create(&self, name: &str, machine_id: &str, status: &str) -> Result<Arcade> {
         let arcade = sqlx::query_as::<_, Arcade>(
-            "INSERT INTO arcades (name, mac_address, status)
+            "INSERT INTO arcades (name, machine_id, status)
              VALUES ($1, $2, $3)
-             RETURNING id, name, mac_address, status, last_seen_at, created_at"
+             RETURNING id, name, machine_id, status, last_seen_at, created_at"
         )
         .bind(name)
-        .bind(mac_address)
+        .bind(machine_id)
         .bind(status)
         .fetch_one(&self.pool)
         .await?;
@@ -57,7 +57,7 @@ impl ArcadeRepository {
     /// List all arcades
     pub async fn list_all(&self) -> Result<Vec<Arcade>> {
         let arcades = sqlx::query_as::<_, Arcade>(
-            "SELECT id, name, mac_address, status, last_seen_at, created_at
+            "SELECT id, name, machine_id, status, last_seen_at, created_at
              FROM arcades
              ORDER BY created_at DESC"
         )
@@ -70,7 +70,7 @@ impl ArcadeRepository {
     /// Get arcade by ID
     pub async fn get_by_id(&self, id: i32) -> Result<Option<Arcade>> {
         let arcade = sqlx::query_as::<_, Arcade>(
-            "SELECT id, name, mac_address, status, last_seen_at, created_at
+            "SELECT id, name, machine_id, status, last_seen_at, created_at
              FROM arcades
              WHERE id = $1"
         )
@@ -87,7 +87,7 @@ impl ArcadeRepository {
             "UPDATE arcades
              SET name = $2, status = $3
              WHERE id = $1
-             RETURNING id, name, mac_address, status, last_seen_at, created_at"
+             RETURNING id, name, machine_id, status, last_seen_at, created_at"
         )
         .bind(id)
         .bind(name)

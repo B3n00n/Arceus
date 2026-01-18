@@ -1,5 +1,5 @@
 use crate::{
-    api::MacKey,
+    api::MachineId,
     error::Result,
     models::SnorlaxApkResponse,
     services::{ArcadeService, SnorlaxService},
@@ -11,10 +11,10 @@ use std::sync::Arc;
 /// Returns download URL for the latest Snorlax APK
 pub async fn get_snorlax_latest(
     State((arcade_service, snorlax_service)): State<(Arc<ArcadeService>, Arc<SnorlaxService>)>,
-    MacKey(mac_key): MacKey,
+    MachineId(machine_id): MachineId,
 ) -> Result<Json<SnorlaxApkResponse>> {
     // Authenticate the arcade
-    let _arcade = arcade_service.get_arcade_config(&mac_key).await?;
+    let _arcade = arcade_service.get_arcade_config(&machine_id).await?;
 
     // Get the latest Snorlax APK download info from database
     let response = snorlax_service.get_latest_apk_response().await?;

@@ -63,16 +63,11 @@ impl Default for AppConfig {
     }
 }
 
-/// Get the system's MAC address for authentication with Alakazam
-/// Returns the first valid non-loopback MAC address found
-pub fn get_mac_address() -> Result<String> {
-    use mac_address::get_mac_address;
-
-    let mac = get_mac_address()
-        .map_err(|e| crate::app::error::ArceusError::Config(format!("Failed to get MAC address: {}", e)))?
-        .ok_or_else(|| crate::app::error::ArceusError::Config("No MAC address found".to_string()))?;
-
-    Ok(mac.to_string())
+/// Get the system's machine ID for authentication with Alakazam
+/// Returns a unique, stable hardware identifier that persists across network adapter changes
+pub fn get_machine_id() -> Result<String> {
+    machine_uid::get()
+        .map_err(|e| crate::app::error::ArceusError::Config(format!("Failed to get machine ID: {}", e)))
 }
 
 pub const CLIENT_APK_FILENAME: &str = "Snorlax.apk";

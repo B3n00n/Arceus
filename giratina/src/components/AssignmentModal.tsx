@@ -80,7 +80,7 @@ export const AssignmentModal = ({
             placeholder="Select an arcade"
             disabled={mode === 'edit'}
             options={arcades.map((arcade) => ({
-              label: `${arcade.name} (${arcade.mac_address})`,
+              label: `${arcade.name} (${arcade.machine_id})`,
               value: arcade.id,
             }))}
             showSearch

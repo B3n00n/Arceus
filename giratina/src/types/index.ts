@@ -3,7 +3,7 @@
 export interface Arcade {
   id: number;
   name: string;
-  mac_address: string;
+  machine_id: string;
   status: string;
   last_seen_at?: string;
   created_at: string;
@@ -65,7 +65,7 @@ export interface GyrosVersion {
 // API Request types
 export interface CreateArcadeRequest {
   name: string;
-  mac_address: string;
+  machine_id: string;
 }
 
 export interface UpdateArcadeRequest {

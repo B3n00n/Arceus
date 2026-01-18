@@ -52,7 +52,7 @@ export const ArcadesPage = () => {
     return arcades.filter((arcade) => {
       const matchesSearch =
         arcade.name.toLowerCase().includes(searchText.toLowerCase()) ||
-        arcade.mac_address.toLowerCase().includes(searchText.toLowerCase());
+        arcade.machine_id.toLowerCase().includes(searchText.toLowerCase());
       const matchesStatus = !statusFilter || arcade.status === statusFilter;
       return matchesSearch && matchesStatus;
     });
@@ -117,10 +117,10 @@ export const ArcadesPage = () => {
       ),
     },
     {
-      title: 'MAC Address',
-      dataIndex: 'mac_address',
-      key: 'mac_address',
-      render: (mac: string) => (
+      title: 'Machine ID',
+      dataIndex: 'machine_id',
+      key: 'machine_id',
+      render: (machineId: string) => (
         <code
           style={{
             fontSize: 12,
@@ -132,7 +132,7 @@ export const ArcadesPage = () => {
             fontFamily: 'monospace',
           }}
         >
-          {mac}
+          {machineId}
         </code>
       ),
     },
@@ -265,7 +265,7 @@ export const ArcadesPage = () => {
         {/* Filters and Search Bar */}
         <Flex gap={12} style={{ marginBottom: 20 }} wrap="wrap" align="center">
           <Input
-            placeholder="Search by name or MAC address..."
+            placeholder="Search by name or machine ID..."
             prefix={<SearchOutlined style={{ color: '#64748b' }} />}
             allowClear
             style={{ maxWidth: 400, flex: 1 }}

@@ -15,7 +15,7 @@ use std::sync::Arc;
 #[derive(Debug, Deserialize)]
 pub struct CreateArcadeRequest {
     pub name: String,
-    pub mac_address: String,
+    pub machine_id: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -119,7 +119,7 @@ pub async fn create_arcade(
     _user: IapUser,
     Json(payload): Json<CreateArcadeRequest>,
 ) -> Result<(StatusCode, Json<Arcade>)> {
-    let arcade = service.create_arcade(&payload.name, &payload.mac_address).await?;
+    let arcade = service.create_arcade(&payload.name, &payload.machine_id).await?;
     Ok((StatusCode::CREATED, Json(arcade)))
 }
 
