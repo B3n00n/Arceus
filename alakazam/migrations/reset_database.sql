@@ -35,9 +35,9 @@ CREATE TABLE release_channels (
 
 -- Insert default channels
 INSERT INTO release_channels (name, description) VALUES
-    ('production', 'Stable production releases for customer-facing arcades'),
+    ('production', 'Stable production releases for customer arcades'),
     ('test', 'Pre-release versions for internal testing'),
-    ('development', 'Latest development builds for active development');
+    ('development', 'Infrastructure development channel. should only be used by B3n00n');
 
 CREATE INDEX idx_release_channels_name ON release_channels(name);
 
