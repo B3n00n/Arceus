@@ -8,11 +8,12 @@ import type {
   CreateGameRequest,
   UpdateGameRequest,
   GameVersion,
+  GameVersionWithChannels,
   CreateGameVersionRequest,
   UpdateGameVersionRequest,
-  Assignment,
-  CreateAssignmentRequest,
-  UpdateAssignmentRequest,
+  ReleaseChannel,
+  CreateChannelRequest,
+  UpdateChannelRequest,
   SnorlaxVersion,
   CreateSnorlaxVersionRequest,
   GyrosVersion,
@@ -65,11 +66,6 @@ class AlakazamAPI {
     await this.client.delete(`/api/admin/arcades/${id}`);
   }
 
-  async getArcadeAssignments(arcadeId: number): Promise<Assignment[]> {
-    const response = await this.client.get(`/api/admin/arcades/${arcadeId}/assignments`);
-    return response.data;
-  }
-
   // Game endpoints
   async getGames(): Promise<Game[]> {
     const response = await this.client.get('/api/admin/games');
@@ -119,12 +115,12 @@ class AlakazamAPI {
   }
 
   // Game Version endpoints
-  async getGameVersions(gameId: number): Promise<GameVersion[]> {
+  async getGameVersions(gameId: number): Promise<GameVersionWithChannels[]> {
     const response = await this.client.get(`/api/admin/games/${gameId}/versions`);
     return response.data;
   }
 
-  async getGameVersion(gameId: number, versionId: number): Promise<GameVersion> {
+  async getGameVersion(gameId: number, versionId: number): Promise<GameVersionWithChannels> {
     const response = await this.client.get(`/api/admin/games/${gameId}/versions/${versionId}`);
     return response.data;
   }
@@ -173,25 +169,6 @@ class AlakazamAPI {
     );
 
     return confirmResponse.data;
-  }
-
-  async getAssignments(): Promise<Assignment[]> {
-    const response = await this.client.get('/api/admin/assignments');
-    return response.data;
-  }
-
-  async createAssignment(data: CreateAssignmentRequest): Promise<Assignment> {
-    const response = await this.client.post('/api/admin/assignments', data);
-    return response.data;
-  }
-
-  async updateAssignment(id: number, data: UpdateAssignmentRequest): Promise<Assignment> {
-    const response = await this.client.put(`/api/admin/assignments/${id}`, data);
-    return response.data;
-  }
-
-  async deleteAssignment(id: number): Promise<void> {
-    await this.client.delete(`/api/admin/assignments/${id}`);
   }
 
   async getSnorlaxVersions(): Promise<SnorlaxVersion[]> {
@@ -284,6 +261,54 @@ class AlakazamAPI {
     });
 
     return confirmResponse.data;
+  }
+
+  // Release Channel endpoints
+  async getChannels(): Promise<ReleaseChannel[]> {
+    const response = await this.client.get('/api/admin/channels');
+    return response.data;
+  }
+
+  async getChannel(id: number): Promise<ReleaseChannel> {
+    const response = await this.client.get(`/api/admin/channels/${id}`);
+    return response.data;
+  }
+
+  async createChannel(data: CreateChannelRequest): Promise<ReleaseChannel> {
+    const response = await this.client.post('/api/admin/channels', data);
+    return response.data;
+  }
+
+  async updateChannel(id: number, data: UpdateChannelRequest): Promise<ReleaseChannel> {
+    const response = await this.client.put(`/api/admin/channels/${id}`, data);
+    return response.data;
+  }
+
+  async deleteChannel(id: number): Promise<void> {
+    await this.client.delete(`/api/admin/channels/${id}`);
+  }
+
+  async updateArcadeChannel(arcadeId: number, channelId: number): Promise<Arcade> {
+    const response = await this.client.put(`/api/admin/arcades/${arcadeId}/channel`, {
+      channel_id: channelId,
+    });
+    return response.data;
+  }
+
+  async publishVersionToChannels(
+    gameId: number,
+    versionId: number,
+    channelIds: number[]
+  ): Promise<GameVersionWithChannels> {
+    const response = await this.client.post(
+      `/api/admin/games/${gameId}/versions/${versionId}/publish`,
+      { channel_ids: channelIds }
+    );
+    return response.data;
+  }
+
+  async unpublishVersion(gameId: number, versionId: number): Promise<void> {
+    await this.client.delete(`/api/admin/games/${gameId}/versions/${versionId}/publish`);
   }
 }
 

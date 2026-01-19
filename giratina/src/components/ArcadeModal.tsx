@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Modal, Form, Input, Select } from 'antd';
 import type { Arcade } from '../types';
+import { useChannels } from '../hooks/useChannels';
 
 interface ArcadeModalProps {
   open: boolean;
@@ -26,6 +27,12 @@ export const ArcadeModal = ({
   loading,
 }: ArcadeModalProps) => {
   const [form] = Form.useForm();
+  const { data: channels = [], isLoading: channelsLoading } = useChannels();
+
+  const channelOptions = channels.map((channel) => ({
+    label: channel.name.charAt(0).toUpperCase() + channel.name.slice(1),
+    value: channel.id,
+  }));
 
   useEffect(() => {
     if (open) {
@@ -34,6 +41,7 @@ export const ArcadeModal = ({
           name: arcade.name,
           machine_id: arcade.machine_id,
           status: arcade.status,
+          channel_id: arcade.channel_id,
         });
       } else {
         form.resetFields();
@@ -69,13 +77,13 @@ export const ArcadeModal = ({
       onOk={handleOk}
       onCancel={onCancel}
       confirmLoading={loading}
-      destroyOnHidden
+      destroyOnClose
       width={600}
     >
       <Form
         form={form}
         layout="vertical"
-        initialValues={{ status: 'active' }}
+        initialValues={{ status: 'active', channel_id: 1 }}
       >
         <Form.Item
           name="name"
@@ -108,6 +116,18 @@ export const ArcadeModal = ({
           rules={[{ required: true, message: 'Please select status' }]}
         >
           <Select options={ARCADE_STATUSES} />
+        </Form.Item>
+
+        <Form.Item
+          name="channel_id"
+          label="Release Channel"
+          rules={[{ required: true, message: 'Please select release channel' }]}
+        >
+          <Select
+            options={channelOptions}
+            loading={channelsLoading}
+            placeholder="Select release channel"
+          />
         </Form.Item>
       </Form>
     </Modal>

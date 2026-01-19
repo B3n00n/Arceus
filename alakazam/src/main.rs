@@ -10,7 +10,7 @@ mod services;
 use axum::extract::DefaultBodyLimit;
 use axum::http::{HeaderValue, Method};
 use config::Config;
-use repositories::{ArcadeRepository, GameRepository, GyrosRepository, SnorlaxRepository};
+use repositories::{ArcadeRepository, ChannelRepository, GameRepository, GyrosRepository, SnorlaxRepository};
 use services::{AdminService, ArcadeService, GcsService, GyrosService, SnorlaxService};
 use std::sync::Arc;
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
@@ -36,6 +36,7 @@ async fn main() -> anyhow::Result<()> {
 
     // Initialize repositories (Arc-wrapped for sharing between services)
     let arcade_repo = Arc::new(ArcadeRepository::new(pool.clone()));
+    let channel_repo = Arc::new(ChannelRepository::new(pool.clone()));
     let game_repo = Arc::new(GameRepository::new(pool.clone()));
     let snorlax_repo = Arc::new(SnorlaxRepository::new(pool.clone()));
     let gyros_repo = Arc::new(GyrosRepository::new(pool.clone()));
@@ -55,7 +56,7 @@ async fn main() -> anyhow::Result<()> {
     let arcade_service = Arc::new(ArcadeService::new(arcade_repo.clone(), game_repo.clone(), gcs_service.clone()));
     let snorlax_service = Arc::new(SnorlaxService::new(snorlax_repo.clone(), gcs_service.clone()));
     let gyros_service = Arc::new(GyrosService::new(gyros_repo.clone(), gcs_service.clone()));
-    let admin_service = Arc::new(AdminService::new(arcade_repo.clone(), game_repo.clone()));
+    let admin_service = Arc::new(AdminService::new(arcade_repo.clone(), channel_repo.clone(), game_repo.clone()));
 
     // Configure CORS
     let allowed_origins: Vec<HeaderValue> = config.cors.allowed_origin

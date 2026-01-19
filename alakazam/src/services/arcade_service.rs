@@ -36,7 +36,7 @@ impl ArcadeService {
         Ok(arcade.into())
     }
 
-    /// Get all game assignments for an arcade
+    /// Get all game versions available to an arcade (based on its channel)
     pub async fn get_arcade_games(&self, machine_id: &str) -> Result<Vec<GameAssignmentResponse>> {
         // Authenticate arcade
         let arcade = self
@@ -48,39 +48,21 @@ impl ArcadeService {
         // Update last seen
         self.arcade_repo.update_last_seen(arcade.id).await?;
 
-        // Get all assignments
-        let assignments = self.game_repo.get_arcade_assignments(arcade.id).await?;
+        // Get all versions available to this arcade based on its channel
+        let available_versions = self.game_repo.get_arcade_available_games(arcade.id).await?;
 
         // Build response with full game and version details
         let mut responses = Vec::new();
 
-        for assignment in assignments {
+        for version in available_versions {
             // Get game info
             let game = self
                 .game_repo
-                .get_game_by_id(assignment.game_id)
+                .get_game_by_id(version.game_id)
                 .await?
                 .ok_or(AppError::GameNotFound)?;
 
-            // Get assigned version
-            let assigned_version = self
-                .game_repo
-                .get_version_by_id(assignment.assigned_version_id)
-                .await?
-                .ok_or(AppError::GameVersionNotFound)?;
-
-            // Get current version if exists
-            let current_version = if let Some(current_id) = assignment.current_version_id {
-                self.game_repo
-                    .get_version_by_id(current_id)
-                    .await?
-                    .map(|v| v.into())
-            } else {
-                None
-            };
-
             // Generate signed URL for background image
-            // Background image path for games: <GameName>/<GameName>BG.jpg
             let background_image_url = {
                 let bg_path = format!("{}/{}BG.jpg", game.name, game.name);
                 self.gcs_service
@@ -92,50 +74,11 @@ impl ArcadeService {
             responses.push(GameAssignmentResponse {
                 game_id: game.id,
                 game_name: game.name.clone(),
-                assigned_version: assigned_version.into(),
-                current_version,
+                assigned_version: version.into(),
                 background_image_url,
             });
         }
 
         Ok(responses)
-    }
-
-    /// Update current version status for a game
-    pub async fn update_game_status(
-        &self,
-        machine_id: &str,
-        game_id: i32,
-        current_version_id: Option<i32>,
-    ) -> Result<()> {
-        // Authenticate arcade
-        let arcade = self
-            .arcade_repo
-            .find_by_machine_id(machine_id)
-            .await?
-            .ok_or(AppError::InvalidMachineId)?;
-
-        // Verify the version exists if provided
-        if let Some(version_id) = current_version_id {
-            let version = self
-                .game_repo
-                .get_version_by_id(version_id)
-                .await?
-                .ok_or(AppError::GameVersionNotFound)?;
-
-            // Verify version belongs to the game
-            if version.game_id != game_id {
-                return Err(AppError::Internal(
-                    "Version does not belong to specified game".to_string(),
-                ));
-            }
-        }
-
-        // Update the current version
-        self.game_repo
-            .update_current_version(arcade.id, game_id, current_version_id)
-            .await?;
-
-        Ok(())
     }
 }

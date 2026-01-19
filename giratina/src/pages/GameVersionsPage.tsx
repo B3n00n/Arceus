@@ -12,12 +12,15 @@ import {
   Tag,
   Progress,
   App,
+  Modal,
+  Space,
 } from 'antd';
 import {
   PlusOutlined,
   DeleteOutlined,
   SearchOutlined,
   ReloadOutlined,
+  CloudUploadOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
@@ -28,15 +31,18 @@ import {
   useDeleteGameVersion,
 } from '../hooks/useGameVersions';
 import { useGames } from '../hooks/useGames';
+import { usePublishVersion } from '../hooks/useChannelMutations';
 import { GameVersionModal } from '../components/GameVersionModal';
+import { ChannelBadge } from '../components/ChannelBadge';
+import { ChannelSelector } from '../components/ChannelSelector';
+import type { GameVersion, GameVersionWithChannels, ChannelInfo } from '../types';
 import { api } from '../services/api';
-import type { GameVersion } from '../types';
 
 dayjs.extend(relativeTime);
 
 const { Title } = Typography;
 
-interface GameVersionWithGame extends GameVersion {
+interface GameVersionWithGame extends GameVersionWithChannels {
   game_name?: string;
 }
 
@@ -45,6 +51,9 @@ export const GameVersionsPage = () => {
   const [searchText, setSearchText] = useState('');
   const [selectedGameFilter, setSelectedGameFilter] = useState<number | 'all'>('all');
   const [isUploading, setIsUploading] = useState(false);
+  const [publishModalOpen, setPublishModalOpen] = useState(false);
+  const [publishVersion, setPublishVersion] = useState<GameVersionWithGame | undefined>();
+  const [selectedChannels, setSelectedChannels] = useState<number[]>([]);
 
   const { data: games = [] } = useGames();
   const gameIds = games.map(g => g.id);
@@ -60,6 +69,7 @@ export const GameVersionsPage = () => {
 
   const { message, modal } = App.useApp();
   const deleteMutation = useDeleteGameVersion();
+  const publishMutation = usePublishVersion();
 
   const enrichedVersions: GameVersionWithGame[] = useMemo(() => {
     return versions.map((version) => ({
@@ -163,6 +173,36 @@ export const GameVersionsPage = () => {
     }
   };
 
+  const handlePublish = (version: GameVersionWithGame) => {
+    setPublishVersion(version);
+    setSelectedChannels(version.channels.map(c => c.id));
+    setPublishModalOpen(true);
+  };
+
+  const handlePublishSubmit = async () => {
+    if (!publishVersion || selectedChannels.length === 0) return;
+
+    try {
+      await publishMutation.mutateAsync({
+        gameId: publishVersion.game_id,
+        versionId: publishVersion.id,
+        channelIds: selectedChannels,
+      });
+      message.success(`Published v${publishVersion.version} to ${selectedChannels.length} channel(s)`);
+      setPublishModalOpen(false);
+      setPublishVersion(undefined);
+      setSelectedChannels([]);
+    } catch {
+      // Error handling is done in the mutation hook
+    }
+  };
+
+  const handlePublishCancel = () => {
+    setPublishModalOpen(false);
+    setPublishVersion(undefined);
+    setSelectedChannels([]);
+  };
+
   const columns: ColumnsType<GameVersionWithGame> = [
     {
       title: 'ID',
@@ -237,6 +277,18 @@ export const GameVersionsPage = () => {
       ),
     },
     {
+      title: 'Channels',
+      dataIndex: 'channels',
+      key: 'channels',
+      width: 180,
+      render: (channels: ChannelInfo[]) => <ChannelBadge channels={channels} />,
+      sorter: (a, b) => {
+        const aChannel = a.channels.length > 0 ? a.channels[0].name : '';
+        const bChannel = b.channels.length > 0 ? b.channels[0].name : '';
+        return aChannel.localeCompare(bChannel);
+      },
+    },
+    {
       title: 'Release Date',
       dataIndex: 'release_date',
       key: 'release_date',
@@ -251,29 +303,56 @@ export const GameVersionsPage = () => {
     {
       title: 'Actions',
       key: 'actions',
-      width: 80,
+      width: 180,
       fixed: 'right',
       align: 'center',
       render: (_, record) => (
-        <Popconfirm
-          title="Delete version?"
-          description="This will also remove assignments using this version."
-          onConfirm={() => handleDelete(record)}
-          okText="Delete"
-          okButtonProps={{ danger: true }}
-          cancelText="Cancel"
-        >
-          <Tooltip title="Delete Version">
-            <Button
-              danger
-              icon={<DeleteOutlined />}
-              size="middle"
-              style={{
-                borderRadius: 6,
-              }}
-            />
-          </Tooltip>
-        </Popconfirm>
+        <Space size={8}>
+          {record.channels && record.channels.length > 0 ? (
+            <Tooltip title="Manage Channels">
+              <Button
+                type="primary"
+                icon={<CloudUploadOutlined />}
+                onClick={() => handlePublish(record)}
+                size="middle"
+                style={{
+                  borderRadius: 6,
+                }}
+              />
+            </Tooltip>
+          ) : (
+            <Tooltip title="Publish to Channels">
+              <Button
+                type="primary"
+                icon={<CloudUploadOutlined />}
+                onClick={() => handlePublish(record)}
+                size="middle"
+                style={{
+                  borderRadius: 6,
+                }}
+              />
+            </Tooltip>
+          )}
+          <Popconfirm
+            title="Delete version?"
+            description="This will permanently delete this version."
+            onConfirm={() => handleDelete(record)}
+            okText="Delete"
+            okButtonProps={{ danger: true }}
+            cancelText="Cancel"
+          >
+            <Tooltip title="Delete Version">
+              <Button
+                danger
+                icon={<DeleteOutlined />}
+                size="middle"
+                style={{
+                  borderRadius: 6,
+                }}
+              />
+            </Tooltip>
+          </Popconfirm>
+        </Space>
       ),
     },
   ];
@@ -375,6 +454,34 @@ export const GameVersionsPage = () => {
         onCancel={handleModalCancel}
         loading={isUploading}
       />
+
+      <Modal
+        title="Manage Version Channels"
+        open={publishModalOpen}
+        onOk={handlePublishSubmit}
+        onCancel={handlePublishCancel}
+        confirmLoading={publishMutation.isPending}
+        okText="Update Channels"
+      >
+        <div style={{ marginBottom: 16 }}>
+          <p style={{ marginBottom: 12 }}>
+            <strong>Game:</strong> {publishVersion?.game_name}
+          </p>
+          <p style={{ marginBottom: 12 }}>
+            <strong>Version:</strong> v{publishVersion?.version}
+          </p>
+
+          <div>
+            <label style={{ display: 'block', marginBottom: 8, fontWeight: 500 }}>
+              Release Channels
+            </label>
+            <ChannelSelector
+              value={selectedChannels}
+              onChange={setSelectedChannels}
+            />
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

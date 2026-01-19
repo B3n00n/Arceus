@@ -13,7 +13,7 @@ impl ArcadeRepository {
     /// Find arcade by machine ID
     pub async fn find_by_machine_id(&self, machine_id: &str) -> Result<Option<Arcade>> {
         let arcade = sqlx::query_as::<_, Arcade>(
-            "SELECT id, name, machine_id, status, last_seen_at, created_at
+            "SELECT id, name, machine_id, status, channel_id, last_seen_at, created_at
              FROM arcades
              WHERE machine_id = $1"
         )
@@ -38,16 +38,17 @@ impl ArcadeRepository {
         Ok(())
     }
 
-    /// Create new arcade
-    pub async fn create(&self, name: &str, machine_id: &str, status: &str) -> Result<Arcade> {
+    /// Create new arcade (defaults to production channel_id=1)
+    pub async fn create(&self, name: &str, machine_id: &str, status: &str, channel_id: i32) -> Result<Arcade> {
         let arcade = sqlx::query_as::<_, Arcade>(
-            "INSERT INTO arcades (name, machine_id, status)
-             VALUES ($1, $2, $3)
-             RETURNING id, name, machine_id, status, last_seen_at, created_at"
+            "INSERT INTO arcades (name, machine_id, status, channel_id)
+             VALUES ($1, $2, $3, $4)
+             RETURNING id, name, machine_id, status, channel_id, last_seen_at, created_at"
         )
         .bind(name)
         .bind(machine_id)
         .bind(status)
+        .bind(channel_id)
         .fetch_one(&self.pool)
         .await?;
 
@@ -57,7 +58,7 @@ impl ArcadeRepository {
     /// List all arcades
     pub async fn list_all(&self) -> Result<Vec<Arcade>> {
         let arcades = sqlx::query_as::<_, Arcade>(
-            "SELECT id, name, machine_id, status, last_seen_at, created_at
+            "SELECT id, name, machine_id, status, channel_id, last_seen_at, created_at
              FROM arcades
              ORDER BY created_at DESC"
         )
@@ -70,7 +71,7 @@ impl ArcadeRepository {
     /// Get arcade by ID
     pub async fn get_by_id(&self, id: i32) -> Result<Option<Arcade>> {
         let arcade = sqlx::query_as::<_, Arcade>(
-            "SELECT id, name, machine_id, status, last_seen_at, created_at
+            "SELECT id, name, machine_id, status, channel_id, last_seen_at, created_at
              FROM arcades
              WHERE id = $1"
         )
@@ -87,7 +88,7 @@ impl ArcadeRepository {
             "UPDATE arcades
              SET name = $2, status = $3
              WHERE id = $1
-             RETURNING id, name, machine_id, status, last_seen_at, created_at"
+             RETURNING id, name, machine_id, status, channel_id, last_seen_at, created_at"
         )
         .bind(id)
         .bind(name)
@@ -106,5 +107,21 @@ impl ArcadeRepository {
             .await?;
 
         Ok(())
+    }
+
+    /// Update arcade's release channel
+    pub async fn update_channel(&self, arcade_id: i32, channel_id: i32) -> Result<Arcade> {
+        let arcade = sqlx::query_as::<_, Arcade>(
+            "UPDATE arcades
+             SET channel_id = $2
+             WHERE id = $1
+             RETURNING id, name, machine_id, status, channel_id, last_seen_at, created_at"
+        )
+        .bind(arcade_id)
+        .bind(channel_id)
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(arcade)
     }
 }

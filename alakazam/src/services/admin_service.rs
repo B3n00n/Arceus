@@ -1,25 +1,38 @@
 use crate::{
     error::{AppError, Result},
-    models::{Arcade, ArcadeGameAssignment, Game, GameVersion},
-    repositories::{ArcadeRepository, GameRepository},
+    models::{Arcade, Game, GameVersion, GameVersionWithChannels, ReleaseChannel},
+    repositories::{ArcadeRepository, ChannelRepository, GameRepository},
 };
 use std::sync::Arc;
 
 pub struct AdminService {
     arcade_repo: Arc<ArcadeRepository>,
+    channel_repo: Arc<ChannelRepository>,
     game_repo: Arc<GameRepository>,
 }
 
 impl AdminService {
-    pub fn new(arcade_repo: Arc<ArcadeRepository>, game_repo: Arc<GameRepository>) -> Self {
+    pub fn new(
+        arcade_repo: Arc<ArcadeRepository>,
+        channel_repo: Arc<ChannelRepository>,
+        game_repo: Arc<GameRepository>,
+    ) -> Self {
         Self {
             arcade_repo,
+            channel_repo,
             game_repo,
         }
     }
 
-    pub async fn create_arcade(&self, name: &str, machine_id: &str) -> Result<Arcade> {
-        self.arcade_repo.create(name, machine_id, "active").await
+    // ========================================================================
+    // ARCADE OPERATIONS
+    // ========================================================================
+
+    pub async fn create_arcade(&self, name: &str, machine_id: &str, channel_id: i32) -> Result<Arcade> {
+        // Verify channel exists
+        self.get_channel(channel_id).await?;
+
+        self.arcade_repo.create(name, machine_id, "active", channel_id).await
     }
 
     pub async fn list_arcades(&self) -> Result<Vec<Arcade>> {
@@ -35,22 +48,63 @@ impl AdminService {
 
     pub async fn update_arcade(&self, id: i32, name: &str, status: &str) -> Result<Arcade> {
         self.get_arcade(id).await?;
-
         self.arcade_repo.update(id, name, status).await
     }
 
     pub async fn delete_arcade(&self, id: i32) -> Result<()> {
         self.get_arcade(id).await?;
-
-        // Note: CASCADE delete will remove assignments automatically
         self.arcade_repo.delete(id).await
     }
 
-    pub async fn get_arcade_assignments(&self, arcade_id: i32) -> Result<Vec<ArcadeGameAssignment>> {
+    pub async fn update_arcade_channel(&self, arcade_id: i32, channel_id: i32) -> Result<Arcade> {
+        // Verify arcade exists
         self.get_arcade(arcade_id).await?;
 
-        self.game_repo.get_arcade_assignments(arcade_id).await
+        // Verify channel exists
+        self.get_channel(channel_id).await?;
+
+        // Update arcade's channel
+        self.arcade_repo.update_channel(arcade_id, channel_id).await
     }
+
+    // ========================================================================
+    // RELEASE CHANNEL OPERATIONS
+    // ========================================================================
+
+    pub async fn list_channels(&self) -> Result<Vec<ReleaseChannel>> {
+        self.channel_repo.list_all().await
+    }
+
+    pub async fn get_channel(&self, id: i32) -> Result<ReleaseChannel> {
+        self.channel_repo
+            .get_by_id(id)
+            .await?
+            .ok_or(AppError::ChannelNotFound)
+    }
+
+    pub async fn create_channel(&self, name: &str, description: Option<&str>) -> Result<ReleaseChannel> {
+        self.channel_repo.create(name, description).await
+    }
+
+    pub async fn update_channel(
+        &self,
+        id: i32,
+        description: Option<&str>,
+    ) -> Result<ReleaseChannel> {
+        self.get_channel(id).await?;
+        self.channel_repo.update(id, description).await
+    }
+
+    pub async fn delete_channel(&self, id: i32) -> Result<()> {
+        self.get_channel(id).await?;
+
+        // This will fail with FK constraint if arcades or versions use it
+        self.channel_repo.delete(id).await
+    }
+
+    // ========================================================================
+    // GAME OPERATIONS
+    // ========================================================================
 
     pub async fn create_game(&self, name: &str) -> Result<Game> {
         self.game_repo.create_game(name).await
@@ -69,16 +123,18 @@ impl AdminService {
 
     pub async fn update_game(&self, id: i32, name: &str) -> Result<Game> {
         self.get_game(id).await?;
-
         self.game_repo.update_game(id, name).await
     }
 
     pub async fn delete_game(&self, id: i32) -> Result<()> {
         self.get_game(id).await?;
-
-        // CASCADE delete will remove versions and assignments
+        // CASCADE delete will remove versions
         self.game_repo.delete_game(id).await
     }
+
+    // ========================================================================
+    // GAME VERSION OPERATIONS
+    // ========================================================================
 
     pub async fn create_game_version(
         &self,
@@ -87,19 +143,24 @@ impl AdminService {
         gcs_path: &str,
     ) -> Result<GameVersion> {
         self.get_game(game_id).await?;
-
         self.game_repo.create_version(game_id, version, gcs_path).await
     }
 
-    pub async fn list_game_versions(&self, game_id: i32) -> Result<Vec<GameVersion>> {
+    pub async fn list_game_versions_with_channels(&self, game_id: i32) -> Result<Vec<GameVersionWithChannels>> {
         self.get_game(game_id).await?;
-
-        self.game_repo.list_versions_by_game(game_id).await
+        self.game_repo.list_versions_with_channels(game_id).await
     }
 
     pub async fn get_game_version(&self, version_id: i32) -> Result<GameVersion> {
         self.game_repo
             .get_version_by_id(version_id)
+            .await?
+            .ok_or(AppError::GameVersionNotFound)
+    }
+
+    pub async fn get_game_version_with_channels(&self, version_id: i32) -> Result<GameVersionWithChannels> {
+        self.game_repo
+            .get_version_with_channels(version_id)
             .await?
             .ok_or(AppError::GameVersionNotFound)
     }
@@ -111,83 +172,42 @@ impl AdminService {
         gcs_path: &str,
     ) -> Result<GameVersion> {
         self.get_game_version(version_id).await?;
-
         self.game_repo.update_version(version_id, version, gcs_path).await
     }
 
     pub async fn delete_game_version(&self, version_id: i32) -> Result<()> {
-        let _game_version = self.get_game_version(version_id).await?;
-
-        // Check if version is assigned to any arcade
-        let all_assignments = self.game_repo.list_all_assignments().await?;
-        let is_assigned = all_assignments.iter().any(|a|
-            a.assigned_version_id == version_id ||
-            a.current_version_id == Some(version_id)
-        );
-
-        if is_assigned {
-            return Err(AppError::Internal(
-                "Cannot delete game version that is assigned to arcades".to_string()
-            ));
-        }
-
+        self.get_game_version(version_id).await?;
+        // CASCADE delete will remove channel associations
         self.game_repo.delete_version(version_id).await
     }
 
-    pub async fn create_assignment(
-        &self,
-        arcade_id: i32,
-        game_id: i32,
-        assigned_version_id: i32,
-    ) -> Result<ArcadeGameAssignment> {
-        self.get_arcade(arcade_id).await?;
+    // ========================================================================
+    // CHANNEL PUBLISHING OPERATIONS
+    // ========================================================================
 
-        self.get_game(game_id).await?;
+    /// Replace all channels a version is published to (removes existing, sets new)
+    pub async fn replace_version_channels(&self, version_id: i32, channel_ids: &[i32]) -> Result<GameVersionWithChannels> {
+        // Verify version exists
+        self.get_game_version(version_id).await?;
 
-        let version = self.get_game_version(assigned_version_id).await?;
-        if version.game_id != game_id {
-            return Err(AppError::Internal(
-                "Game version does not belong to the specified game".to_string()
-            ));
+        // Verify all channels exist
+        for channel_id in channel_ids {
+            self.get_channel(*channel_id).await?;
         }
 
-        self.game_repo
-            .create_assignment(arcade_id, game_id, assigned_version_id)
-            .await
+        // Replace channels
+        self.game_repo.set_version_channels(version_id, channel_ids).await?;
+
+        // Return version with channels
+        self.get_game_version_with_channels(version_id).await
     }
 
-    pub async fn update_assignment(
-        &self,
-        assignment_id: i32,
-        assigned_version_id: i32,
-    ) -> Result<ArcadeGameAssignment> {
-        let assignment = self.game_repo
-            .get_assignment_by_id(assignment_id)
-            .await?
-            .ok_or(AppError::NoAssignment)?;
+    /// Unpublish version from all channels
+    pub async fn unpublish_version_from_all(&self, version_id: i32) -> Result<()> {
+        // Verify version exists
+        self.get_game_version(version_id).await?;
 
-        let version = self.get_game_version(assigned_version_id).await?;
-        if version.game_id != assignment.game_id {
-            return Err(AppError::Internal(
-                "Game version does not belong to the assignment's game".to_string()
-            ));
-        }
-
-        self.game_repo
-            .update_assignment(assignment_id, assigned_version_id)
-            .await
-    }
-
-    pub async fn delete_assignment(&self, assignment_id: i32) -> Result<()> {
-        self.game_repo
-            .get_assignment_by_id(assignment_id)
-            .await?
-            .ok_or(AppError::NoAssignment)?;
-
-        self.game_repo.delete_assignment(assignment_id).await
-    }
-
-    pub async fn list_all_assignments(&self) -> Result<Vec<ArcadeGameAssignment>> {
-        self.game_repo.list_all_assignments().await
+        // Unpublish from all channels
+        self.game_repo.unpublish_version_from_all_channels(version_id).await
     }
 }

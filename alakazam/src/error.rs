@@ -28,8 +28,8 @@ pub enum AppError {
     #[error("Game version not found")]
     GameVersionNotFound,
 
-    #[error("No assignment found for this arcade and game")]
-    NoAssignment,
+    #[error("Release channel not found")]
+    ChannelNotFound,
 
     #[error("Snorlax version not found")]
     SnorlaxVersionNotFound,
@@ -60,7 +60,7 @@ impl IntoResponse for AppError {
             AppError::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg.clone()),
             AppError::GameNotFound => (StatusCode::NOT_FOUND, "Game not found".to_string()),
             AppError::GameVersionNotFound => (StatusCode::NOT_FOUND, "Game version not found".to_string()),
-            AppError::NoAssignment => (StatusCode::NOT_FOUND, "No assignment found".to_string()),
+            AppError::ChannelNotFound => (StatusCode::NOT_FOUND, "Release channel not found".to_string()),
             AppError::SnorlaxVersionNotFound => (StatusCode::NOT_FOUND, "Snorlax version not found".to_string()),
             AppError::NoCurrentSnorlaxVersion => (StatusCode::NOT_FOUND, "No current Snorlax version set".to_string()),
             AppError::GyrosVersionNotFound => (StatusCode::NOT_FOUND, "Gyros version not found".to_string()),

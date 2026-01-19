@@ -5,7 +5,7 @@ import {
   DesktopOutlined,
   AppstoreOutlined,
   TagsOutlined,
-  LinkOutlined,
+  BranchesOutlined,
   AndroidOutlined,
   ToolOutlined,
   LeftOutlined,
@@ -56,9 +56,9 @@ export const MainLayout = () => {
       label: 'Game Versions',
     },
     {
-      key: '/assignments',
-      icon: <LinkOutlined />,
-      label: 'Assignments',
+      key: '/channels',
+      icon: <BranchesOutlined />,
+      label: 'Release Channels',
     },
     {
       key: '/snorlax',

@@ -1,4 +1,4 @@
-use serde::{Serialize};
+use serde::Serialize;
 use sqlx::types::chrono::{DateTime, Utc};
 
 /// Arcade entity from database
@@ -8,6 +8,7 @@ pub struct Arcade {
     pub name: String,
     pub machine_id: String,
     pub status: String,
+    pub channel_id: i32,
     pub last_seen_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
 }
@@ -18,6 +19,7 @@ pub struct ArcadeConfigResponse {
     pub id: i32,
     pub name: String,
     pub status: String,
+    pub channel_id: i32,
 }
 
 impl From<Arcade> for ArcadeConfigResponse {
@@ -26,6 +28,7 @@ impl From<Arcade> for ArcadeConfigResponse {
             id: arcade.id,
             name: arcade.name,
             status: arcade.status,
+            channel_id: arcade.channel_id,
         }
     }
 }

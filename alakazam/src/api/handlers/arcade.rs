@@ -1,12 +1,11 @@
 use crate::{
     api::MachineId,
     error::Result,
-    models::{ArcadeConfigResponse, GameAssignmentResponse, UpdateStatusRequest},
+    models::{ArcadeConfigResponse, GameAssignmentResponse},
     services::ArcadeService,
 };
 use axum::{
-    extract::{Path, State},
-    http::StatusCode,
+    extract::State,
     Json,
 };
 use std::sync::Arc;
@@ -29,19 +28,4 @@ pub async fn get_arcade_games(
 ) -> Result<Json<Vec<GameAssignmentResponse>>> {
     let games = service.get_arcade_games(&machine_id).await?;
     Ok(Json(games))
-}
-
-/// POST /api/arcade/games/{game_id}/status
-/// Update the current version status for a game
-pub async fn update_game_status(
-    State(service): State<Arc<ArcadeService>>,
-    Path(game_id): Path<i32>,
-    MachineId(machine_id): MachineId,
-    Json(payload): Json<UpdateStatusRequest>,
-) -> Result<StatusCode> {
-    service
-        .update_game_status(&machine_id, game_id, payload.current_version_id)
-        .await?;
-
-    Ok(StatusCode::OK)
 }

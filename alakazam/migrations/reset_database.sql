@@ -6,18 +6,45 @@
 
 -- Drop all tables (in reverse order of dependencies)
 DROP TABLE IF EXISTS gyros_versions CASCADE;
+DROP TABLE IF EXISTS game_version_channels CASCADE;
 DROP TABLE IF EXISTS arcade_game_assignments CASCADE;
 DROP TABLE IF EXISTS game_versions CASCADE;
 DROP TABLE IF EXISTS games CASCADE;
 DROP TABLE IF EXISTS snorlax_versions CASCADE;
 DROP TABLE IF EXISTS arcades CASCADE;
+DROP TABLE IF EXISTS release_channels CASCADE;
+
+-- Drop types
+DROP TYPE IF EXISTS release_channel CASCADE;
 
 -- Drop functions
 DROP FUNCTION IF EXISTS ensure_single_current_gyros() CASCADE;
 DROP FUNCTION IF EXISTS ensure_single_current_snorlax() CASCADE;
+DROP FUNCTION IF EXISTS ensure_one_game_version_per_channel() CASCADE;
 
 -- ============================================================================
--- ARCADES TABLE (UPDATED: mac_address -> machine_id)
+-- RELEASE CHANNELS TABLE
+-- Dynamic table for managing release channels (can add/remove channels)
+-- ============================================================================
+CREATE TABLE release_channels (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(50) UNIQUE NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+-- Insert default channels
+INSERT INTO release_channels (name, description) VALUES
+    ('production', 'Stable production releases for customer-facing arcades'),
+    ('test', 'Pre-release versions for internal testing'),
+    ('development', 'Latest development builds for active development');
+
+CREATE INDEX idx_release_channels_name ON release_channels(name);
+
+COMMENT ON TABLE release_channels IS 'Release channels for game version distribution';
+
+-- ============================================================================
+-- ARCADES TABLE
 -- Represents physical VR arcade installations
 -- ============================================================================
 CREATE TABLE arcades (
@@ -25,16 +52,19 @@ CREATE TABLE arcades (
     name VARCHAR(255) NOT NULL,
     machine_id VARCHAR(255) UNIQUE NOT NULL,  -- Machine ID format: 32-char hex string
     status VARCHAR(50) NOT NULL DEFAULT 'active',  -- active, inactive, maintenance
+    channel_id INTEGER NOT NULL REFERENCES release_channels(id) ON DELETE RESTRICT DEFAULT 1,  -- FK to release_channels (defaults to production)
     last_seen_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
--- Index for frequent machine ID lookups
+-- Indexes for frequent lookups
 CREATE INDEX idx_arcades_machine_id ON arcades(machine_id);
 CREATE INDEX idx_arcades_status ON arcades(status);
+CREATE INDEX idx_arcades_channel_id ON arcades(channel_id);
 
 COMMENT ON TABLE arcades IS 'Physical VR arcade installations worldwide';
 COMMENT ON COLUMN arcades.machine_id IS 'Unique machine identifier (stable across network adapter changes)';
+COMMENT ON COLUMN arcades.channel_id IS 'Release channel for this arcade (determines which game versions are available)';
 
 -- ============================================================================
 -- GAMES TABLE
@@ -71,27 +101,63 @@ CREATE INDEX idx_game_versions_release_date ON game_versions(release_date DESC);
 COMMENT ON TABLE game_versions IS 'Specific versions of games stored in GCS';
 
 -- ============================================================================
--- ARCADE_GAME_ASSIGNMENTS TABLE
--- Assigns specific game versions to arcades
+-- GAME_VERSION_CHANNELS TABLE
+-- Junction table: Which channels is each version published to?
+-- A version can be published to multiple channels simultaneously
 -- ============================================================================
-CREATE TABLE arcade_game_assignments (
-    id SERIAL PRIMARY KEY,
-    arcade_id INTEGER NOT NULL REFERENCES arcades(id) ON DELETE CASCADE,
-    game_id INTEGER NOT NULL REFERENCES games(id) ON DELETE CASCADE,
-    assigned_version_id INTEGER NOT NULL REFERENCES game_versions(id) ON DELETE RESTRICT,
-    current_version_id INTEGER REFERENCES game_versions(id) ON DELETE SET NULL,
-    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    UNIQUE(arcade_id, game_id)  -- Each arcade can have only one assignment per game
+CREATE TABLE game_version_channels (
+    version_id INTEGER NOT NULL REFERENCES game_versions(id) ON DELETE CASCADE,
+    channel_id INTEGER NOT NULL REFERENCES release_channels(id) ON DELETE CASCADE,
+    published_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (version_id, channel_id)
 );
 
 -- Indexes for frequent queries
-CREATE INDEX idx_assignments_arcade_id ON arcade_game_assignments(arcade_id);
-CREATE INDEX idx_assignments_game_id ON arcade_game_assignments(game_id);
-CREATE INDEX idx_assignments_updated_at ON arcade_game_assignments(updated_at DESC);
+CREATE INDEX idx_game_version_channels_version_id ON game_version_channels(version_id);
+CREATE INDEX idx_game_version_channels_channel_id ON game_version_channels(channel_id);
 
-COMMENT ON TABLE arcade_game_assignments IS 'Assigns game versions to specific arcades';
-COMMENT ON COLUMN arcade_game_assignments.assigned_version_id IS 'Version that should be installed on the arcade';
-COMMENT ON COLUMN arcade_game_assignments.current_version_id IS 'Version currently installed (null if not yet downloaded)';
+COMMENT ON TABLE game_version_channels IS 'Junction table mapping versions to release channels (many-to-many)';
+
+-- Trigger function to ensure only one version of a game per channel
+CREATE OR REPLACE FUNCTION ensure_one_game_version_per_channel()
+RETURNS TRIGGER AS $$
+DECLARE
+    new_game_id INTEGER;
+    conflicting_count INTEGER;
+BEGIN
+    -- Get the game_id for the version being published
+    SELECT game_id INTO new_game_id
+    FROM game_versions
+    WHERE id = NEW.version_id;
+
+    -- Check if another version of this game already exists on this channel
+    SELECT COUNT(*) INTO conflicting_count
+    FROM game_version_channels gvc
+    JOIN game_versions gv ON gvc.version_id = gv.id
+    WHERE gvc.channel_id = NEW.channel_id
+      AND gv.game_id = new_game_id
+      AND gvc.version_id != NEW.version_id;
+
+    IF conflicting_count > 0 THEN
+        -- Remove the old version(s) automatically
+        DELETE FROM game_version_channels gvc
+        USING game_versions gv
+        WHERE gvc.version_id = gv.id
+          AND gvc.channel_id = NEW.channel_id
+          AND gv.game_id = new_game_id
+          AND gvc.version_id != NEW.version_id;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER game_version_per_channel_trigger
+    BEFORE INSERT ON game_version_channels
+    FOR EACH ROW
+    EXECUTE FUNCTION ensure_one_game_version_per_channel();
+
+COMMENT ON FUNCTION ensure_one_game_version_per_channel() IS 'Automatically removes old versions of a game from a channel when publishing a new version';
 
 -- ============================================================================
 -- SNORLAX_VERSIONS TABLE

@@ -8,7 +8,7 @@ import { MainLayout } from './layouts/MainLayout';
 const ArcadesPage = lazy(() => import('./pages/ArcadesPage').then(m => ({ default: m.ArcadesPage })));
 const GamesPage = lazy(() => import('./pages/GamesPage').then(m => ({ default: m.GamesPage })));
 const GameVersionsPage = lazy(() => import('./pages/GameVersionsPage').then(m => ({ default: m.GameVersionsPage })));
-const AssignmentsPage = lazy(() => import('./pages/AssignmentsPage').then(m => ({ default: m.AssignmentsPage })));
+const ChannelsPage = lazy(() => import('./pages/ChannelsPage').then(m => ({ default: m.ChannelsPage })));
 const SnorlaxVersionsPage = lazy(() => import('./pages/SnorlaxVersionsPage').then(m => ({ default: m.SnorlaxVersionsPage })));
 const GyrosVersionsPage = lazy(() => import('./pages/GyrosVersionsPage').then(m => ({ default: m.GyrosVersionsPage })));
 
@@ -121,7 +121,7 @@ function App() {
                   <Route path="arcades" element={<ArcadesPage />} />
                   <Route path="games" element={<GamesPage />} />
                   <Route path="versions" element={<GameVersionsPage />} />
-                  <Route path="assignments" element={<AssignmentsPage />} />
+                  <Route path="channels" element={<ChannelsPage />} />
                   <Route path="snorlax" element={<SnorlaxVersionsPage />} />
                   <Route path="gyros" element={<GyrosVersionsPage />} />
                 </Route>

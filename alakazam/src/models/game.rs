@@ -19,15 +19,22 @@ pub struct GameVersion {
     pub release_date: DateTime<Utc>,
 }
 
-/// Arcade game assignment entity from database
-#[derive(Debug, Clone, Serialize, sqlx::FromRow)]
-pub struct ArcadeGameAssignment {
+/// Game version with channel information
+#[derive(Debug, Serialize)]
+pub struct GameVersionWithChannels {
     pub id: i32,
-    pub arcade_id: i32,
     pub game_id: i32,
-    pub assigned_version_id: i32,
-    pub current_version_id: Option<i32>,
-    pub updated_at: DateTime<Utc>,
+    pub version: String,
+    pub gcs_path: String,
+    pub release_date: DateTime<Utc>,
+    pub channels: Vec<ChannelInfo>,
+}
+
+/// Channel information for a version
+#[derive(Debug, Serialize, sqlx::FromRow)]
+pub struct ChannelInfo {
+    pub id: i32,
+    pub name: String,
 }
 
 /// Response DTO for game assignment with full details
@@ -36,7 +43,6 @@ pub struct GameAssignmentResponse {
     pub game_id: i32,
     pub game_name: String,
     pub assigned_version: VersionInfo,
-    pub current_version: Option<VersionInfo>,
     pub background_image_url: Option<String>,
 }
 
@@ -60,8 +66,14 @@ impl From<GameVersion> for VersionInfo {
     }
 }
 
-/// Request to update arcade status
+/// Request to publish/unpublish version to channels
 #[derive(Debug, Deserialize)]
-pub struct UpdateStatusRequest {
-    pub current_version_id: Option<i32>,
+pub struct PublishVersionRequest {
+    pub channel_ids: Vec<i32>,
+}
+
+/// Request to update arcade's release channel
+#[derive(Debug, Deserialize)]
+pub struct UpdateArcadeChannelRequest {
+    pub channel_id: i32,
 }

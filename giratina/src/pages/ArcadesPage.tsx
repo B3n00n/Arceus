@@ -23,7 +23,9 @@ import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { useArcades, useCreateArcade, useUpdateArcade, useDeleteArcade } from '../hooks/useArcades';
+import { useChannels } from '../hooks/useChannels';
 import { ArcadeModal } from '../components/ArcadeModal';
+import { ChannelBadge } from '../components/ChannelBadge';
 import type { Arcade } from '../types';
 
 dayjs.extend(relativeTime);
@@ -44,9 +46,15 @@ export const ArcadesPage = () => {
   const [statusFilter, setStatusFilter] = useState<string | undefined>();
 
   const { data: arcades = [], isLoading, refetch } = useArcades();
+  const { data: channels = [] } = useChannels();
   const createMutation = useCreateArcade();
   const updateMutation = useUpdateArcade();
   const deleteMutation = useDeleteArcade();
+
+  const getChannelName = (channelId: number) => {
+    const channel = channels.find(c => c.id === channelId);
+    return channel ? channel.name : 'Unknown';
+  };
 
   const filteredArcades = useMemo(() => {
     return arcades.filter((arcade) => {
@@ -158,6 +166,21 @@ export const ArcadesPage = () => {
       sorter: (a, b) => a.status.localeCompare(b.status),
     },
     {
+      title: 'Channel',
+      dataIndex: 'channel_id',
+      key: 'channel_id',
+      width: 140,
+      render: (channelId: number) => {
+        const channelName = getChannelName(channelId);
+        return <ChannelBadge channels={[{ id: channelId, name: channelName }]} />;
+      },
+      sorter: (a, b) => {
+        const aName = getChannelName(a.channel_id);
+        const bName = getChannelName(b.channel_id);
+        return aName.localeCompare(bName);
+      },
+    },
+    {
       title: 'Last Seen',
       dataIndex: 'last_seen_at',
       key: 'last_seen_at',
@@ -210,7 +233,7 @@ export const ArcadesPage = () => {
           </Tooltip>
           <Popconfirm
             title="Delete arcade?"
-            description="This will remove all game assignments for this arcade."
+            description="This will permanently remove this arcade."
             onConfirm={() => handleDelete(record.id)}
             okText="Delete"
             okButtonProps={{ danger: true }}

@@ -16,10 +16,6 @@ pub fn create_api_router(
     let arcade_router = Router::new()
         .route("/arcade/config", get(handlers::get_arcade_config))
         .route("/arcade/games", get(handlers::get_arcade_games))
-        .route(
-            "/arcade/games/{game_id}/status",
-            post(handlers::update_game_status),
-        )
         .with_state(arcade_service.clone());
 
     // Game download endpoint
@@ -39,6 +35,7 @@ pub fn create_api_router(
         .with_state((arcade_service, snorlax_service.clone()));
 
     let admin_router = Router::new()
+        // Arcade management
         .route("/admin/arcades",
             post(handlers::create_arcade)
                 .get(handlers::list_arcades))
@@ -46,26 +43,32 @@ pub fn create_api_router(
             get(handlers::get_arcade)
                 .put(handlers::update_arcade)
                 .delete(handlers::delete_arcade))
-        .route("/admin/arcades/{id}/assignments", get(handlers::get_arcade_assignments))
+        .route("/admin/arcades/{id}/channel", put(handlers::update_arcade_channel))
+        // Release channel management
+        .route("/admin/channels",
+            post(handlers::create_channel)
+                .get(handlers::list_channels))
+        .route("/admin/channels/{id}",
+            get(handlers::get_channel)
+                .put(handlers::update_channel)
+                .delete(handlers::delete_channel))
+        // Game management
         .route("/admin/games",
             post(handlers::create_game))
         .route("/admin/games/{id}",
             get(handlers::get_game)
                 .put(handlers::update_game)
                 .delete(handlers::delete_game))
+        // Game version management
         .route("/admin/games/{game_id}/versions",
             post(handlers::create_game_version)
                 .get(handlers::list_game_versions))
         .route("/admin/games/{game_id}/versions/{version_id}",
             get(handlers::get_game_version)
                 .put(handlers::update_game_version))
-        // Assignment management
-        .route("/admin/assignments",
-            post(handlers::create_assignment)
-                .get(handlers::list_assignments))
-        .route("/admin/assignments/{id}",
-            put(handlers::update_assignment)
-                .delete(handlers::delete_assignment))
+        .route("/admin/games/{game_id}/versions/{version_id}/publish",
+            post(handlers::publish_version)
+                .delete(handlers::unpublish_version))
         .with_state(admin_service.clone());
 
     // Game endpoints that require GCS service
