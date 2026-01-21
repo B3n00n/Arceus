@@ -58,3 +58,11 @@ private/
 *.msi
 
 .tauri/
+
+# Nix direnv cache
+.direnv/
+
+# PostgreSQL data (alakazam)
+.pg_data/
+.pg_socket/
+logfile
