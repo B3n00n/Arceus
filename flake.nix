@@ -77,18 +77,7 @@
           ] ++ tauriDeps;
 
           shellHook = ''
-            echo "🚀 Arceus Monorepo Development Environment"
-            echo ""
-            echo "📦 Rust:       $(rustc --version)"
-            echo "📦 Node.js:    $(node --version)"
-            echo "📦 PostgreSQL: $(postgres --version | head -n1)"
-            echo ""
-            echo "Projects:"
-            echo "  alakazam  - Rust backend API (cd alakazam)"
-            echo "  giratina  - React web dashboard (cd giratina)"
-            echo "  calyrex   - Rust CLI utility (cd calyrex)"
-            echo "  arceus    - Tauri desktop app (root)"
-            echo ""
+            echo "Launched Arceus Dev Environment"
 
             export LD_LIBRARY_PATH="${pkgs.lib.makeLibraryPath tauriLibs}:$LD_LIBRARY_PATH"
             export PKG_CONFIG_PATH="${pkgs.lib.makeSearchPathOutput "dev" "lib/pkgconfig" tauriDeps}:$PKG_CONFIG_PATH"
