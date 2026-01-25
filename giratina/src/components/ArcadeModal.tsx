@@ -62,12 +62,18 @@ export const ArcadeModal = ({
     if (!value) {
       return Promise.reject(new Error('Machine ID is required'));
     }
-    // Machine ID is a 32-character hexadecimal string
+    // Strip hyphens and validate as 32-character hexadecimal string
+    const normalized = value.replace(/-/g, '');
     const machineIdRegex = /^[0-9a-fA-F]{32}$/;
-    if (!machineIdRegex.test(value)) {
-      return Promise.reject(new Error('Invalid machine ID format (must be 32 hexadecimal characters)'));
+    if (!machineIdRegex.test(normalized)) {
+      return Promise.reject(new Error('Invalid machine ID format (must be 32 hexadecimal characters, hyphens allowed)'));
     }
     return Promise.resolve();
+  };
+
+  const normalizeMachineId = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const normalized = e.target.value.replace(/-/g, '');
+    form.setFieldValue('machine_id', normalized);
   };
 
   return (
@@ -103,10 +109,10 @@ export const ArcadeModal = ({
           rules={[{ validator: validateMachineId }]}
         >
           <Input
-            placeholder="32 character hex (no '-')"
+            placeholder="32 character hex (hyphens will be auto-removed)"
             disabled={mode === 'edit'}
             style={{ fontFamily: 'monospace', textTransform: 'lowercase' }}
-            maxLength={32}
+            onChange={normalizeMachineId}
           />
         </Form.Item>
 

@@ -19,7 +19,10 @@ where
             .and_then(|value| value.to_str().ok())
             .ok_or(AppError::InvalidMachineId)?;
 
-        Ok(MachineId(machine_id.to_string()))
+        // Normalize machine ID by stripping hyphens (support both formats)
+        let normalized = machine_id.replace("-", "");
+
+        Ok(MachineId(normalized))
     }
 }
 

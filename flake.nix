@@ -71,6 +71,10 @@
             # Google Cloud SDK (for alakazam GCS)
             google-cloud-sdk
 
+            # Docker (for building and deploying containers)
+            docker
+            docker-compose
+
             # Build dependencies
             pkg-config
             openssl
