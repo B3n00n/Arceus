@@ -78,6 +78,7 @@ export interface CreateArcadeRequest {
 export interface UpdateArcadeRequest {
   name: string;
   status: string;
+  channel_id?: number;
 }
 
 export interface UpdateArcadeChannelRequest {

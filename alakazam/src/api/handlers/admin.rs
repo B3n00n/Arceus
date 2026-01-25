@@ -31,6 +31,7 @@ pub struct CreateArcadeRequest {
 pub struct UpdateArcadeRequest {
     pub name: String,
     pub status: String,
+    pub channel_id: Option<i32>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -149,7 +150,13 @@ pub async fn update_arcade(
     Path(id): Path<i32>,
     Json(payload): Json<UpdateArcadeRequest>,
 ) -> Result<Json<Arcade>> {
-    let arcade = service.update_arcade(id, &payload.name, &payload.status).await?;
+    let mut arcade = service.update_arcade(id, &payload.name, &payload.status).await?;
+
+    // Update channel if provided
+    if let Some(channel_id) = payload.channel_id {
+        arcade = service.update_arcade_channel(id, channel_id).await?;
+    }
+
     Ok(Json(arcade))
 }
 
