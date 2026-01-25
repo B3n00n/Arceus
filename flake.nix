@@ -21,7 +21,7 @@
         # Unified Rust toolchain for all projects (Tauri + backend)
         rustToolchain = pkgs.rust-bin.stable.latest.default.override {
           extensions = [ "rust-src" "rust-analyzer" ];
-          targets = [ "x86_64-unknown-linux-gnu" ];
+          targets = [ "x86_64-unknown-linux-gnu" "x86_64-pc-windows-gnu" ];
         };
 
         # Tauri dependencies
@@ -74,6 +74,10 @@
             # Build dependencies
             pkg-config
             openssl
+
+            # Windows cross-compilation
+            pkgsCross.mingwW64.stdenv.cc
+            pkgsCross.mingwW64.windows.pthreads
           ] ++ tauriDeps;
 
           shellHook = ''
