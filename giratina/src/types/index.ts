@@ -18,6 +18,7 @@ export interface Arcade {
   machine_id: string;
   status: string;
   channel_id: number;
+  installed_games?: Record<string, string>;
   last_seen_at: string | null;
   created_at: string;
 }

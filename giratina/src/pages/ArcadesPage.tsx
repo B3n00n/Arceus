@@ -24,6 +24,7 @@ import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { useArcades, useCreateArcade, useUpdateArcade, useDeleteArcade } from '../hooks/useArcades';
 import { useChannels } from '../hooks/useChannels';
+import { useGames } from '../hooks/useGames';
 import { ArcadeModal } from '../components/ArcadeModal';
 import { ChannelBadge } from '../components/ChannelBadge';
 import type { Arcade } from '../types';
@@ -47,6 +48,7 @@ export const ArcadesPage = () => {
 
   const { data: arcades = [], isLoading, refetch } = useArcades();
   const { data: channels = [] } = useChannels();
+  const { data: games = [] } = useGames();
   const createMutation = useCreateArcade();
   const updateMutation = useUpdateArcade();
   const deleteMutation = useDeleteArcade();
@@ -54,6 +56,11 @@ export const ArcadesPage = () => {
   const getChannelName = (channelId: number) => {
     const channel = channels.find(c => c.id === channelId);
     return channel ? channel.name : 'Unknown';
+  };
+
+  const getGameName = (gameId: string) => {
+    const game = games.find(g => g.id === parseInt(gameId));
+    return game ? game.name : `Game #${gameId}`;
   };
 
   const filteredArcades = useMemo(() => {
@@ -102,6 +109,107 @@ export const ArcadesPage = () => {
   const handleModalCancel = () => {
     setModalOpen(false);
     setSelectedArcade(undefined);
+  };
+
+  const expandedRowRender = (arcade: Arcade) => {
+    if (!arcade.installed_games || Object.keys(arcade.installed_games).length === 0) {
+      return (
+        <div
+          style={{
+            padding: '24px',
+            textAlign: 'center',
+            backgroundColor: '#0f0f0f',
+            borderTop: '1px solid #1e293b',
+          }}
+        >
+          <span style={{ color: '#64748b', fontSize: 14 }}>
+            No games installed on this arcade
+          </span>
+        </div>
+      );
+    }
+
+    return (
+      <div
+        style={{
+          padding: '20px 24px',
+          backgroundColor: '#0f0f0f',
+          borderTop: '1px solid #1e293b',
+        }}
+      >
+        <div
+          style={{
+            marginBottom: 16,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+          }}
+        >
+          <span style={{ color: '#94a3b8', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            Installed Games
+          </span>
+          <Tag
+            color="blue"
+            style={{
+              margin: 0,
+              fontSize: 11,
+              padding: '2px 8px',
+              fontWeight: 600,
+            }}
+          >
+            {Object.keys(arcade.installed_games).length}
+          </Tag>
+        </div>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+            gap: 12,
+          }}
+        >
+          {Object.entries(arcade.installed_games).map(([gameId, version]) => (
+            <div
+              key={gameId}
+              style={{
+                padding: '12px 16px',
+                backgroundColor: '#1a1a1a',
+                border: '1px solid #2a2a2a',
+                borderRadius: 8,
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#1e1e2e';
+                e.currentTarget.style.borderColor = '#1e3a8a';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#1a1a1a';
+                e.currentTarget.style.borderColor = '#2a2a2a';
+              }}
+            >
+              <span style={{ color: '#e2e8f0', fontSize: 14, fontWeight: 500 }}>
+                {getGameName(gameId)}
+              </span>
+              <Tag
+                color="processing"
+                style={{
+                  margin: 0,
+                  fontSize: 12,
+                  padding: '4px 10px',
+                  fontWeight: 600,
+                  fontFamily: 'monospace',
+                  borderRadius: 6,
+                }}
+              >
+                {version}
+              </Tag>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   };
 
   const columns: ColumnsType<Arcade> = [
@@ -327,6 +435,11 @@ export const ArcadesPage = () => {
           dataSource={filteredArcades}
           loading={isLoading}
           rowKey="id"
+          expandable={{
+            expandedRowRender,
+            rowExpandable: (record) =>
+              !!record.installed_games && Object.keys(record.installed_games).length > 0,
+          }}
           pagination={{
             pageSize: 10,
             showTotal: (total) => `${total} arcade${total !== 1 ? 's' : ''} total`,

@@ -5,7 +5,7 @@ use crate::{
 };
 use axum::{extract::{Path, State}, Json};
 use chrono::Utc;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 /// Response for game download request
@@ -78,4 +78,28 @@ pub async fn get_game_download_urls(
         background_image_url,
         expires_at,
     }))
+}
+
+/// Request for reporting installed games
+#[derive(Debug, Deserialize)]
+pub struct ReportInstallationsRequest {
+    pub installed_games: serde_json::Value,
+}
+
+/// POST /api/arcade/games/status
+/// Arcade reports all its installed games and versions
+pub async fn report_installations(
+    State(arcade_service): State<Arc<ArcadeService>>,
+    MachineId(machine_id): MachineId,
+    Json(payload): Json<ReportInstallationsRequest>,
+) -> Result<Json<serde_json::Value>> {
+    // Authenticate and update installations
+    arcade_service
+        .update_installed_games(&machine_id, payload.installed_games)
+        .await?;
+
+    Ok(Json(serde_json::json!({
+        "success": true,
+        "message": "Installations updated successfully"
+    })))
 }

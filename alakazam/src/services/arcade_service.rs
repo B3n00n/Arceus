@@ -81,4 +81,28 @@ impl ArcadeService {
 
         Ok(responses)
     }
+
+    /// Update the installed games JSON for an arcade
+    pub async fn update_installed_games(
+        &self,
+        machine_id: &str,
+        games_json: serde_json::Value,
+    ) -> Result<()> {
+        // Authenticate arcade
+        let arcade = self
+            .arcade_repo
+            .find_by_machine_id(machine_id)
+            .await?
+            .ok_or(AppError::InvalidMachineId)?;
+
+        // Update the installed_games field
+        self.arcade_repo
+            .update_installed_games(arcade.id, games_json)
+            .await?;
+
+        // Update last seen
+        self.arcade_repo.update_last_seen(arcade.id).await?;
+
+        Ok(())
+    }
 }

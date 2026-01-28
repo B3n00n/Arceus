@@ -320,26 +320,37 @@ impl GameVersionRepository for FsGameVersionRepository {
 
     async fn report_version_status(
         &self,
-        game_id: i32,
-        version_id: Option<i32>,
+        _game_id: i32,
+        _version_id: Option<i32>,
     ) -> Result<(), GameVersionError> {
-        let url = format!(
-            "{}/api/arcade/games/{}/status",
-            self.alakazam_config.base_url, game_id
-        );
-        tracing::info!("Reporting version status for game {}", game_id);
+        // Report all installed games to the server
+        let url = format!("{}/api/arcade/games/status", self.alakazam_config.base_url);
 
         // Get machine ID for authentication
         let machine_id = get_machine_id().map_err(|e| {
             GameVersionError::Network(format!("Failed to get machine ID: {}", e))
         })?;
 
+        // Scan all installed games
+        let installed_games = self.scan_installed_games().await?;
+
+        // Build JSON object: {"game_id": "version"}
+        let mut games_map = serde_json::Map::new();
+        for game in installed_games {
+            games_map.insert(
+                game.game_id.to_string(),
+                serde_json::Value::String(format!("v{}", game.installed_version)),
+            );
+        }
+
+        tracing::info!("Reporting {} installed games to server", games_map.len());
+
         let response = self
             .http_client
             .post(&url)
             .header("X-Machine-ID", machine_id)
             .json(&serde_json::json!({
-                "current_version_id": version_id
+                "installed_games": serde_json::Value::Object(games_map)
             }))
             .send()
             .await
@@ -347,12 +358,12 @@ impl GameVersionRepository for FsGameVersionRepository {
 
         if !response.status().is_success() {
             return Err(GameVersionError::Network(format!(
-                "HTTP {}: Failed to report version status",
+                "HTTP {}: Failed to report installations",
                 response.status()
             )));
         }
 
-        tracing::info!("Successfully reported version status");
+        tracing::info!("Successfully reported installations");
         Ok(())
     }
 

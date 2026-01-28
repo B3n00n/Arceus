@@ -18,13 +18,17 @@ pub fn create_api_router(
         .route("/arcade/games", get(handlers::get_arcade_games))
         .with_state(arcade_service.clone());
 
-    // Game download endpoint
+    // Game download and status endpoints
     let game_download_router = Router::new()
         .route(
             "/arcade/games/{game_id}/download",
             get(handlers::get_game_download_urls),
         )
         .with_state((arcade_service.clone(), gcs_service.clone()));
+
+    let game_status_router = Router::new()
+        .route("/arcade/games/status", post(handlers::report_installations))
+        .with_state(arcade_service.clone());
 
     // Snorlax endpoint
     let snorlax_router = Router::new()
@@ -123,6 +127,7 @@ pub fn create_api_router(
     // Merge routers
     arcade_router
         .merge(game_download_router)
+        .merge(game_status_router)
         .merge(snorlax_router)
         .merge(admin_router)
         .merge(game_gcs_router)

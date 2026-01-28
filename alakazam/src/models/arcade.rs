@@ -1,5 +1,6 @@
 use serde::Serialize;
 use sqlx::types::chrono::{DateTime, Utc};
+use sqlx::types::JsonValue;
 
 /// Arcade entity from database
 #[derive(Debug, Clone, Serialize, sqlx::FromRow)]
@@ -9,6 +10,8 @@ pub struct Arcade {
     pub machine_id: String,
     pub status: String,
     pub channel_id: i32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub installed_games: Option<JsonValue>,
     pub last_seen_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
 }

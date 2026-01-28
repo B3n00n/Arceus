@@ -53,6 +53,7 @@ CREATE TABLE arcades (
     machine_id VARCHAR(255) UNIQUE NOT NULL,  -- Machine ID format: 32-char hex string
     status VARCHAR(50) NOT NULL DEFAULT 'active',  -- active, inactive, maintenance
     channel_id INTEGER NOT NULL REFERENCES release_channels(id) ON DELETE RESTRICT DEFAULT 1,  -- FK to release_channels (defaults to production)
+    installed_games JSONB DEFAULT '{}'::jsonb,  -- Map of game_id to version: {"1": "v0.8.2", "2": "v1.2.0"}
     last_seen_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
@@ -65,6 +66,7 @@ CREATE INDEX idx_arcades_channel_id ON arcades(channel_id);
 COMMENT ON TABLE arcades IS 'Physical VR arcade installations worldwide';
 COMMENT ON COLUMN arcades.machine_id IS 'Unique machine identifier (stable across network adapter changes)';
 COMMENT ON COLUMN arcades.channel_id IS 'Release channel for this arcade (determines which game versions are available)';
+COMMENT ON COLUMN arcades.installed_games IS 'JSON map of installed games: {"game_id": "version_string"}';
 
 -- ============================================================================
 -- GAMES TABLE
