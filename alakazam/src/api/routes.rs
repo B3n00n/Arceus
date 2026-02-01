@@ -80,6 +80,7 @@ pub fn create_api_router(
         .route("/admin/games", get(handlers::list_games))
         .route("/admin/games/{game_id}/versions/{version_id}", delete(handlers::delete_game_version))
         .route("/admin/games/{game_id}/versions/generate-upload-url", post(handlers::generate_game_version_upload_url))
+        .route("/admin/games/{game_id}/versions/generate-batch-upload-urls", post(handlers::generate_batch_upload_urls))
         .route("/admin/games/{game_id}/background/generate-upload-url", post(handlers::generate_background_upload_url))
         .with_state((admin_service.clone(), gcs_service.clone()));
 

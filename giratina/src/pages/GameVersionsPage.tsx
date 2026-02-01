@@ -99,25 +99,27 @@ export const GameVersionsPage = () => {
 
   const handleModalSubmit = async (values: any) => {
     try {
-      const { game_id, version, file } = values;
+      const { game_id, version, files } = values;
 
-      if (!file) {
-        message.error('Please select a ZIP file');
+      if (!files || files.length === 0) {
+        message.error('Please select a folder');
         return;
       }
 
       setIsUploading(true);
       setModalOpen(false);
 
+      const totalFiles = files.length;
+
       // Show progress modal
       const progressModal = modal.info({
         title: 'Uploading Game Version',
         content: (
           <div>
-            <p>Uploading {file.name}...</p>
+            <p>Preparing to upload {totalFiles} files...</p>
             <Progress percent={0} status="active" />
             <p style={{ marginTop: 16, color: '#666', fontSize: 12 }}>
-              This may take several minutes for large files. Do not close this window.
+              This may take several minutes for large uploads. Do not close this window.
             </p>
           </div>
         ),
@@ -127,16 +129,16 @@ export const GameVersionsPage = () => {
       });
 
       try {
-        await api.uploadGameVersion(game_id, version, file, (progress) => {
+        await api.uploadGameVersion(game_id, version, files, (progress, filesUploaded, total) => {
           progressModal.update({
             content: (
               <div>
-                <p>Uploading {file.name}...</p>
+                <p>Uploading files... ({filesUploaded}/{total})</p>
                 <Progress percent={progress} status="active" />
                 <p style={{ marginTop: 16, color: '#666', fontSize: 12 }}>
                   {progress < 100
-                    ? 'This may take several minutes for large files. Do not close this window.'
-                    : 'Processing... The ZIP will be extracted automatically.'}
+                    ? 'This may take several minutes for large uploads. Do not close this window.'
+                    : 'Finalizing upload...'}
                 </p>
               </div>
             ),
@@ -144,7 +146,7 @@ export const GameVersionsPage = () => {
         });
 
         progressModal.destroy();
-        message.success(`Version ${version} uploaded successfully! Files will be extracted shortly.`);
+        message.success(`Version ${version} uploaded successfully!`);
         refetch();
       } catch (error: any) {
         progressModal.destroy();

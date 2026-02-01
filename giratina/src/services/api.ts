@@ -142,26 +142,59 @@ class AlakazamAPI {
   async uploadGameVersion(
     gameId: number,
     version: string,
-    file: File,
-    onProgress?: (progress: number) => void
+    files: { file: File; relativePath: string }[],
+    onProgress?: (progress: number, filesUploaded: number, totalFiles: number) => void
   ): Promise<GameVersion> {
-    const urlResponse = await this.client.post(
-      `/api/admin/games/${gameId}/versions/generate-upload-url`,
-      { version }
-    );
-    const { upload_url, gcs_path } = urlResponse.data;
+    const filePaths = files.map(f => f.relativePath);
 
-    await axios.put(upload_url, file, {
-      headers: {
-        'Content-Type': 'application/zip',
-      },
-      onUploadProgress: (progressEvent) => {
-        if (onProgress && progressEvent.total) {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          onProgress(percentCompleted);
-        }
-      },
-    });
+    // Get batch signed URLs
+    const urlResponse = await this.client.post(
+      `/api/admin/games/${gameId}/versions/generate-batch-upload-urls`,
+      { version, files: filePaths }
+    );
+    const { gcs_path, files: fileUrls } = urlResponse.data as {
+      gcs_path: string;
+      files: { path: string; upload_url: string }[];
+    };
+
+    const urlMap = new Map(fileUrls.map(f => [f.path, f.upload_url]));
+
+    const totalBytes = files.reduce((sum, f) => sum + f.file.size, 0);
+    const fileProgress = new Map<string, number>();
+    let completedFiles = 0;
+
+    const updateProgress = () => {
+      const uploadedBytes = Array.from(fileProgress.values()).reduce((sum, bytes) => sum + bytes, 0);
+      const percent = totalBytes > 0 ? Math.round((uploadedBytes * 100) / totalBytes) : 0;
+      onProgress?.(percent, completedFiles, files.length);
+    };
+
+    const CONCURRENCY = 6;
+    const uploadFile = async (fileInfo: { file: File; relativePath: string }) => {
+      const uploadUrl = urlMap.get(fileInfo.relativePath);
+      if (!uploadUrl) {
+        throw new Error(`No upload URL for ${fileInfo.relativePath}`);
+      }
+
+      await axios.put(uploadUrl, fileInfo.file, {
+        headers: {
+          'Content-Type': this.getContentType(fileInfo.relativePath),
+        },
+        onUploadProgress: (progressEvent) => {
+          fileProgress.set(fileInfo.relativePath, progressEvent.loaded);
+          updateProgress();
+        },
+      });
+
+      fileProgress.set(fileInfo.relativePath, fileInfo.file.size);
+      completedFiles++;
+      updateProgress();
+    };
+
+    for (let i = 0; i < files.length; i += CONCURRENCY) {
+      const batch = files.slice(i, i + CONCURRENCY);
+      await Promise.all(batch.map(uploadFile));
+    }
 
     const confirmResponse = await this.client.post(
       `/api/admin/games/${gameId}/versions/confirm-upload`,
@@ -169,6 +202,30 @@ class AlakazamAPI {
     );
 
     return confirmResponse.data;
+  }
+
+  private getContentType(filename: string): string {
+    const ext = filename.split('.').pop()?.toLowerCase() || '';
+    const contentTypes: Record<string, string> = {
+      'apk': 'application/vnd.android.package-archive',
+      'obb': 'application/octet-stream',
+      'zip': 'application/zip',
+      'json': 'application/json',
+      'txt': 'text/plain',
+      'xml': 'application/xml',
+      'png': 'image/png',
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'gif': 'image/gif',
+      'mp4': 'video/mp4',
+      'mp3': 'audio/mpeg',
+      'wav': 'audio/wav',
+      'exe': 'application/x-msdownload',
+      'dll': 'application/x-msdownload',
+      'bundle': 'application/octet-stream',
+      'data': 'application/octet-stream',
+    };
+    return contentTypes[ext] || 'application/octet-stream';
   }
 
   async getSnorlaxVersions(): Promise<SnorlaxVersion[]> {

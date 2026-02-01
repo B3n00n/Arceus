@@ -84,6 +84,24 @@ pub struct GenerateUploadUrlResponse {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct GenerateBatchUploadUrlsRequest {
+    pub version: String,
+    pub files: Vec<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct FileUploadUrl {
+    pub path: String,
+    pub upload_url: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct GenerateBatchUploadUrlsResponse {
+    pub gcs_path: String,
+    pub files: Vec<FileUploadUrl>,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct ConfirmGameVersionUploadRequest {
     pub version: String,
     pub gcs_path: String,
@@ -461,6 +479,47 @@ pub async fn generate_game_version_upload_url(
     Ok(Json(GenerateUploadUrlResponse {
         upload_url,
         gcs_path: gcs_folder,
+    }))
+}
+
+/// POST /api/admin/games/{game_id}/versions/generate-batch-upload-urls
+pub async fn generate_batch_upload_urls(
+    State((admin_service, gcs_service)): State<(Arc<AdminService>, Arc<GcsService>)>,
+    _user: IapUser,
+    Path(game_id): Path<i32>,
+    Json(payload): Json<GenerateBatchUploadUrlsRequest>,
+) -> Result<Json<GenerateBatchUploadUrlsResponse>> {
+    let game = admin_service.get_game(game_id).await?;
+
+    if !payload.version.split('.').all(|part| part.parse::<u32>().is_ok()) {
+        return Err(AppError::BadRequest("Version must be in format X.Y.Z (e.g., 1.0.0)".to_string()));
+    }
+
+    if payload.files.is_empty() {
+        return Err(AppError::BadRequest("No files provided".to_string()));
+    }
+
+    let gcs_folder = format!("{}/{}", game.name, payload.version);
+
+    let url_futures: Vec<_> = payload.files.iter().map(|file_path| {
+        let gcs_service = gcs_service.clone();
+        let full_path = format!("{}/{}", gcs_folder, file_path);
+        let file_path = file_path.clone();
+        async move {
+            let upload_url = gcs_service.generate_signed_upload_url(&full_path, 3600).await?;
+            Ok::<FileUploadUrl, AppError>(FileUploadUrl {
+                path: file_path,
+                upload_url,
+            })
+        }
+    }).collect();
+
+    let results = futures::future::join_all(url_futures).await;
+    let files: Result<Vec<FileUploadUrl>> = results.into_iter().collect();
+
+    Ok(Json(GenerateBatchUploadUrlsResponse {
+        gcs_path: gcs_folder,
+        files: files?,
     }))
 }
 

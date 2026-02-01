@@ -1,11 +1,15 @@
-import { useEffect, useState } from 'react';
-import { Modal, Form, Input, Select, Upload, Button, Typography, Alert } from 'antd';
-import { InboxOutlined } from '@ant-design/icons';
+import { useEffect, useState, useRef } from 'react';
+import { Modal, Form, Input, Select, Button, Typography, Alert } from 'antd';
+import { FolderOpenOutlined } from '@ant-design/icons';
 import { useGames } from '../hooks/useGames';
 import type { GameVersion } from '../types';
 
-const { Dragger } = Upload;
 const { Text } = Typography;
+
+interface FileWithPath {
+  file: File;
+  relativePath: string;
+}
 
 interface GameVersionModalProps {
   open: boolean;
@@ -26,7 +30,8 @@ export const GameVersionModal = ({
 }: GameVersionModalProps) => {
   const [form] = Form.useForm();
   const { data: games = [] } = useGames();
-  const [zipFile, setZipFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<FileWithPath[]>([]);
+  const folderInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (open) {
@@ -35,10 +40,10 @@ export const GameVersionModal = ({
           game_id: version.game_id,
           version: version.version,
         });
-        setZipFile(null);
+        setSelectedFiles([]);
       } else {
         form.resetFields();
-        setZipFile(null);
+        setSelectedFiles([]);
       }
     }
   }, [open, mode, version, form]);
@@ -47,44 +52,42 @@ export const GameVersionModal = ({
     try {
       const values = await form.validateFields();
 
-      // For create mode, file is required
-      if (mode === 'create' && !zipFile) {
+      if (mode === 'create' && selectedFiles.length === 0) {
         return;
       }
 
       onSubmit({
         ...values,
-        file: zipFile,
+        files: selectedFiles,
       });
     } catch {
       // Validation failed
     }
   };
 
-  const beforeUpload = (file: File) => {
-    // Only allow .zip files
-    const isZip = file.type === 'application/zip' ||
-                  file.type === 'application/x-zip-compressed' ||
-                  file.name.toLowerCase().endsWith('.zip');
+  const handleFolderSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const fileList = event.target.files;
+    if (!fileList || fileList.length === 0) return;
 
-    if (!isZip) {
-      return Upload.LIST_IGNORE;
+    const files: FileWithPath[] = [];
+
+    for (let i = 0; i < fileList.length; i++) {
+      const file = fileList[i];
+      const fullPath = file.webkitRelativePath;
+      const parts = fullPath.split('/');
+      const relativePath = parts.slice(1).join('/');
+
+      if (relativePath) {
+        files.push({ file, relativePath });
+      }
     }
 
-    // Max 20GB
-    const maxSize = 20 * 1024 * 1024 * 1024;
-    if (file.size > maxSize) {
-      return Upload.LIST_IGNORE;
-    }
-
-    setZipFile(file);
-
-    // Prevent auto-upload
-    return false;
+    setSelectedFiles(files);
+    event.target.value = '';
   };
 
-  const resetUpload = () => {
-    setZipFile(null);
+  const resetFolder = () => {
+    setSelectedFiles([]);
   };
 
   const formatFileSize = (bytes: number): string => {
@@ -94,6 +97,8 @@ export const GameVersionModal = ({
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
   };
+
+  const totalSize = selectedFiles.reduce((sum, f) => sum + f.file.size, 0);
 
   return (
     <Modal
@@ -106,7 +111,7 @@ export const GameVersionModal = ({
       width={600}
       okText={mode === 'create' ? 'Upload' : 'Update'}
       okButtonProps={{
-        disabled: mode === 'create' && !zipFile,
+        disabled: mode === 'create' && selectedFiles.length === 0,
       }}
     >
       <Form
@@ -148,26 +153,52 @@ export const GameVersionModal = ({
 
         {mode === 'create' && (
           <Form.Item
-            label="Game ZIP File"
+            label="Game Folder"
             required
-            help={!zipFile ? "Upload a ZIP file containing all game files (max 20GB)" : undefined}
+            help={selectedFiles.length === 0 ? "Select a folder containing all game files" : undefined}
           >
-            {!zipFile ? (
-              <Dragger
-                beforeUpload={beforeUpload}
-                maxCount={1}
-                accept=".zip"
-                disabled={loading}
-                showUploadList={false}
+            {/* Hidden folder input */}
+            <input
+              ref={folderInputRef}
+              type="file"
+              // @ts-expect-error - webkitdirectory is not in the types
+              webkitdirectory=""
+              directory=""
+              multiple
+              onChange={handleFolderSelect}
+              style={{ display: 'none' }}
+              disabled={loading}
+            />
+
+            {selectedFiles.length === 0 ? (
+              <div
+                onClick={() => folderInputRef.current?.click()}
+                style={{
+                  padding: '32px 20px',
+                  border: '1px dashed #424242',
+                  borderRadius: '8px',
+                  backgroundColor: '#1a1a1a',
+                  textAlign: 'center',
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                  transition: 'border-color 0.2s',
+                }}
+                onMouseEnter={(e) => {
+                  if (!loading) e.currentTarget.style.borderColor = '#1890ff';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = '#424242';
+                }}
               >
-                <p className="ant-upload-drag-icon">
-                  <InboxOutlined />
+                <div style={{ marginBottom: '8px' }}>
+                  <FolderOpenOutlined style={{ fontSize: 48, color: '#1890ff' }} />
+                </div>
+                <p style={{ margin: '8px 0', fontSize: 16 }}>
+                  Click to select a folder
                 </p>
-                <p className="ant-upload-text">Click or drag ZIP file to this area</p>
-                <p className="ant-upload-hint">
-                  The ZIP will be automatically extracted on GCS. Max file size: 20GB
+                <p style={{ margin: 0, color: '#666', fontSize: 12 }}>
+                  All files in the folder will be uploaded directly to GCS
                 </p>
-              </Dragger>
+              </div>
             ) : (
               <div style={{
                 padding: '20px',
@@ -177,13 +208,16 @@ export const GameVersionModal = ({
                 textAlign: 'center',
               }}>
                 <div style={{ marginBottom: '8px' }}>
-                  <Text strong>{zipFile.name}</Text>
+                  <FolderOpenOutlined style={{ fontSize: 32, color: '#52c41a' }} />
+                </div>
+                <div style={{ marginBottom: '8px' }}>
+                  <Text strong>{selectedFiles.length} files selected</Text>
                 </div>
                 <div style={{ marginBottom: '12px' }}>
-                  <Text type="secondary">Size: {formatFileSize(zipFile.size)}</Text>
+                  <Text type="secondary">Total size: {formatFileSize(totalSize)}</Text>
                 </div>
-                <Button onClick={resetUpload}>
-                  Change File
+                <Button onClick={resetFolder}>
+                  Change Folder
                 </Button>
               </div>
             )}
