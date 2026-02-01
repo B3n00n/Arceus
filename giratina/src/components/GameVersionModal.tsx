@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Modal, Form, Input, Select, Upload, Alert, Typography } from 'antd';
+import { Modal, Form, Input, Select, Upload, Button, Typography, Alert } from 'antd';
 import { InboxOutlined } from '@ant-design/icons';
-import type { UploadFile } from 'antd';
 import { useGames } from '../hooks/useGames';
 import type { GameVersion } from '../types';
 
@@ -28,7 +27,6 @@ export const GameVersionModal = ({
   const [form] = Form.useForm();
   const { data: games = [] } = useGames();
   const [zipFile, setZipFile] = useState<File | null>(null);
-  const [fileList, setFileList] = useState<UploadFile[]>([]);
 
   useEffect(() => {
     if (open) {
@@ -38,11 +36,9 @@ export const GameVersionModal = ({
           version: version.version,
         });
         setZipFile(null);
-        setFileList([]);
       } else {
         form.resetFields();
         setZipFile(null);
-        setFileList([]);
       }
     }
   }, [open, mode, version, form]);
@@ -82,20 +78,13 @@ export const GameVersionModal = ({
     }
 
     setZipFile(file);
-    setFileList([{
-      uid: file.name,
-      name: file.name,
-      status: 'done',
-      size: file.size,
-    }]);
 
     // Prevent auto-upload
     return false;
   };
 
-  const handleRemove = () => {
+  const resetUpload = () => {
     setZipFile(null);
-    setFileList([]);
   };
 
   const formatFileSize = (bytes: number): string => {
@@ -158,19 +147,18 @@ export const GameVersionModal = ({
         </Form.Item>
 
         {mode === 'create' && (
-          <>
-            <Form.Item
-              label="Game ZIP File"
-              required
-              help="Upload a ZIP file containing all game files (max 20GB)"
-            >
+          <Form.Item
+            label="Game ZIP File"
+            required
+            help={!zipFile ? "Upload a ZIP file containing all game files (max 20GB)" : undefined}
+          >
+            {!zipFile ? (
               <Dragger
                 beforeUpload={beforeUpload}
-                onRemove={handleRemove}
-                fileList={fileList}
                 maxCount={1}
                 accept=".zip"
                 disabled={loading}
+                showUploadList={false}
               >
                 <p className="ant-upload-drag-icon">
                   <InboxOutlined />
@@ -180,24 +168,26 @@ export const GameVersionModal = ({
                   The ZIP will be automatically extracted on GCS. Max file size: 20GB
                 </p>
               </Dragger>
-            </Form.Item>
-
-            {zipFile && (
-              <Alert
-                title="File ready for upload"
-                description={
-                  <div>
-                    <Text strong>{zipFile.name}</Text>
-                    <br />
-                    <Text type="secondary">Size: {formatFileSize(zipFile.size)}</Text>
-                  </div>
-                }
-                type="success"
-                showIcon
-                style={{ marginTop: 16 }}
-              />
+            ) : (
+              <div style={{
+                padding: '20px',
+                border: '1px solid #424242',
+                borderRadius: '8px',
+                backgroundColor: '#1a1a1a',
+                textAlign: 'center',
+              }}>
+                <div style={{ marginBottom: '8px' }}>
+                  <Text strong>{zipFile.name}</Text>
+                </div>
+                <div style={{ marginBottom: '12px' }}>
+                  <Text type="secondary">Size: {formatFileSize(zipFile.size)}</Text>
+                </div>
+                <Button onClick={resetUpload}>
+                  Change File
+                </Button>
+              </div>
             )}
-          </>
+          </Form.Item>
         )}
 
         {mode === 'edit' && (
