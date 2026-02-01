@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Modal, Form, Input, Select } from 'antd';
 import type { Arcade } from '../types';
 import { useChannels } from '../hooks/useChannels';
+import { GameSelector } from './GameSelector';
 
 interface ArcadeModalProps {
   open: boolean;
@@ -42,6 +43,7 @@ export const ArcadeModal = ({
           machine_id: arcade.machine_id,
           status: arcade.status,
           channel_id: arcade.channel_id,
+          game_ids: arcade.assigned_game_ids || [],
         });
       } else {
         form.resetFields();
@@ -89,7 +91,7 @@ export const ArcadeModal = ({
       <Form
         form={form}
         layout="vertical"
-        initialValues={{ status: 'active', channel_id: 1 }}
+        initialValues={{ status: 'active', channel_id: 1, game_ids: [] }}
       >
         <Form.Item
           name="name"
@@ -134,6 +136,14 @@ export const ArcadeModal = ({
             loading={channelsLoading}
             placeholder="Select release channel"
           />
+        </Form.Item>
+
+        <Form.Item
+          name="game_ids"
+          label="Game Access"
+          rules={[{ required: true, message: 'Please select at least one game', type: 'array', min: 1 }]}
+        >
+          <GameSelector />
         </Form.Item>
       </Form>
     </Modal>

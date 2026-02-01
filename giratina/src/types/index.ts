@@ -18,6 +18,7 @@ export interface Arcade {
   machine_id: string;
   status: string;
   channel_id: number;
+  assigned_game_ids: number[];
   installed_games?: Record<string, string>;
   last_seen_at: string | null;
   created_at: string;
@@ -74,12 +75,14 @@ export interface CreateArcadeRequest {
   name: string;
   machine_id: string;
   channel_id: number;
+  game_ids: number[];
 }
 
 export interface UpdateArcadeRequest {
   name: string;
   status: string;
   channel_id?: number;
+  game_ids?: number[];
 }
 
 export interface UpdateArcadeChannelRequest {

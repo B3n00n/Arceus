@@ -56,6 +56,20 @@ impl AdminService {
         self.arcade_repo.delete(id).await
     }
 
+    pub async fn get_arcade_with_games(&self, id: i32) -> Result<(Arcade, Vec<i32>)> {
+        let arcade = self.get_arcade(id).await?;
+        let game_ids = self.arcade_repo.get_assigned_game_ids(id).await?;
+        Ok((arcade, game_ids))
+    }
+
+    pub async fn get_assigned_game_ids(&self, arcade_id: i32) -> Result<Vec<i32>> {
+        self.arcade_repo.get_assigned_game_ids(arcade_id).await
+    }
+
+    pub async fn set_game_assignments(&self, arcade_id: i32, game_ids: &[i32]) -> Result<()> {
+        self.arcade_repo.set_game_assignments(arcade_id, game_ids).await
+    }
+
     pub async fn update_arcade_channel(&self, arcade_id: i32, channel_id: i32) -> Result<Arcade> {
         // Verify arcade exists
         self.get_arcade(arcade_id).await?;

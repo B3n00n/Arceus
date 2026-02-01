@@ -84,6 +84,22 @@ CREATE INDEX idx_games_name ON games(name);
 COMMENT ON TABLE games IS 'VR games available in the system';
 
 -- ============================================================================
+-- ARCADE_GAME_ASSIGNMENTS TABLE
+-- Explicit game assignments per arcade. Arcade only gets assigned games.
+-- ============================================================================
+CREATE TABLE arcade_game_assignments (
+    arcade_id INTEGER NOT NULL REFERENCES arcades(id) ON DELETE CASCADE,
+    game_id INTEGER NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (arcade_id, game_id)
+);
+
+CREATE INDEX idx_arcade_game_assignments_arcade_id ON arcade_game_assignments(arcade_id);
+CREATE INDEX idx_arcade_game_assignments_game_id ON arcade_game_assignments(game_id);
+
+COMMENT ON TABLE arcade_game_assignments IS 'Explicit game assignments per arcade. Arcade only receives games listed here.';
+
+-- ============================================================================
 -- GAME_VERSIONS TABLE
 -- Specific versions of games stored in GCS
 -- ============================================================================

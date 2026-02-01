@@ -25,6 +25,8 @@ pub struct CreateArcadeRequest {
     pub name: String,
     pub machine_id: String,
     pub channel_id: i32,
+    #[serde(default)]
+    pub game_ids: Vec<i32>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -32,6 +34,14 @@ pub struct UpdateArcadeRequest {
     pub name: String,
     pub status: String,
     pub channel_id: Option<i32>,
+    pub game_ids: Option<Vec<i32>>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ArcadeWithGames {
+    #[serde(flatten)]
+    pub arcade: Arcade,
+    pub assigned_game_ids: Vec<i32>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -119,18 +129,30 @@ pub async fn create_arcade(
     State(service): State<Arc<AdminService>>,
     _user: IapUser,
     Json(payload): Json<CreateArcadeRequest>,
-) -> Result<(StatusCode, Json<Arcade>)> {
+) -> Result<(StatusCode, Json<ArcadeWithGames>)> {
     let arcade = service.create_arcade(&payload.name, &payload.machine_id, payload.channel_id).await?;
-    Ok((StatusCode::CREATED, Json(arcade)))
+    service.set_game_assignments(arcade.id, &payload.game_ids).await?;
+    Ok((StatusCode::CREATED, Json(ArcadeWithGames {
+        arcade,
+        assigned_game_ids: payload.game_ids,
+    })))
 }
 
 /// GET /api/admin/arcades
 pub async fn list_arcades(
     State(service): State<Arc<AdminService>>,
     _user: IapUser,
-) -> Result<Json<Vec<Arcade>>> {
+) -> Result<Json<Vec<ArcadeWithGames>>> {
     let arcades = service.list_arcades().await?;
-    Ok(Json(arcades))
+    let mut result = Vec::with_capacity(arcades.len());
+    for arcade in arcades {
+        let game_ids = service.get_assigned_game_ids(arcade.id).await?;
+        result.push(ArcadeWithGames {
+            arcade,
+            assigned_game_ids: game_ids,
+        });
+    }
+    Ok(Json(result))
 }
 
 /// GET /api/admin/arcades/{id}
@@ -138,9 +160,12 @@ pub async fn get_arcade(
     State(service): State<Arc<AdminService>>,
     _user: IapUser,
     Path(id): Path<i32>,
-) -> Result<Json<Arcade>> {
-    let arcade = service.get_arcade(id).await?;
-    Ok(Json(arcade))
+) -> Result<Json<ArcadeWithGames>> {
+    let (arcade, game_ids) = service.get_arcade_with_games(id).await?;
+    Ok(Json(ArcadeWithGames {
+        arcade,
+        assigned_game_ids: game_ids,
+    }))
 }
 
 /// PUT /api/admin/arcades/{id}
@@ -149,7 +174,7 @@ pub async fn update_arcade(
     _user: IapUser,
     Path(id): Path<i32>,
     Json(payload): Json<UpdateArcadeRequest>,
-) -> Result<Json<Arcade>> {
+) -> Result<Json<ArcadeWithGames>> {
     let mut arcade = service.update_arcade(id, &payload.name, &payload.status).await?;
 
     // Update channel if provided
@@ -157,7 +182,16 @@ pub async fn update_arcade(
         arcade = service.update_arcade_channel(id, channel_id).await?;
     }
 
-    Ok(Json(arcade))
+    // Update game assignments if provided
+    if let Some(ref game_ids) = payload.game_ids {
+        service.set_game_assignments(id, game_ids).await?;
+    }
+
+    let assigned_game_ids = service.get_assigned_game_ids(id).await?;
+    Ok(Json(ArcadeWithGames {
+        arcade,
+        assigned_game_ids,
+    }))
 }
 
 /// DELETE /api/admin/arcades/{id}

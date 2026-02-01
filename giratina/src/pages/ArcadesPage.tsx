@@ -289,6 +289,32 @@ export const ArcadesPage = () => {
       },
     },
     {
+      title: 'Games',
+      dataIndex: 'assigned_game_ids',
+      key: 'games',
+      width: 200,
+      render: (gameIds: number[]) => {
+        if (!gameIds || gameIds.length === 0) {
+          return <span style={{ color: '#64748b' }}>None</span>;
+        }
+        const gameNames = gameIds.map(id => getGameName(String(id))).join(', ');
+        return (
+          <Tooltip title={gameNames}>
+            <span style={{
+              display: 'block',
+              maxWidth: 180,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}>
+              {gameNames}
+            </span>
+          </Tooltip>
+        );
+      },
+      sorter: (a, b) => (a.assigned_game_ids?.length || 0) - (b.assigned_game_ids?.length || 0),
+    },
+    {
       title: 'Last Seen',
       dataIndex: 'last_seen_at',
       key: 'last_seen_at',

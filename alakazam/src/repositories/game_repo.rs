@@ -248,16 +248,18 @@ impl GameRepository {
         Ok(())
     }
 
-    /// Get all game versions available to an arcade (based on arcade's channel)
+    /// Get all game versions available to an arcade
+    /// Only returns games explicitly assigned to this arcade AND published to its channel
     pub async fn get_arcade_available_games(&self, arcade_id: i32) -> Result<Vec<GameVersion>> {
         let results = sqlx::query_as::<_, GameVersion>(
-            "SELECT DISTINCT ON (gv.game_id)
+            r#"SELECT DISTINCT ON (gv.game_id)
                 gv.id, gv.game_id, gv.version, gv.gcs_path, gv.release_date
-             FROM game_versions gv
-             JOIN game_version_channels gvc ON gv.id = gvc.version_id
-             JOIN arcades a ON a.channel_id = gvc.channel_id
-             WHERE a.id = $1
-             ORDER BY gv.game_id, gv.release_date DESC"
+               FROM game_versions gv
+               JOIN game_version_channels gvc ON gv.id = gvc.version_id
+               JOIN arcades a ON a.channel_id = gvc.channel_id
+               JOIN arcade_game_assignments aga ON aga.arcade_id = a.id AND aga.game_id = gv.game_id
+               WHERE a.id = $1
+               ORDER BY gv.game_id, gv.release_date DESC"#
         )
         .bind(arcade_id)
         .fetch_all(&self.pool)

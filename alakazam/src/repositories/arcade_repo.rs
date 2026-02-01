@@ -139,4 +139,34 @@ impl ArcadeRepository {
 
         Ok(())
     }
+
+    /// Get assigned game IDs for an arcade
+    pub async fn get_assigned_game_ids(&self, arcade_id: i32) -> Result<Vec<i32>> {
+        let ids = sqlx::query_scalar::<_, i32>(
+            "SELECT game_id FROM arcade_game_assignments WHERE arcade_id = $1 ORDER BY game_id"
+        )
+        .bind(arcade_id)
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(ids)
+    }
+
+    /// Set game assignments for an arcade (replaces existing)
+    pub async fn set_game_assignments(&self, arcade_id: i32, game_ids: &[i32]) -> Result<()> {
+        sqlx::query("DELETE FROM arcade_game_assignments WHERE arcade_id = $1")
+            .bind(arcade_id)
+            .execute(&self.pool)
+            .await?;
+
+        for game_id in game_ids {
+            sqlx::query(
+                "INSERT INTO arcade_game_assignments (arcade_id, game_id) VALUES ($1, $2)"
+            )
+            .bind(arcade_id)
+            .bind(game_id)
+            .execute(&self.pool)
+            .await?;
+        }
+        Ok(())
+    }
 }
