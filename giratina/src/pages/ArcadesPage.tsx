@@ -236,6 +236,7 @@ export const ArcadesPage = () => {
       title: 'Machine ID',
       dataIndex: 'machine_id',
       key: 'machine_id',
+      width: 290,
       render: (machineId: string) => (
         <code
           style={{
