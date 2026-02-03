@@ -31,6 +31,12 @@ pub enum AppError {
     #[error("Release channel not found")]
     ChannelNotFound,
 
+    #[error("Customer not found")]
+    CustomerNotFound,
+
+    #[error("Cannot delete customer with assigned arcades")]
+    CustomerHasArcades,
+
     #[error("Snorlax version not found")]
     SnorlaxVersionNotFound,
 
@@ -61,6 +67,8 @@ impl IntoResponse for AppError {
             AppError::GameNotFound => (StatusCode::NOT_FOUND, "Game not found".to_string()),
             AppError::GameVersionNotFound => (StatusCode::NOT_FOUND, "Game version not found".to_string()),
             AppError::ChannelNotFound => (StatusCode::NOT_FOUND, "Release channel not found".to_string()),
+            AppError::CustomerNotFound => (StatusCode::NOT_FOUND, "Customer not found".to_string()),
+            AppError::CustomerHasArcades => (StatusCode::CONFLICT, "Cannot delete customer with assigned arcades".to_string()),
             AppError::SnorlaxVersionNotFound => (StatusCode::NOT_FOUND, "Snorlax version not found".to_string()),
             AppError::NoCurrentSnorlaxVersion => (StatusCode::NOT_FOUND, "No current Snorlax version set".to_string()),
             AppError::GyrosVersionNotFound => (StatusCode::NOT_FOUND, "Gyros version not found".to_string()),

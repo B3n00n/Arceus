@@ -10,6 +10,7 @@ pub struct Arcade {
     pub machine_id: String,
     pub status: String,
     pub channel_id: i32,
+    pub customer_id: Option<i32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub installed_games: Option<JsonValue>,
     pub last_seen_at: Option<DateTime<Utc>>,

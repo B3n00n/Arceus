@@ -11,6 +11,7 @@ import {
   LeftOutlined,
   RightOutlined,
   MenuOutlined,
+  TeamOutlined,
 } from '@ant-design/icons';
 
 const { Header, Content, Sider } = Layout;
@@ -40,6 +41,11 @@ export const MainLayout = () => {
   }, []);
 
   const menuItems = [
+    {
+      key: '/customers',
+      icon: <TeamOutlined />,
+      label: 'Customers',
+    },
     {
       key: '/arcades',
       icon: <DesktopOutlined />,

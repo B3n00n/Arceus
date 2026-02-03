@@ -39,6 +39,14 @@ pub fn create_api_router(
         .with_state((arcade_service, snorlax_service.clone()));
 
     let admin_router = Router::new()
+        // Customer management
+        .route("/admin/customers",
+            post(handlers::create_customer)
+                .get(handlers::list_customers))
+        .route("/admin/customers/{id}",
+            get(handlers::get_customer)
+                .put(handlers::update_customer)
+                .delete(handlers::delete_customer))
         // Arcade management
         .route("/admin/arcades",
             post(handlers::create_arcade)

@@ -1,13 +1,14 @@
 use crate::{
     error::{AppError, Result},
-    models::{Arcade, Game, GameVersion, GameVersionWithChannels, ReleaseChannel},
-    repositories::{ArcadeRepository, ChannelRepository, GameRepository},
+    models::{Arcade, Customer, Game, GameVersion, GameVersionWithChannels, ReleaseChannel},
+    repositories::{ArcadeRepository, ChannelRepository, CustomerRepository, GameRepository},
 };
 use std::sync::Arc;
 
 pub struct AdminService {
     arcade_repo: Arc<ArcadeRepository>,
     channel_repo: Arc<ChannelRepository>,
+    customer_repo: Arc<CustomerRepository>,
     game_repo: Arc<GameRepository>,
 }
 
@@ -15,11 +16,13 @@ impl AdminService {
     pub fn new(
         arcade_repo: Arc<ArcadeRepository>,
         channel_repo: Arc<ChannelRepository>,
+        customer_repo: Arc<CustomerRepository>,
         game_repo: Arc<GameRepository>,
     ) -> Self {
         Self {
             arcade_repo,
             channel_repo,
+            customer_repo,
             game_repo,
         }
     }
@@ -79,6 +82,70 @@ impl AdminService {
 
         // Update arcade's channel
         self.arcade_repo.update_channel(arcade_id, channel_id).await
+    }
+
+    // ========================================================================
+    // CUSTOMER OPERATIONS
+    // ========================================================================
+
+    pub async fn create_customer(
+        &self,
+        name: &str,
+        phone_number: Option<&str>,
+        email: Option<&str>,
+    ) -> Result<Customer> {
+        self.customer_repo.create(name, phone_number, email).await
+    }
+
+    pub async fn list_customers(&self) -> Result<Vec<Customer>> {
+        self.customer_repo.list_all().await
+    }
+
+    pub async fn get_customer(&self, id: i32) -> Result<Customer> {
+        self.customer_repo
+            .get_by_id(id)
+            .await?
+            .ok_or(AppError::CustomerNotFound)
+    }
+
+    pub async fn update_customer(
+        &self,
+        id: i32,
+        name: &str,
+        phone_number: Option<&str>,
+        email: Option<&str>,
+    ) -> Result<Customer> {
+        self.get_customer(id).await?;
+        self.customer_repo.update(id, name, phone_number, email).await
+    }
+
+    pub async fn delete_customer(&self, id: i32) -> Result<()> {
+        self.get_customer(id).await?;
+
+        // Check if customer has arcades assigned
+        if self.customer_repo.has_arcades(id).await? {
+            return Err(AppError::CustomerHasArcades);
+        }
+
+        self.customer_repo.delete(id).await
+    }
+
+    pub async fn get_customer_arcade_ids(&self, customer_id: i32) -> Result<Vec<i32>> {
+        self.customer_repo.get_arcade_ids(customer_id).await
+    }
+
+    pub async fn get_customer_with_arcade_ids(&self, id: i32) -> Result<(Customer, Vec<i32>)> {
+        let customer = self.get_customer(id).await?;
+        let arcade_ids = self.customer_repo.get_arcade_ids(id).await?;
+        Ok((customer, arcade_ids))
+    }
+
+    pub async fn set_customer_arcades(&self, customer_id: i32, arcade_ids: &[i32]) -> Result<()> {
+        // Verify customer exists
+        self.get_customer(customer_id).await?;
+
+        // Set arcade assignments
+        self.customer_repo.set_arcade_assignments(customer_id, arcade_ids).await
     }
 
     // ========================================================================

@@ -13,7 +13,7 @@ impl ArcadeRepository {
     /// Find arcade by machine ID
     pub async fn find_by_machine_id(&self, machine_id: &str) -> Result<Option<Arcade>> {
         let arcade = sqlx::query_as::<_, Arcade>(
-            "SELECT id, name, machine_id, status, channel_id, installed_games, last_seen_at, created_at
+            "SELECT id, name, machine_id, status, channel_id, customer_id, installed_games, last_seen_at, created_at
              FROM arcades
              WHERE machine_id = $1"
         )
@@ -43,7 +43,7 @@ impl ArcadeRepository {
         let arcade = sqlx::query_as::<_, Arcade>(
             "INSERT INTO arcades (name, machine_id, status, channel_id)
              VALUES ($1, $2, $3, $4)
-             RETURNING id, name, machine_id, status, channel_id, installed_games, last_seen_at, created_at"
+             RETURNING id, name, machine_id, status, channel_id, customer_id, installed_games, last_seen_at, created_at"
         )
         .bind(name)
         .bind(machine_id)
@@ -58,7 +58,7 @@ impl ArcadeRepository {
     /// List all arcades
     pub async fn list_all(&self) -> Result<Vec<Arcade>> {
         let arcades = sqlx::query_as::<_, Arcade>(
-            "SELECT id, name, machine_id, status, channel_id, installed_games, last_seen_at, created_at
+            "SELECT id, name, machine_id, status, channel_id, customer_id, installed_games, last_seen_at, created_at
              FROM arcades
              ORDER BY created_at DESC"
         )
@@ -71,7 +71,7 @@ impl ArcadeRepository {
     /// Get arcade by ID
     pub async fn get_by_id(&self, id: i32) -> Result<Option<Arcade>> {
         let arcade = sqlx::query_as::<_, Arcade>(
-            "SELECT id, name, machine_id, status, channel_id, installed_games, last_seen_at, created_at
+            "SELECT id, name, machine_id, status, channel_id, customer_id, installed_games, last_seen_at, created_at
              FROM arcades
              WHERE id = $1"
         )
@@ -88,7 +88,7 @@ impl ArcadeRepository {
             "UPDATE arcades
              SET name = $2, status = $3
              WHERE id = $1
-             RETURNING id, name, machine_id, status, channel_id, installed_games, last_seen_at, created_at"
+             RETURNING id, name, machine_id, status, channel_id, customer_id, installed_games, last_seen_at, created_at"
         )
         .bind(id)
         .bind(name)
@@ -115,7 +115,7 @@ impl ArcadeRepository {
             "UPDATE arcades
              SET channel_id = $2
              WHERE id = $1
-             RETURNING id, name, machine_id, status, channel_id, installed_games, last_seen_at, created_at"
+             RETURNING id, name, machine_id, status, channel_id, customer_id, installed_games, last_seen_at, created_at"
         )
         .bind(arcade_id)
         .bind(channel_id)

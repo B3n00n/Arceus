@@ -2,7 +2,7 @@ use crate::{
     api::IapUser,
     error::{AppError, Result},
     models::{
-        Arcade, CreateChannelRequest, Game, GameVersion, GameVersionWithChannels,
+        Arcade, CreateChannelRequest, Customer, Game, GameVersion, GameVersionWithChannels,
         GyrosVersion, PublishVersionRequest, ReleaseChannel, SnorlaxVersion,
         UpdateArcadeChannelRequest, UpdateChannelRequest,
     },
@@ -130,12 +130,125 @@ pub struct AdminActionResponse {
     pub message: String,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct CreateCustomerRequest {
+    pub name: String,
+    pub phone_number: Option<String>,
+    pub email: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateCustomerRequest {
+    pub name: String,
+    pub phone_number: Option<String>,
+    pub email: Option<String>,
+    pub arcade_ids: Option<Vec<i32>>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct CustomerWithArcades {
+    #[serde(flatten)]
+    pub customer: Customer,
+    pub arcade_ids: Vec<i32>,
+}
+
 #[derive(Debug, Serialize)]
 pub struct GameWithBackground {
     pub id: i32,
     pub name: String,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub background_url: Option<String>,
+}
+
+// ============================================================================
+// CUSTOMER ENDPOINTS
+// ============================================================================
+
+/// POST /api/admin/customers
+pub async fn create_customer(
+    State(service): State<Arc<AdminService>>,
+    _user: IapUser,
+    Json(payload): Json<CreateCustomerRequest>,
+) -> Result<(StatusCode, Json<CustomerWithArcades>)> {
+    let customer = service
+        .create_customer(
+            &payload.name,
+            payload.phone_number.as_deref(),
+            payload.email.as_deref(),
+        )
+        .await?;
+    Ok((StatusCode::CREATED, Json(CustomerWithArcades {
+        customer,
+        arcade_ids: vec![],
+    })))
+}
+
+/// GET /api/admin/customers
+pub async fn list_customers(
+    State(service): State<Arc<AdminService>>,
+    _user: IapUser,
+) -> Result<Json<Vec<CustomerWithArcades>>> {
+    let customers = service.list_customers().await?;
+    let mut result = Vec::with_capacity(customers.len());
+    for customer in customers {
+        let arcade_ids = service.get_customer_arcade_ids(customer.id).await?;
+        result.push(CustomerWithArcades {
+            customer,
+            arcade_ids,
+        });
+    }
+    Ok(Json(result))
+}
+
+/// GET /api/admin/customers/{id}
+pub async fn get_customer(
+    State(service): State<Arc<AdminService>>,
+    _user: IapUser,
+    Path(id): Path<i32>,
+) -> Result<Json<CustomerWithArcades>> {
+    let (customer, arcade_ids) = service.get_customer_with_arcade_ids(id).await?;
+    Ok(Json(CustomerWithArcades {
+        customer,
+        arcade_ids,
+    }))
+}
+
+/// PUT /api/admin/customers/{id}
+pub async fn update_customer(
+    State(service): State<Arc<AdminService>>,
+    _user: IapUser,
+    Path(id): Path<i32>,
+    Json(payload): Json<UpdateCustomerRequest>,
+) -> Result<Json<CustomerWithArcades>> {
+    let customer = service
+        .update_customer(
+            id,
+            &payload.name,
+            payload.phone_number.as_deref(),
+            payload.email.as_deref(),
+        )
+        .await?;
+
+    // Update arcade assignments if provided
+    if let Some(ref arcade_ids) = payload.arcade_ids {
+        service.set_customer_arcades(id, arcade_ids).await?;
+    }
+
+    let arcade_ids = service.get_customer_arcade_ids(id).await?;
+    Ok(Json(CustomerWithArcades {
+        customer,
+        arcade_ids,
+    }))
+}
+
+/// DELETE /api/admin/customers/{id}
+pub async fn delete_customer(
+    State(service): State<Arc<AdminService>>,
+    _user: IapUser,
+    Path(id): Path<i32>,
+) -> Result<StatusCode> {
+    service.delete_customer(id).await?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
 // ============================================================================

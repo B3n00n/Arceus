@@ -12,6 +12,7 @@ DROP TABLE IF EXISTS game_versions CASCADE;
 DROP TABLE IF EXISTS games CASCADE;
 DROP TABLE IF EXISTS snorlax_versions CASCADE;
 DROP TABLE IF EXISTS arcades CASCADE;
+DROP TABLE IF EXISTS customers CASCADE;
 DROP TABLE IF EXISTS release_channels CASCADE;
 
 -- Drop types
@@ -44,6 +45,25 @@ CREATE INDEX idx_release_channels_name ON release_channels(name);
 COMMENT ON TABLE release_channels IS 'Release channels for game version distribution';
 
 -- ============================================================================
+-- CUSTOMERS TABLE
+-- Represents customers who own arcade installations
+-- ============================================================================
+CREATE TABLE customers (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    phone_number VARCHAR(50),
+    email VARCHAR(255),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_customers_name ON customers(name);
+
+COMMENT ON TABLE customers IS 'Customers who own arcade installations';
+COMMENT ON COLUMN customers.name IS 'Customer display name';
+COMMENT ON COLUMN customers.phone_number IS 'Contact phone number (optional)';
+COMMENT ON COLUMN customers.email IS 'Contact email address (optional)';
+
+-- ============================================================================
 -- ARCADES TABLE
 -- Represents physical VR arcade installations
 -- ============================================================================
@@ -53,6 +73,7 @@ CREATE TABLE arcades (
     machine_id VARCHAR(255) UNIQUE NOT NULL,  -- Machine ID format: 32-char hex string
     status VARCHAR(50) NOT NULL DEFAULT 'active',  -- active, inactive, maintenance
     channel_id INTEGER NOT NULL REFERENCES release_channels(id) ON DELETE RESTRICT DEFAULT 1,  -- FK to release_channels (defaults to production)
+    customer_id INTEGER REFERENCES customers(id) ON DELETE RESTRICT,  -- FK to customers (nullable for unassigned arcades)
     installed_games JSONB DEFAULT '{}'::jsonb,  -- Map of game_id to version: {"1": "v0.8.2", "2": "v1.2.0"}
     last_seen_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
@@ -62,10 +83,12 @@ CREATE TABLE arcades (
 CREATE INDEX idx_arcades_machine_id ON arcades(machine_id);
 CREATE INDEX idx_arcades_status ON arcades(status);
 CREATE INDEX idx_arcades_channel_id ON arcades(channel_id);
+CREATE INDEX idx_arcades_customer_id ON arcades(customer_id);
 
 COMMENT ON TABLE arcades IS 'Physical VR arcade installations worldwide';
 COMMENT ON COLUMN arcades.machine_id IS 'Unique machine identifier (stable across network adapter changes)';
 COMMENT ON COLUMN arcades.channel_id IS 'Release channel for this arcade (determines which game versions are available)';
+COMMENT ON COLUMN arcades.customer_id IS 'Customer who owns this arcade (nullable for unassigned arcades)';
 COMMENT ON COLUMN arcades.installed_games IS 'JSON map of installed games: {"game_id": "version_string"}';
 
 -- ============================================================================

@@ -18,6 +18,9 @@ import type {
   CreateSnorlaxVersionRequest,
   GyrosVersion,
   CreateGyrosVersionRequest,
+  Customer,
+  CreateCustomerRequest,
+  UpdateCustomerRequest,
 } from '../types';
 
 class AlakazamAPI {
@@ -64,6 +67,31 @@ class AlakazamAPI {
 
   async deleteArcade(id: number): Promise<void> {
     await this.client.delete(`/api/admin/arcades/${id}`);
+  }
+
+  // Customer endpoints
+  async getCustomers(): Promise<Customer[]> {
+    const response = await this.client.get('/api/admin/customers');
+    return response.data;
+  }
+
+  async getCustomer(id: number): Promise<Customer> {
+    const response = await this.client.get(`/api/admin/customers/${id}`);
+    return response.data;
+  }
+
+  async createCustomer(data: CreateCustomerRequest): Promise<Customer> {
+    const response = await this.client.post('/api/admin/customers', data);
+    return response.data;
+  }
+
+  async updateCustomer(id: number, data: UpdateCustomerRequest): Promise<Customer> {
+    const response = await this.client.put(`/api/admin/customers/${id}`, data);
+    return response.data;
+  }
+
+  async deleteCustomer(id: number): Promise<void> {
+    await this.client.delete(`/api/admin/customers/${id}`);
   }
 
   // Game endpoints

@@ -25,6 +25,7 @@ import relativeTime from 'dayjs/plugin/relativeTime';
 import { useArcades, useCreateArcade, useUpdateArcade, useDeleteArcade } from '../hooks/useArcades';
 import { useChannels } from '../hooks/useChannels';
 import { useGames } from '../hooks/useGames';
+import { useCustomers } from '../hooks/useCustomers';
 import { ArcadeModal } from '../components/ArcadeModal';
 import { ChannelBadge } from '../components/ChannelBadge';
 import type { Arcade } from '../types';
@@ -49,6 +50,7 @@ export const ArcadesPage = () => {
   const { data: arcades = [], isLoading, refetch } = useArcades();
   const { data: channels = [] } = useChannels();
   const { data: games = [] } = useGames();
+  const { data: customers = [] } = useCustomers();
   const createMutation = useCreateArcade();
   const updateMutation = useUpdateArcade();
   const deleteMutation = useDeleteArcade();
@@ -61,6 +63,12 @@ export const ArcadesPage = () => {
   const getGameName = (gameId: string) => {
     const game = games.find(g => g.id === parseInt(gameId));
     return game ? game.name : `Game #${gameId}`;
+  };
+
+  const getCustomerName = (customerId: number | null) => {
+    if (customerId === null) return null;
+    const customer = customers.find(c => c.id === customerId);
+    return customer ? customer.name : null;
   };
 
   const filteredArcades = useMemo(() => {
@@ -222,6 +230,24 @@ export const ArcadesPage = () => {
       render: (id: number) => (
         <span style={{ color: '#94a3b8', fontWeight: 500, fontSize: 13 }}>#{id}</span>
       ),
+    },
+    {
+      title: 'Customer',
+      dataIndex: 'customer_id',
+      key: 'customer_id',
+      width: 150,
+      render: (customerId: number | null) => {
+        const customerName = getCustomerName(customerId);
+        if (!customerName) {
+          return <span style={{ color: '#64748b', fontStyle: 'italic' }}>Unassigned</span>;
+        }
+        return <span style={{ fontWeight: 500 }}>{customerName}</span>;
+      },
+      sorter: (a, b) => {
+        const aName = getCustomerName(a.customer_id) || '';
+        const bName = getCustomerName(b.customer_id) || '';
+        return aName.localeCompare(bName);
+      },
     },
     {
       title: 'Name',

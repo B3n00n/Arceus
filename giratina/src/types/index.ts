@@ -18,9 +18,19 @@ export interface Arcade {
   machine_id: string;
   status: string;
   channel_id: number;
+  customer_id: number | null;
   assigned_game_ids: number[];
   installed_games?: Record<string, string>;
   last_seen_at: string | null;
+  created_at: string;
+}
+
+export interface Customer {
+  id: number;
+  name: string;
+  phone_number: string | null;
+  email: string | null;
+  arcade_ids: number[];
   created_at: string;
 }
 
@@ -128,6 +138,19 @@ export interface CreateSnorlaxVersionRequest {
 export interface CreateGyrosVersionRequest {
   version: string;
   gcs_path: string;
+}
+
+export interface CreateCustomerRequest {
+  name: string;
+  phone_number?: string;
+  email?: string;
+}
+
+export interface UpdateCustomerRequest {
+  name: string;
+  phone_number?: string;
+  email?: string;
+  arcade_ids?: number[];
 }
 
 // API Response types

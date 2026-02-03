@@ -6,6 +6,7 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { MainLayout } from './layouts/MainLayout';
 
 const ArcadesPage = lazy(() => import('./pages/ArcadesPage').then(m => ({ default: m.ArcadesPage })));
+const CustomersPage = lazy(() => import('./pages/CustomersPage').then(m => ({ default: m.CustomersPage })));
 const GamesPage = lazy(() => import('./pages/GamesPage').then(m => ({ default: m.GamesPage })));
 const GameVersionsPage = lazy(() => import('./pages/GameVersionsPage').then(m => ({ default: m.GameVersionsPage })));
 const ChannelsPage = lazy(() => import('./pages/ChannelsPage').then(m => ({ default: m.ChannelsPage })));
@@ -117,7 +118,8 @@ function App() {
             <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}><Spin size="large" /></div>}>
               <Routes>
                 <Route path="/" element={<MainLayout />}>
-                  <Route index element={<Navigate to="/arcades" replace />} />
+                  <Route index element={<Navigate to="/customers" replace />} />
+                  <Route path="customers" element={<CustomersPage />} />
                   <Route path="arcades" element={<ArcadesPage />} />
                   <Route path="games" element={<GamesPage />} />
                   <Route path="versions" element={<GameVersionsPage />} />
