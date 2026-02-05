@@ -21,7 +21,7 @@ dist-ssr
 *.sln
 *.sw?
 
-/client/
+/snorlax-client/
 /setup/
 
 src-tauri/target/
