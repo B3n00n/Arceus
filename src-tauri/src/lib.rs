@@ -12,7 +12,7 @@ use app::{AppConfig, AppState, EventBus, ServerManager, setup_signal_handlers};
 use application::services::{
     ApkApplicationService, BatteryMonitor, ClientApkService,
     DeviceApplicationService, GameApplicationService, GameVersionService,
-    update_service::create_update_service,
+    SensorService, update_service::create_update_service,
 };
 use infrastructure::repositories::{
     FsApkRepository, FsClientApkRepository, FsGameVersionRepository, InMemoryDeviceRepository,
@@ -176,11 +176,15 @@ pub fn run() {
                 battery_monitor.clone(),
             ));
 
+            // Initialize sensor service
+            let sensor_service = Arc::new(SensorService::new());
+
             app.manage(device_service);
             app.manage(apk_service);
             app.manage(game_service);
             app.manage(client_apk_service.clone());
             app.manage(game_version_service.clone());
+            app.manage(sensor_service);
             app.manage(app_state.clone());
             app.manage(server_manager);
 
@@ -256,6 +260,11 @@ pub fn run() {
             download_game,
             cancel_download,
             force_refresh_games,
+            list_sensors,
+            get_sensor_info,
+            upload_sensor_firmware,
+            get_max_sensor_name_length,
+            validate_sensor_firmware,
         ])
         .build(tauri::generate_context!())
         .expect("Failed to build Tauri application");

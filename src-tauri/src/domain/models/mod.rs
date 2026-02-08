@@ -6,6 +6,7 @@ mod volume;
 mod device;
 mod game_id;
 mod game;
+mod sensor;
 
 pub use device_id::DeviceId;
 pub use serial::Serial;
@@ -15,3 +16,4 @@ pub use volume::Volume;
 pub use device::Device;
 pub use game_id::GameId;
 pub use game::{GameConfig, GameState};
+pub use sensor::{Sensor, SensorConnectionStatus};
