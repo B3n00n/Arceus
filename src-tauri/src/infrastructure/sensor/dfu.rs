@@ -30,12 +30,75 @@ const RETRY_DELAY_SECS: u64 = 3;
 pub struct DfuUploader;
 
 impl DfuUploader {
+    /// Ensure `adafruit-nrfutil` is available, auto-installing via pip if needed.
+    async fn ensure_nrfutil_installed() -> Result<()> {
+        // Check if already available
+        if Self::is_nrfutil_available().await {
+            return Ok(());
+        }
+
+        tracing::info!("adafruit-nrfutil not found, attempting pip install...");
+
+        // Try pip commands: pip3 first on Linux, pip on Windows
+        let pip_commands = if cfg!(target_os = "windows") {
+            vec!["pip", "pip3"]
+        } else {
+            vec!["pip3", "pip"]
+        };
+
+        let mut last_error = String::new();
+        for pip in &pip_commands {
+            tracing::info!("Trying: {} install --user adafruit-nrfutil", pip);
+            let result = tokio::process::Command::new(pip)
+                .args(["install", "--user", "adafruit-nrfutil"])
+                .output()
+                .await;
+
+            match result {
+                Ok(output) if output.status.success() => {
+                    tracing::info!("Successfully installed adafruit-nrfutil via {}", pip);
+                    // Verify it's now available
+                    if Self::is_nrfutil_available().await {
+                        return Ok(());
+                    }
+                    last_error = "Installed but still not found on PATH. \
+                        You may need to add ~/.local/bin to your PATH."
+                        .to_string();
+                }
+                Ok(output) => {
+                    last_error = Self::combined_output(&output);
+                    tracing::warn!("{} install failed: {}", pip, last_error);
+                }
+                Err(e) => {
+                    tracing::debug!("{} not available: {}", pip, e);
+                }
+            }
+        }
+
+        Err(SensorError::NrfutilNotFound(format!(
+            "Could not auto-install adafruit-nrfutil. {}\n\
+            Install manually: pip install adafruit-nrfutil",
+            last_error
+        )))
+    }
+
+    /// Check if `adafruit-nrfutil` is callable.
+    async fn is_nrfutil_available() -> bool {
+        tokio::process::Command::new("adafruit-nrfutil")
+            .arg("version")
+            .output()
+            .await
+            .is_ok_and(|o| o.status.success())
+    }
+
     /// Complete firmware upload workflow: patch name, create DFU package, upload via serial.
     pub async fn upload_with_name(
         port: Option<&str>,
         firmware_path: &Path,
         device_name: &str,
     ) -> Result<()> {
+        Self::ensure_nrfutil_installed().await?;
+
         let firmware = tokio::fs::read(firmware_path)
             .await
             .map_err(SensorError::Io)?;
