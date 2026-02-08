@@ -4,6 +4,7 @@ import { MainLayout } from './components/layout/MainLayout';
 import { DashboardPage } from './pages/DashboardPage';
 import { DevicesPage } from './pages/DevicesPage';
 import { ApkManagerPage } from './pages/ApkManagerPage';
+import { SensorsPage } from './pages/SensorsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { useUIStore } from './stores/uiStore';
 import { eventService } from './services/eventService';
@@ -31,6 +32,7 @@ function App() {
           <Route index element={<DashboardPage />} />
           <Route path="devices" element={<DevicesPage />} />
           <Route path="apk-manager" element={<ApkManagerPage />} />
+          <Route path="sensors" element={<SensorsPage />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>
       </Routes>

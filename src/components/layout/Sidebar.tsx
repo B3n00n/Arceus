@@ -5,7 +5,8 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
-  RectangleGoggles
+  RectangleGoggles,
+  Cpu
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { useUIStore } from '@/stores/uiStore';
@@ -15,6 +16,7 @@ import { getVersion } from '@tauri-apps/api/app';
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Devices', href: '/devices', icon: RectangleGoggles },
+  { name: 'Sensors', href: '/sensors', icon: Cpu },
   { name: 'APK Manager', href: '/apk-manager', icon: Package },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
