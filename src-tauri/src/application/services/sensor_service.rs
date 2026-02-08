@@ -58,8 +58,7 @@ impl SensorService {
         let port_name = port.to_string();
 
         let info = tokio::task::spawn_blocking(move || {
-            let mut serial = SerialComm::open(&port_name)?;
-            serial.get_device_info_with_retry(3)
+            SerialComm::open_and_get_info(&port_name, 3)
         })
         .await
         .map_err(|e| SensorServiceError::OperationFailed(e.to_string()))??;

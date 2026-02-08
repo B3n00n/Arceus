@@ -27,15 +27,17 @@ pub struct SerialComm {
 
 impl SerialComm {
     /// Open a serial connection to a XIAO board
-    pub fn open(port_name: &str) -> Result<Self> {
-        let port = serialport::new(port_name, 115200)
-            .timeout(Duration::from_secs(3))
-            .open()?;
+    fn open(port_name: &str) -> Result<Self> {
+        let mut port = serialport::new(port_name, 115200)
+        .timeout(Duration::from_secs(5))
+        .open()?;
 
-        // Wait for device to be ready after connection
-        std::thread::sleep(Duration::from_millis(500));
+    port.write_data_terminal_ready(true)?;
 
-        Ok(Self { port })
+    let ready_delay = if cfg!(target_os = "windows") { 2000 } else { 500 };
+    std::thread::sleep(Duration::from_millis(ready_delay));
+
+    Ok(Self {port})
     }
 
     /// Send a command and read the response.
@@ -73,7 +75,7 @@ impl SerialComm {
     }
 
     /// Get complete device information
-    pub fn get_device_info(&mut self) -> Result<SensorInfo> {
+    fn get_device_info(&mut self) -> Result<SensorInfo> {
         let response = self.send_command("INFO")?;
         tracing::debug!(response = %response, "Raw INFO response");
 
@@ -113,18 +115,37 @@ impl SerialComm {
         Ok(info)
     }
 
-    /// Read all available info with retries
-    pub fn get_device_info_with_retry(&mut self, max_retries: u32) -> Result<SensorInfo> {
+    pub fn open_and_get_info(port_name: &str, max_retries: u32) -> Result<SensorInfo> {
         let mut last_error = None;
 
         for attempt in 0..max_retries {
-            match self.get_device_info() {
-                Ok(info) if info.serial_number.is_some() => return Ok(info),
-                Ok(_) => {
-                    tracing::debug!("Attempt {}/{}: No serial number in response", attempt + 1, max_retries);
-                }
+            match SerialComm::open(port_name) {
+                Ok(mut serial) => match serial.get_device_info() {
+                    Ok(info) if info.serial_number.is_some() => return Ok(info),
+                    Ok(_) => {
+                        tracing::debug!(
+                            "Attempt {}/{}: No serial number in response",
+                            attempt + 1,
+                            max_retries
+                        );
+                    }
+                    Err(e) => {
+                        tracing::debug!(
+                            "Attempt {}/{}: Read error: {}",
+                            attempt + 1,
+                            max_retries,
+                            e
+                        );
+                        last_error = Some(e);
+                    }
+                },
                 Err(e) => {
-                    tracing::debug!("Attempt {}/{}: Error: {}", attempt + 1, max_retries, e);
+                    tracing::debug!(
+                        "Attempt {}/{}: Open error: {}",
+                        attempt + 1,
+                        max_retries,
+                        e
+                    );
                     last_error = Some(e);
                 }
             }
@@ -138,5 +159,4 @@ impl SerialComm {
             "Could not read device info after retries".to_string(),
         )))
     }
-
 }
