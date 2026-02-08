@@ -38,6 +38,7 @@
           libsoup_3
           at-spi2-atk
           atkmm
+          udev
         ];
 
         tauriLibs = with pkgs; [
@@ -50,6 +51,7 @@
           dbus
           openssl
           librsvg
+          udev
         ];
 
       in
@@ -78,6 +80,13 @@
             # Build dependencies
             pkg-config
             openssl
+
+            # Serial port support (for sensor management)
+            udev
+
+            # USB automounting (for UF2 bootloader)
+            udiskie
+            udisks2
 
             # Windows cross-compilation
             pkgsCross.mingwW64.stdenv.cc
