@@ -40,9 +40,6 @@ pub enum SensorError {
 
     #[error("Firmware upload failed: {0}")]
     UploadFailed(String),
-
-    #[error("adafruit-nrfutil not found: {0}")]
-    NrfutilNotFound(String),
 }
 
 pub type Result<T> = std::result::Result<T, SensorError>;
