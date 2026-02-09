@@ -18,6 +18,7 @@ mod transport;
 
 use super::{FirmwarePatcher, Result, SensorError, XiaoDetector, XiaoMode};
 use std::path::Path;
+use std::sync::Arc;
 use transport::DfuTransport;
 
 /// Maximum retry attempts for DFU upload (port may be temporarily busy)
@@ -35,6 +36,7 @@ impl DfuUploader {
         port: Option<&str>,
         firmware_path: &Path,
         device_name: &str,
+        on_progress: Arc<dyn Fn(f32) + Send + Sync>,
     ) -> Result<()> {
         let firmware = tokio::fs::read(firmware_path)
             .await
@@ -50,7 +52,7 @@ impl DfuUploader {
             None => XiaoDetector::find_first()?.port,
         };
 
-        Self::upload_with_retry(&patched, &port_name).await?;
+        Self::upload_with_retry(&patched, &port_name, on_progress).await?;
 
         tracing::info!(
             "Firmware upload complete for device '{}'",
@@ -61,7 +63,11 @@ impl DfuUploader {
     }
 
     /// Upload with retry logic for transient port-busy errors.
-    async fn upload_with_retry(firmware: &[u8], port: &str) -> Result<()> {
+    async fn upload_with_retry(
+        firmware: &[u8],
+        port: &str,
+        on_progress: Arc<dyn Fn(f32) + Send + Sync>,
+    ) -> Result<()> {
         let mut last_error = None;
 
         for attempt in 0..MAX_UPLOAD_RETRIES {
@@ -78,9 +84,10 @@ impl DfuUploader {
             // Clone data for the blocking task
             let fw = firmware.to_vec();
             let port_name = port.to_string();
+            let progress = on_progress.clone();
 
             let result = tokio::task::spawn_blocking(move || {
-                Self::upload_blocking(&fw, &port_name)
+                Self::upload_blocking(&fw, &port_name, &*progress)
             })
             .await
             .map_err(|e| {
@@ -111,14 +118,14 @@ impl DfuUploader {
     }
 
     /// Synchronous DFU upload — runs inside spawn_blocking.
-    fn upload_blocking(firmware: &[u8], port_name: &str) -> Result<()> {
+    fn upload_blocking(firmware: &[u8], port_name: &str, on_progress: &dyn Fn(f32)) -> Result<()> {
         tracing::info!(
             "Starting DFU upload on {} (with 1200-baud touch)",
             port_name
         );
 
         let mut transport = DfuTransport::open_with_touch(port_name)?;
-        let result = protocol::run_dfu_upload(&mut transport, firmware);
+        let result = protocol::run_dfu_upload(&mut transport, firmware, on_progress);
         transport.close();
 
         result

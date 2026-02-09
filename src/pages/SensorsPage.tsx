@@ -3,6 +3,7 @@ import { Cpu, RefreshCw, Upload, Usb, AlertCircle, CheckCircle2, Loader2 } from 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { SensorService } from '@/services/sensorService';
+import { eventService } from '@/services/eventService';
 import type { Sensor } from '@/types/sensor.types';
 import { cn } from '@/lib/cn';
 import { toast } from '@/lib/toast';
@@ -12,6 +13,7 @@ export function SensorsPage() {
   const [loading, setLoading] = useState(true);
   const [loadingInfo, setLoadingInfo] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{ stage: string; percentage: number } | null>(null);
   const [firmwarePath, setFirmwarePath] = useState('');
   const [deviceName, setDeviceName] = useState('');
   const [maxNameLength, setMaxNameLength] = useState<number | null>(null);
@@ -64,6 +66,18 @@ export function SensorsPage() {
     SensorService.getMaxNameLength()
       .then(setMaxNameLength)
       .catch((error) => toast.error(`Failed to get max name length: ${error}`));
+
+    const unsubscribe = eventService.subscribe((event) => {
+      if (event.type === 'sensorUploadProgress') {
+        if (event.stage === 'completed' || event.stage === 'failed') {
+          setUploadProgress(null);
+        } else {
+          setUploadProgress({ stage: event.stage, percentage: event.percentage });
+        }
+      }
+    });
+
+    return unsubscribe;
   }, []);
 
   const handleUpload = async () => {
@@ -213,6 +227,21 @@ export function SensorsPage() {
               )}
             </div>
           </div>
+
+          {uploading && uploadProgress && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-grey-300 capitalize">{uploadProgress.stage}...</span>
+                <span className="text-grey-300 font-mono">{Math.round(uploadProgress.percentage)}%</span>
+              </div>
+              <div className="w-full h-2 bg-grey-700 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-blue-500 rounded-full transition-all duration-300 ease-out"
+                  style={{ width: `${Math.min(uploadProgress.percentage, 100)}%` }}
+                />
+              </div>
+            </div>
+          )}
 
           <Button
             className="w-full"

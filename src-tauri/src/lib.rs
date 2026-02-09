@@ -177,7 +177,7 @@ pub fn run() {
             ));
 
             // Initialize sensor service
-            let sensor_service = Arc::new(SensorService::new());
+            let sensor_service = Arc::new(SensorService::new(event_bus.clone(), config.alakazam.clone()));
 
             app.manage(device_service);
             app.manage(apk_service);

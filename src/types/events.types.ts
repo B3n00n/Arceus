@@ -97,6 +97,12 @@ export type ArceusEvent =
       gameId: number;
       gameName: string;
       percentage: number;
+    }
+  | {
+      type: 'sensorUploadProgress';
+      port: string;
+      stage: string;
+      percentage: number;
     };
 
 export interface OperationProgress {

@@ -10,8 +10,8 @@ mod services;
 use axum::extract::DefaultBodyLimit;
 use axum::http::{HeaderValue, Method};
 use config::Config;
-use repositories::{ArcadeRepository, ChannelRepository, CustomerRepository, GameRepository, GyrosRepository, SnorlaxRepository};
-use services::{AdminService, ArcadeService, GcsService, GyrosService, SnorlaxService};
+use repositories::{ArcadeRepository, ChannelRepository, CustomerRepository, GameRepository, GyrosRepository, SensorRepository, SnorlaxRepository};
+use services::{AdminService, ArcadeService, GcsService, GyrosService, SensorService, SnorlaxService};
 use std::sync::Arc;
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use tracing::info;
@@ -41,6 +41,7 @@ async fn main() -> anyhow::Result<()> {
     let game_repo = Arc::new(GameRepository::new(pool.clone()));
     let snorlax_repo = Arc::new(SnorlaxRepository::new(pool.clone()));
     let gyros_repo = Arc::new(GyrosRepository::new(pool.clone()));
+    let sensor_repo = Arc::new(SensorRepository::new(pool.clone()));
 
     // Initialize GCS service with Application Default Credentials
     let gcs_service = Arc::new(
@@ -58,6 +59,7 @@ async fn main() -> anyhow::Result<()> {
     let snorlax_service = Arc::new(SnorlaxService::new(snorlax_repo.clone(), gcs_service.clone()));
     let gyros_service = Arc::new(GyrosService::new(gyros_repo.clone(), gcs_service.clone()));
     let admin_service = Arc::new(AdminService::new(arcade_repo.clone(), channel_repo.clone(), customer_repo.clone(), game_repo.clone()));
+    let sensor_service = Arc::new(SensorService::new(sensor_repo.clone(), arcade_repo.clone()));
 
     // Configure CORS
     let allowed_origins: Vec<HeaderValue> = config.cors.allowed_origin
@@ -72,6 +74,7 @@ async fn main() -> anyhow::Result<()> {
             axum::http::header::CONTENT_TYPE,
             axum::http::header::AUTHORIZATION,
             axum::http::HeaderName::from_static("x-goog-authenticated-user-email"),
+            axum::http::HeaderName::from_static("x-machine-id"),
         ])
         .allow_credentials(true);
 
@@ -80,7 +83,7 @@ async fn main() -> anyhow::Result<()> {
     // Build application router
     let app = axum::Router::new()
         .merge(routes::create_router())
-        .nest("/api", api::create_api_router(arcade_service, gcs_service, snorlax_service, gyros_service, admin_service))
+        .nest("/api", api::create_api_router(arcade_service, gcs_service, snorlax_service, gyros_service, admin_service, sensor_service))
         .layer(DefaultBodyLimit::max(20 * 1024 * 1024 * 1024)) // 20 GB limit for file uploads
         .layer(cors)
         .layer(TraceLayer::new_for_http());

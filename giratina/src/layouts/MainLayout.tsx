@@ -8,6 +8,7 @@ import {
   BranchesOutlined,
   AndroidOutlined,
   ToolOutlined,
+  WifiOutlined,
   LeftOutlined,
   RightOutlined,
   MenuOutlined,
@@ -75,6 +76,11 @@ export const MainLayout = () => {
       key: '/gyros',
       icon: <ToolOutlined />,
       label: 'Gyros Versions',
+    },
+    {
+      key: '/sensors',
+      icon: <WifiOutlined />,
+      label: 'Sensors',
     },
   ];
 

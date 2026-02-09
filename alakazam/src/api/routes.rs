@@ -1,4 +1,4 @@
-use crate::{api::handlers, services::{AdminService, ArcadeService, GcsService, GyrosService, SnorlaxService}};
+use crate::{api::handlers, services::{AdminService, ArcadeService, GcsService, GyrosService, SensorService, SnorlaxService}};
 use axum::{
     routing::{delete, get, post, put},
     Router,
@@ -11,6 +11,7 @@ pub fn create_api_router(
     snorlax_service: Arc<SnorlaxService>,
     gyros_service: Arc<GyrosService>,
     admin_service: Arc<AdminService>,
+    sensor_service: Arc<SensorService>,
 ) -> Router {
     // Arcade endpoints
     let arcade_router = Router::new()
@@ -133,6 +134,16 @@ pub fn create_api_router(
         .route("/admin/gyros/confirm-upload", post(handlers::confirm_gyros_upload))
         .with_state(gyros_service);
 
+    // Sensor admin endpoints (for Giratina)
+    let sensor_admin_router = Router::new()
+        .route("/admin/sensors", get(handlers::list_sensors))
+        .with_state(sensor_service.clone());
+
+    // Sensor arcade endpoint (for Arceus reporting)
+    let sensor_arcade_router = Router::new()
+        .route("/arcade/sensors/report", post(handlers::report_sensor))
+        .with_state(sensor_service);
+
     // Merge routers
     arcade_router
         .merge(game_download_router)
@@ -147,4 +158,6 @@ pub fn create_api_router(
         .merge(gyros_admin_router)
         .merge(gyros_upload_router)
         .merge(gyros_confirm_router)
+        .merge(sensor_admin_router)
+        .merge(sensor_arcade_router)
 }

@@ -12,6 +12,7 @@ const GameVersionsPage = lazy(() => import('./pages/GameVersionsPage').then(m =>
 const ChannelsPage = lazy(() => import('./pages/ChannelsPage').then(m => ({ default: m.ChannelsPage })));
 const SnorlaxVersionsPage = lazy(() => import('./pages/SnorlaxVersionsPage').then(m => ({ default: m.SnorlaxVersionsPage })));
 const GyrosVersionsPage = lazy(() => import('./pages/GyrosVersionsPage').then(m => ({ default: m.GyrosVersionsPage })));
+const SensorsPage = lazy(() => import('./pages/SensorsPage').then(m => ({ default: m.SensorsPage })));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -126,6 +127,7 @@ function App() {
                   <Route path="channels" element={<ChannelsPage />} />
                   <Route path="snorlax" element={<SnorlaxVersionsPage />} />
                   <Route path="gyros" element={<GyrosVersionsPage />} />
+                  <Route path="sensors" element={<SensorsPage />} />
                 </Route>
               </Routes>
             </Suspense>

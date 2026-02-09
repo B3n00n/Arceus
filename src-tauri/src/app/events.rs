@@ -103,6 +103,13 @@ pub enum ArceusEvent {
         game_name: String,
         percentage: f32,
     },
+
+    #[serde(rename_all = "camelCase")]
+    SensorUploadProgress {
+        port: String,
+        stage: String,
+        percentage: f32,
+    },
 }
 
 #[derive(Clone)]
@@ -197,6 +204,14 @@ impl EventBus {
         self.emit(ArceusEvent::GameDownloadProgress {
             game_id,
             game_name,
+            percentage,
+        });
+    }
+
+    pub fn sensor_upload_progress(&self, port: String, stage: String, percentage: f32) {
+        self.emit(ArceusEvent::SensorUploadProgress {
+            port,
+            stage,
             percentage,
         });
     }

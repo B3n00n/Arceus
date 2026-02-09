@@ -153,6 +153,17 @@ export interface UpdateCustomerRequest {
   arcade_ids?: number[];
 }
 
+export interface TrackedSensor {
+  id: number;
+  serial_number: string;
+  mac_address: string | null;
+  firmware_version: string | null;
+  arcade_id: number | null;
+  arcade_name: string | null;
+  updated_at: string;
+  created_at: string;
+}
+
 // API Response types
 export interface ApiError {
   error: string;

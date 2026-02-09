@@ -29,11 +29,14 @@ const MIN_ERASE_DELAY_MS: u64 = 500;
 pub fn run_dfu_upload(
     transport: &mut DfuTransport,
     firmware: &[u8],
+    on_progress: &dyn Fn(f32),
 ) -> Result<(), SensorError> {
+    on_progress(0.0);
     send_start(transport, firmware.len())?;
     send_init(transport, firmware)?;
-    send_data(transport, firmware)?;
+    send_data(transport, firmware, on_progress)?;
     send_stop(transport)?;
+    on_progress(100.0);
     Ok(())
 }
 
@@ -75,7 +78,7 @@ fn send_init(transport: &mut DfuTransport, firmware: &[u8]) -> Result<(), Sensor
 }
 
 /// DATA — stream firmware in 512-byte chunks with flash-write pacing.
-fn send_data(transport: &mut DfuTransport, firmware: &[u8]) -> Result<(), SensorError> {
+fn send_data(transport: &mut DfuTransport, firmware: &[u8], on_progress: &dyn Fn(f32)) -> Result<(), SensorError> {
     let total_chunks = firmware.len().div_ceil(DATA_CHUNK_SIZE);
     let log_interval = (total_chunks / 10).max(1);
 
@@ -97,8 +100,9 @@ fn send_data(transport: &mut DfuTransport, firmware: &[u8]) -> Result<(), Sensor
         }
 
         if (i + 1) % log_interval == 0 || i + 1 == total_chunks {
-            let pct = ((i + 1) * 100) / total_chunks;
-            tracing::info!("DFU progress: {}% ({}/{})", pct, i + 1, total_chunks);
+            let pct = ((i + 1) as f32 / total_chunks as f32) * 100.0;
+            tracing::info!("DFU progress: {:.0}% ({}/{})", pct, i + 1, total_chunks);
+            on_progress(pct);
         }
     }
 

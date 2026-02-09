@@ -5,6 +5,7 @@
 -- ============================================================================
 
 -- Drop all tables (in reverse order of dependencies)
+DROP TABLE IF EXISTS sensors CASCADE;
 DROP TABLE IF EXISTS gyros_versions CASCADE;
 DROP TABLE IF EXISTS game_version_channels CASCADE;
 DROP TABLE IF EXISTS arcade_game_assignments CASCADE;
@@ -272,6 +273,29 @@ CREATE TRIGGER gyros_version_current_trigger
     FOR EACH ROW
     WHEN (NEW.is_current = true)
     EXECUTE FUNCTION ensure_single_current_gyros();
+
+-- ============================================================================
+-- SENSORS TABLE
+-- Tracks individual sensors deployed in arcades
+-- ============================================================================
+CREATE TABLE sensors (
+    id SERIAL PRIMARY KEY,
+    serial_number VARCHAR(255) UNIQUE NOT NULL,
+    mac_address VARCHAR(50),
+    firmware_version VARCHAR(50),
+    arcade_id INTEGER REFERENCES arcades(id) ON DELETE SET NULL,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_sensors_serial_number ON sensors(serial_number);
+CREATE INDEX idx_sensors_arcade_id ON sensors(arcade_id);
+
+COMMENT ON TABLE sensors IS 'Individual sensors deployed in arcades, reported by Arceus after firmware upload';
+COMMENT ON COLUMN sensors.serial_number IS 'Unique sensor serial number read from the device';
+COMMENT ON COLUMN sensors.mac_address IS 'BLE MAC address of the sensor';
+COMMENT ON COLUMN sensors.firmware_version IS 'Currently installed firmware version';
+COMMENT ON COLUMN sensors.arcade_id IS 'Arcade this sensor belongs to (matched by machine_id)';
 
 -- ============================================================================
 -- SCRIPT COMPLETE

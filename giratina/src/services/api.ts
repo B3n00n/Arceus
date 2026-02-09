@@ -21,6 +21,7 @@ import type {
   Customer,
   CreateCustomerRequest,
   UpdateCustomerRequest,
+  TrackedSensor,
 } from '../types';
 
 class AlakazamAPI {
@@ -394,6 +395,12 @@ class AlakazamAPI {
 
   async unpublishVersion(gameId: number, versionId: number): Promise<void> {
     await this.client.delete(`/api/admin/games/${gameId}/versions/${versionId}/publish`);
+  }
+
+  // Sensor endpoints
+  async getSensors(): Promise<TrackedSensor[]> {
+    const response = await this.client.get('/api/admin/sensors');
+    return response.data;
   }
 }
 
