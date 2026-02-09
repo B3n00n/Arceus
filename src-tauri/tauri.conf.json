@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "arceus",
+  "productName": "combatica-hub",
   "version": "0.3.5",
-  "identifier": "com.b3n00n.Arkeus",
+  "identifier": "com.b3n00n.CombaticaHub",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Arkeus",
+        "title": "Combatica Hub",
         "width": 1280,
         "height": 720,
         "minWidth": 1075,
@@ -22,7 +22,7 @@
       },
       {
         "label": "updater",
-        "title": "Arkeus Updater",
+        "title": "Combatica Hub Updater",
         "width": 300,
         "height": 350,
         "center": true,

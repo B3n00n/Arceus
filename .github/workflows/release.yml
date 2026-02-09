@@ -55,7 +55,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ github.ref_name }}
-          releaseName: 'Arceus ${{ github.ref_name }}'
+          releaseName: 'Combatica Hub ${{ github.ref_name }}'
           releaseBody: 'See the assets to download and install this version.'
           releaseDraft: false
           prerelease: false
@@ -113,7 +113,7 @@ jobs:
             cat >> update-manifest.json <<EOF
               "windows-x86_64": {
                 "signature": "${WIN_SIG_CONTENT}",
-                "url": "https://github.com/B3n00n/Arceus/releases/download/v${VERSION}/arceus_${VERSION}_x64-setup.exe"
+                "url": "https://github.com/B3n00n/Arceus/releases/download/v${VERSION}/combatica-hub_${VERSION}_x64-setup.exe"
               }
           EOF
           fi
@@ -128,7 +128,7 @@ jobs:
             cat >> update-manifest.json <<EOF
               "linux-x86_64": {
                 "signature": "${LINUX_SIG_CONTENT}",
-                "url": "https://github.com/B3n00n/Arceus/releases/download/v${VERSION}/arceus_${VERSION}_amd64.AppImage"
+                "url": "https://github.com/B3n00n/Arceus/releases/download/v${VERSION}/combatica-hub_${VERSION}_amd64.AppImage"
               }
           EOF
           fi
