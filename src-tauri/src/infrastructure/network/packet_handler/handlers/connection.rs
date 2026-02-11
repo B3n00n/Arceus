@@ -16,7 +16,7 @@ use std::sync::Arc;
 use super::super::{PacketHandler, Result};
 
 /// Handles DEVICE_CONNECTED (0x01) packets
-/// Payload: [model: String][serial: String]
+/// Payload: [model: String][serial: String][foreground_app: String]
 pub struct DeviceConnectedHandler {
     device_repo: Arc<dyn DeviceRepository>,
     device_name_repo: Arc<dyn DeviceNameRepository>,
@@ -76,6 +76,8 @@ impl PacketHandler for DeviceConnectedHandler {
         // Read device information from packet
         let model = cursor.read_string()?;
         let serial_str = cursor.read_string()?;
+        let foreground_app = cursor.read_string()?;
+        let running_app = if foreground_app.is_empty() { None } else { Some(foreground_app) };
 
         // Get version from session metadata (set during VERSION_CHECK phase)
         let version = self.session_manager
@@ -91,6 +93,7 @@ impl PacketHandler for DeviceConnectedHandler {
             model = %model,
             serial = %serial_str,
             version = %version,
+            running_app = ?running_app,
             "Device connected packet received"
         );
 
@@ -107,7 +110,12 @@ impl PacketHandler for DeviceConnectedHandler {
         }
 
         // Create device with real info from the packet (first time device is created!)
-        let device = Device::new(device_id, serial.clone(), model.clone(), version);
+        let mut device = Device::new(device_id, serial.clone(), model.clone(), version);
+
+        // Apply foreground app from initial packet if present
+        if let Some(app_name) = running_app {
+            device = device.with_running_app(app_name);
+        }
 
         // Load custom name from database if exists
         let custom_name = self.device_name_repo.get_name(&serial).await.ok().flatten();
