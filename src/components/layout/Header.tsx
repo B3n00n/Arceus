@@ -72,7 +72,7 @@ export function Header() {
               {isOnline ? (
                 <Wifi className="h-5 w-5 text-success-default" />
               ) : (
-                <WifiOff className="h-5 w-5 text-error-default" />
+                <WifiOff className="h-5 w-5 text-warning-default" />
               )}
             </div>
 
