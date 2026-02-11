@@ -80,6 +80,7 @@
             # Build dependencies
             pkg-config
             openssl
+            sqlite
 
             # Serial port support (for sensor management)
             udev
@@ -99,6 +100,7 @@
             export LD_LIBRARY_PATH="${pkgs.lib.makeLibraryPath tauriLibs}:$LD_LIBRARY_PATH"
             export PKG_CONFIG_PATH="${pkgs.lib.makeSearchPathOutput "dev" "lib/pkgconfig" tauriDeps}:$PKG_CONFIG_PATH"
             export RUST_SRC_PATH="${rustToolchain}/lib/rustlib/src/rust/library"
+            export LIBSQLITE3_SYS_USE_PKG_CONFIG=1
           '';
         };
       }
