@@ -7,6 +7,8 @@ use crate::domain::repositories::{DeviceNameRepository, DeviceRepository};
 use crate::infrastructure::network::connection_handler::ConnectionHandler;
 use crate::infrastructure::network::device_session_manager::DeviceSessionManager;
 use crate::infrastructure::network::packet_handler::PacketHandlerRegistry;
+use socket2::{Domain, Protocol, Socket, Type};
+use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::net::TcpListener;
@@ -61,11 +63,32 @@ impl TcpServer {
         (server, shutdown_rx, session_manager)
     }
 
+    fn bind_listener(addr: SocketAddr) -> std::result::Result<TcpListener, NetworkError> {
+        let socket = Socket::new(Domain::IPV4, Type::STREAM, Some(Protocol::TCP))
+            .map_err(|e| NetworkError::BindError(format!("{}", e)))?;
+        socket
+            .set_reuse_address(true)
+            .map_err(|e| NetworkError::BindError(format!("{}", e)))?;
+        socket
+            .set_nonblocking(true)
+            .map_err(|e| NetworkError::BindError(format!("{}", e)))?;
+        socket
+            .bind(&addr.into())
+            .map_err(|e| NetworkError::BindError(format!("Failed to bind {}: {}", addr, e)))?;
+        socket
+            .listen(128)
+            .map_err(|e| NetworkError::BindError(format!("{}", e)))?;
+
+        TcpListener::from_std(socket.into())
+            .map_err(|e| NetworkError::BindError(format!("{}", e)))
+    }
+
     pub async fn start(self: Arc<Self>) -> Result<()> {
-        let addr = format!("{}:{}", self.config.tcp_host, self.config.tcp_port);
-        let listener = TcpListener::bind(&addr).await.map_err(|e| {
-            NetworkError::BindError(format!("Failed to bind to {}: {}", addr, e))
-        })?;
+        let addr: SocketAddr = format!("{}:{}", self.config.tcp_host, self.config.tcp_port)
+            .parse()
+            .map_err(|e| NetworkError::BindError(format!("{}", e)))?;
+
+        let listener = Self::bind_listener(addr)?;
 
         tracing::info!(
             tcp_host = %self.config.tcp_host,
